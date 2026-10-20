@@ -1,55 +1,51 @@
-# Projektanweisung: PerfCraft (Perfboard CAD Workbench)
+# Projektanweisung: PerfCraft (Perfboard Designer)
 
 > **Verbindliche Spezifikation für den ausführenden Entwickler-Agenten**
 > Version: 1.0.0-PROD
 > Zielsystem: Java 21 LTS | JavaFX 21 | Apache Maven | Material Design 2 Dark Standard
-> Referenz-Vorbild: ABACOM LochMaster 4.0 CAD-Workbench
+> Leitprinzip: **Klarheit auf den ersten Blick (Zero-Clutter Workbench)**
 > Dieses Dokument ist die ausnahmslos gültige Arbeitsgrundlage. Jede Klasse, jedes Interface, jedes Tool und jede Rendering-Schicht muss exakt den hier definierten Vorgaben entsprechen.
 
 ---
 
 ## Inhaltsverzeichnis
-1. [Präambel, Mission & Design-Philosophie](#1-präambel-mission--design-philosophie)
+1. [Präambel, Mission & Design-Philosophie (Zero-Clutter CAD)](#1-präambel-mission--design-philosophie-zero-clutter-cad)
 2. [Tech-Stack, Frameworks & Feste Leitplanken](#2-tech-stack-frameworks--feste-leitplanken)
-3. [UI-Layout nach LochMaster-Vorbild (CAD-Workbench Architektur)](#3-ui-layout-nach-lochmaster-vorbild-cad-workbench-architektur)
-   - 3.1 Gesamtlayout & Responsive Aufteilung
-   - 3.2 Menüleiste (Menüs & Aktionen)
-   - 3.3 Befehlsleiste (Top Command Bar)
-   - 3.4 Ebenen-Steuerung (Bauteilseite, Lötseite, Röntgen/X-Ray)
-   - 3.5 Linke CAD-Toolbox (Werkzeugleiste)
-   - 3.6 Dynamische Dual-Einheiten-Lineale (Ruler Engine)
-   - 3.7 Zentraler Perfboard Canvas & Substrat-Rendering
-   - 3.8 Rechte Dock-Sidebar (Katalog, Inspektor, Projekt-Baum)
-   - 3.9 Echtzeit-Statusleiste & Messdaten
-   - 3.10 KiCad-inspiriertes Appearance- & Sichtbarkeits-Panel
-4. [Interaktives Werkzeug-System (CAD Tools & State Machine)](#4-interaktives-werkzeug-system-cad-tools--state-machine)
-   - 4.1 Auswahl-Werkzeug (Pointer / Selection Tool)
-   - 4.2 Jumper-Draht-Werkzeug (Top Layer Wire Tool)
-   - 4.3 Lötbrücken-Werkzeug (Bottom Layer Solder Bridge Tool)
-   - 4.4 Bauteil-Platzierungs-Werkzeug (Component Placement Tool)
-   - 4.5 Text- & Beschriftungs-Werkzeug (Silkscreen Text Tool)
-   - 4.6 Verbindungsprüfer (Continuity & Net Highlighter Tool)
-   - 4.7 Lösch-Werkzeug (Eraser / Delete Tool)
-   - 4.8 Ratsnest / Airwire-Engine (Logische Netze & Flugdrähte wie in KiCad)
-   - 4.9 Design Rule Check (DRC) & Kollisions-Engine (KiCad-Standard)
-   - 4.10 Relatives Koordinaten-Messwerkzeug (KiCad Leertasten-Delta-Modus)
-5. [Bauteil-Bibliothek & Footprint-Spezifikationen](#5-bauteil-bibliothek--footprint-spezifikationen)
-   - 5.1 Passive Bauteile (Widerstände, Kondensatoren, Potentiometer)
-   - 5.2 Aktive Bauteile (Dioden, LEDs, Transistoren)
-   - 5.3 Integrierte Schaltungen (DIL/DIP-Sockel & ICs)
-   - 5.4 Steckverbinder & Mechanik (Stiftleisten, Klemmen, Taster)
-6. [Widerstands-Farbcode-Engine (Mathematik & Algorithmus)](#6-widerstands-farbcode-engine-mathematik--algorithmus)
-7. [Canvas Rendering-Pipeline & Grafik-Mathematik](#7-canvas-rendering-pipeline--grafik-mathematik)
-   - 7.1 Koordinaten-Systeme (Screen vs. World vs. Grid)
-   - 7.2 Transformationsmatrix, Zoom & Pan
+3. [Aufgeräumtes UI-Layout (Klar & Sofort Verständlich)](#3-aufgeräumtes-ui-layout-klar--sofort-verständlich)
+   - 3.1 Das 4-Zonen-Layout auf einen Blick
+   - 3.2 Menüleiste (Schlank & Fokussiert)
+   - 3.3 Obere Befehlsleiste (Header-Bar)
+   - 3.4 Die 3 Kern-Werkzeuge (Auswahl, Kabel/Silberdraht, Bauteil)
+   - 3.5 Rechter Bauteil-Katalog & Eigenschaften-Inspektor
+   - 3.6 Der Perfboard Canvas (Clean 2D Flat-Vector Stil)
+   - 3.7 Lineale (Rulers) & Statusleiste
+4. [Die 3 Kern-Werkzeuge im Detail](#4-die-3-kern-werkzeuge-im-detail)
+   - 4.1 Werkzeug 1: Auswahl & Verschieben (`V`)
+   - 4.2 Werkzeug 2: Universelles Draht- & Kabel-Werkzeug (`W`) (Kabel / Silberdraht)
+   - 4.3 Werkzeug 3: Bauteil-Platzierungs-Werkzeug (`C`)
+5. [Bauteil-Bibliothek (Inklusive Taster & Widerstands-Farbbänder)](#5-bauteil-bibliothek-inklusive-taster--widerstands-farbbänder)
+   - 5.1 Taster (4-Pin Kurzhubtaster / Tactile Switch 6x6 mm)
+   - 5.2 Widerstände (Axial 0207 mit echten Farbringen)
+   - 5.3 Kondensatoren (Keramik & Elko mit Minus-Markierung)
+   - 5.4 Dioden & LEDs (Mit Kathoden-Markierung)
+   - 5.5 Transistoren (TO-92 Dreibeiner)
+   - 5.6 Integrierte Schaltungen (DIL/DIP-8 & DIP-16 Sockel/ICs)
+   - 5.7 Stiftleisten & Klemmen
+6. [Widerstands-Farbcode-Engine (Mathematik & IEC 60062)](#6-widerstands-farbcode-engine-mathematik--iec-60062)
+   - 6.1 Farbwert-Tabelle (Exakte Hex-Werte für Canvas)
+   - 6.2 Parsing-Algorithmus (String zu Ohm)
+   - 6.3 Ring-Generierungs-Algorithmus
+7. [Canvas Rendering-Pipeline (Clean 2D Flat-Vector statt Pseudofotorealismus)](#7-canvas-rendering-pipeline-clean-2d-flat-vector-statt-pseudofotorealismus)
+   - 7.1 Visuelle Farbabstimmung (Substrat, Pads, Bauteile)
+   - 7.2 Koordinatensysteme (Screen vs. World vs. Grid)
    - 7.3 Vollständige Implementierung von `CoordinateTransform.java`
-   - 7.4 Viewport-Culling für Hochleistungs-Rendering
-   - 7.5 Multi-Layer Zeichenschichten & Z-Index
+   - 7.4 Zoom, Pan & Magnetisches Pad-Snapping
+   - 7.5 Ebenen-Rendering (Bauteilseite, Lötseite, Beide / Röntgen)
 8. [Vollständiges Datenmodell & `.perf` Dateiformat](#8-vollständiges-datenmodell--perf-dateiformat)
    - 8.1 JSON-Schemaspezifikation
    - 8.2 Java-Klassenstruktur im `model`-Package
 9. [Undo/Redo Transaktions-Architektur (Command Pattern)](#9-undoredo-transaktions-architektur-command-pattern)
-10. [Stücklisten- (BOM) & Export-Engine](#10-stücklisten--bom--export-engine)
+10. [Stücklisten- (BOM) & Export-Engine (PNG & CSV)](#10-stücklisten--bom--export-engine-png--csv)
 11. [Vollständige Tastatur- & Maus-Interaktionsmatrix](#11-vollständige-tastatur--maus-interaktionsmatrix)
 12. [Detaillierte Fehlermatrix & Edge Cases](#12-detaillierte-fehlermatrix--edge-cases)
 13. [Phasenweise Implementierungs-Roadmap](#13-phasenweise-implementierungs-roadmap)
@@ -57,28 +53,24 @@
 
 ---
 
-## 1. Präambel, Mission & Design-Philosophie
+## 1. Präambel, Mission & Design-Philosophie (Zero-Clutter CAD)
 
 ### 1.1 Mission von PerfCraft
-PerfCraft ist eine spezialisierte, hochpräzise Desktop-CAD-Anwendung für Elektronikentwickler, Maker und Hobbyisten zur Planung, Verdrahtung und Dokumentation von Lochrasterplatinen (Perfboards / Pad-per-Hole Prototypenboards).
+PerfCraft ist eine intuitive, visuell aufgeräumte Desktop-Applikation zur schnellen Konzeption, Verdrahtung und Dokumentation von Lochraster-Schaltungen (Perfboards / Pad-per-Hole Prototypenboards).
 
-Klassische EDA-Werkzeuge (wie KiCad, Altium oder Eagle) sind primär auf die industrielle Fertigung von Mehrlagen-Leiterplatten (PCBs) ausgelegt. Sie zwingen Nutzer durch komplexe Schematics, Netzlisten, ERC-Prüfungen und Gerber-Exporte. Bei der praktischen Labor- und Prototypenentwicklung auf Lochrasterplatten hingegen zählt die **direkte räumliche Platzierung**, die **mechanische Passgenauigkeit von Bauteilen im 2.54 mm Raster**, die **gezielte Verlegung von isolierten Schaltdrähten auf der Bauteilseite** und das **Ziehen von Zinnbrücken auf der Lötseite**.
+Viele klassische Elektronikprogramme (wie KiCad, Eagle oder LochMaster) wirken auf den ersten Blick überfüllt: Dutzende verschachtelte Untermenüs, unübersichtliche Werkzeugkaskaden, kryptische Icons und übertriebener Pseudofotorealismus erschweren den schnellen Einstieg.
 
-PerfCraft verbindet das legendäre Workbench-Workflow-Konzept des Branchenstandards **ABACOM LochMaster 4.0** mit modernen Softwarestandards:
-- **Material Design 2 Dark Theme** für ermüdungsfreies Arbeiten im Labor.
-- **Flüssige Vektorgrafik-Canvas-Engine** mit stufenlosem Zoom und verzögerungsfreiem Panning.
-- **Robuste Java 21 LTS & JavaFX Plattform** mit nativer Ausführbarkeit auf Windows und Linux.
-- **Klares, menschenlesbares JSON-Projektformat (`.perf`)** für maximale Zukunfts- und Versionsverwaltungssicherheit.
-
-### 1.2 Die LochMaster-DNA
-PerfCraft adaptiert zentrale Kernparadigmen von LochMaster:
-1. **Das Board ist die Realität:** Es gibt keine Trennung zwischen Schaltplan und Platinenlayout; der Anwender arbeitet direkt auf dem physikalischen Abbild der Lochrasterplatine.
-2. **Physikalische 2-Ebenen-Metapher:**
-   - **Bauteilseite (Top Layer):** Hier liegen die Bauteilkörper, Silkscreen-Beschriftungen und isolierte Schaltdrähte / Jumper.
-   - **Lötseite (Bottom Layer):** Hier liegen die Kupfer-Pads, blanke Drähte und verlötete Zinnbrücken.
-   - **Röntgenansicht (X-Ray Mode):** Gleichzeitiges Betrachten beider Seiten mit transparenter Durchsicht – exakt wie beim Gegenlicht-Halten einer echten Platine.
-3. **Dual-Einheiten-Lineale (Rulers):** Gleichzeitige Anzeige von Loch-Koordinaten (Index 1..N) und echten Millimeter-/Zoll-Abmessungen mit mitfahrenden Cursor-Markern.
-4. **Haptische CAD-Werkzeugleiste:** Direkter Zugriff auf Auswahl, Draht, Lötbrücke, Bauteil, Text und Prüfwerkzeuge.
+**Die PerfCraft-Philosophie lautet:**
+1. **Auf den ersten Blick verständlich:** Keine überfüllten Toolbars. Jeder Anwender – vom Schüler über den Hobby-Bastler bis zum Ingenieur – versteht das Programm innerhalb von 10 Sekunden ohne Handbuch.
+2. **Kompaktes, logisches Werkzeug-Set:**
+   - **Ein Tool zum Auswählen, Verschieben und Drehen.**
+   - **Ein universelles Tool für Leitungen:** Egal ob isoliertes farbiges Kabel oder blanker Silberdraht / Lötbrücke.
+   - **Ein Tool zum Platzieren von Bauteilen und Geräten:** Direktes Auswählen und Setzen auf das Lochraster.
+3. **Clean 2D Flat-Vector Design statt Kitsch:**
+   - Kein pseudofotorealistischer Glanz-Overkill, keine künstlichen Rausch-Texturen.
+   - Stattdessen: **Satte, harmonische Farben**, klares Platinengrün, saubere Kupfer-Pads mit Bohrung, eindeutig erkennbare Bauteil-Silhouetten und **echte, exakt berechnete Farbbänder auf den Widerständen**.
+4. **Kernbauteile im Fokus:**
+   - Neben Widerständen, Kondensatoren, LEDs und ICs sind **Taster (4-Pin Kurzhubtaster)** eine elementare Standard-Komponente.
 
 ---
 
@@ -86,10 +78,10 @@ PerfCraft adaptiert zentrale Kernparadigmen von LochMaster:
 
 ### 2.1 Plattform & Basis-Bibliotheken
 - **Java-Version:** Java 21 LTS (Oracle OpenJDK, Eclipse Temurin).
-- **Betriebssysteme:** Windows 10/11 (x64) & Linux (Debian, Ubuntu, Fedora, GNOME Wayland/X11).
-- **Build- & Dependency-Management:** Apache Maven 3.9+ (`pom.xml`).
-- **UI-Framework:** JavaFX 21.0.2 (Module: `javafx.controls`, `javafx.graphics`, `javafx.fxml`).
-- **Serialisierung & JSON-Parsing:** Jackson Databind 2.17.0 (`com.fasterxml.jackson.core:jackson-databind`).
+- **Betriebssysteme:** Windows 10/11 & Linux (vollwertig cross-platform ohne native DLL-Abhängigkeiten).
+- **Build-Tool:** Apache Maven 3.9+ (`pom.xml`).
+- **UI-Framework:** JavaFX 21.0.2 (`javafx-controls`, `javafx-graphics`, `javafx-fxml`).
+- **Serialisierung:** Jackson Databind 2.17.0 (`com.fasterxml.jackson.core:jackson-databind`).
 - **Testing:** JUnit 5.10.2 Jupiter (`org.junit.jupiter:junit-jupiter`).
 
 ### 2.2 Strikte Maven- & Code-Konventionen
@@ -97,495 +89,359 @@ PerfCraft adaptiert zentrale Kernparadigmen von LochMaster:
 - **ArtifactId:** `perfcraft`
 - **Version:** `1.0.0-SNAPSHOT`
 - **Root-Package:** `de.exit.perfcraft`
-- **Source-Verzeichnis:** Alle Klassen liegen unter `src/main/java/de/exit/perfcraft/...`.
-- **Ressourcen:** Alle Assets (CSS, SVG, Icons) liegen unter `src/main/resources/...`.
-- **Verpackung:** `maven-shade-plugin` erzeugt eine ausführbare Fat-JAR unter `target/perfcraft-1.0.0-all.jar`.
-- **Direkter Start:** `mvn exec:java` startet die Anwendung via `de.exit.perfcraft.Main`.
+- **Verzeichnisstruktur:** Alle Java-Klassen liegen unter `src/main/java/de/exit/perfcraft/...`.
+- **Packaging:** `maven-shade-plugin` erzeugt eine ausführbare Fat-JAR unter `target/perfcraft-1.0.0-all.jar`.
+- **Direkter Start:** `mvn exec:java` startet via `de.exit.perfcraft.Main`.
 
 ### 2.3 UI-Design & Material Design 2 Dark Standard
-- **Elevation & Flächenfarben:**
-  - Background (Basis): `#121212`
-  - Surface Level 1 (Workbench-Rahmen & Toolbars): `#1E1E1E`
-  - Surface Level 2 (Dock-Panels, Dialoge & Karten): `#242424`
-  - Surface Level 3 (Inputs, Dropdowns & Selektionen): `#2C2C2C`
-  - Hover-Zustand: `#383838`
-- **Kantenrundungen:** Durchgängig `4px` für Karten, Buttons, Eingabefelder und Tooltips.
+- **Elevation-Farben:**
+  - Base / Background: `#121212`
+  - Surface Level 1 (Toolbars, Leisten): `#1E1E1E`
+  - Surface Level 2 (Karten, Dialoge, Sidebar): `#242424`
+  - Surface Level 3 (Inputs, aktive Buttons): `#2C2C2C`
+  - Hover: `#353535`
+- **Kantenrundungen:** Durchgängig `4px`.
 - **Trennlinien:** `1px solid #2C2C2C`.
-- **Primärfarbe (Perfboard Green):** `#00C853` (Akzent) / `#43A047` (Gedämpft). Text auf Primärfarbe zwingend Kontrastverhältnis >= 4.5:1.
-- **Perfboard Canvas Farbpalette:**
-  - Substrat dunkelgrün: `#1B4D2E`
-  - Substrat-Kantenfase: `#143922`
-  - Kupfer-Pads (Außenring): `#D4AF37` (Mattgold) / `#C87D2E` (Kupfer)
-  - Pad-Innenbohrung: `#0D1F14` (Lochschatten)
-  - Lötbrücken (Lötzinn): `#CFD8DC` mit feinem Glanz `#ECEFF1`
-  - Silkscreen-Aufdruck: `#F5F5F5` mit feiner Kontur
-- **Strikte Bezeichnungsregel:** Niemals Erklärungen, Klammerzusätze oder Richtwerte in Buttons, Menüs oder Dropdowns rendern (z. B. nur `"Top Layer"`, niemals `"Top Layer (Bauteilseite)"`).
+- **Primärfarbe (Perfboard Green):** `#00C853` (Akzent) / `#43A047`.
+- **Keine Klammerzusätze in Labels:** Buttons und Auswahlen tragen saubere Fachbegriffe (`"Kabel"`, `"Silberdraht"`, `"Widerstand"`, `"Taster"`), niemals umgangssprachliche Erklärungen im Label.
 
 ### 2.4 Anti-Halluzinations-Regeln
 - ❌ **Kein Gradle** – Ausschließlich Apache Maven mit `pom.xml`.
-- ❌ **Kein Swing / AWT** – Keine Verwendung von `java.awt.Desktop` oder Swing-Komponenten; ausschließlich JavaFX.
-- ❌ **Keine ungeprüften Bibliotheken** – Keine externen Drawing-Engines einbinden; der Canvas wird nativ mit JavaFX `GraphicsContext` gerendert.
-- ❌ **Keine monolithischen Dateien** – Jede Klasse hat eine klare Einzelverantwortung (Single Responsibility) und bleibt überschaubar (< 300 Zeilen).
+- ❌ **Kein Swing / AWT** – Kein `java.awt.Desktop`, ausschließlich JavaFX.
+- ❌ **Keine externen Drawing-Libraries** – Nativer JavaFX `GraphicsContext` mit sauberem Vektor-Rendering.
+- ❌ **Kein Overengineering** – Übersichtliche, modulare Klassen unter 250 Zeilen.
 
 ---
 
-## 3. UI-Layout nach LochMaster-Vorbild (CAD-Workbench Architektur)
+## 3. Aufgeräumtes UI-Layout (Klar & Sofort Verständlich)
 
-### 3.1 Gesamtlayout & Responsive Aufteilung
-Das Workbench-Fenster nutzt ein hierarchisches `BorderPane`-Layout, das die Arbeitsfläche in klar definierte Funktionsbereiche gliedert:
+### 3.1 Das 4-Zonen-Layout auf einen Blick
+
+Das Layout ist bewusst extrem aufgeräumt gehalten:
 
 ```text
 +---------------------------------------------------------------------------------------------------------+
-| [Menüleiste] Datei   Bearbeiten   Ansicht   Platine   Bauteile   Extras   Hilfe                         |
+| [Menü] Datei   Bearbeiten   Ansicht   Platine   Hilfe                                                   |
 +---------------------------------------------------------------------------------------------------------+
-| [Top Command Bar]                                                                                       |
-| [Neu] [Öffnen] [Speichern] | [Undo] [Redo] | [Top] [Bottom] [X-Ray] | [Zoom In] [Zoom Out] [1:1] [Fit]  |
+| [Header-Bar] [Neu] [Öffnen] [Speichern] | [Undo] [Redo] | Ansicht: [Bauteile] [Lötseite] [Beide] | Zoom |
 +---+-------------------------------------------------------------------------------+---------------------+
-| T | [Horizontales Lineal / Ruler: Loch-Index 1..N & mm-Skala mit Cursor-Marker]   | [Rechte Dock-Leiste]|
-| O +---+---------------------------------------------------------------------------+ [Tabs:]             |
-| O | V |                                                                           | [Katalog]           |
-| L | e |                                                                           | [Inspektor]         |
-| B | r |                                                                           | [Projekt-Baum]      |
-| O | t |                       ZENTRALER PERFBOARD CANVAS                          +---------------------+
-| X | . |                                                                           | AKTIVER TAB-INHALT  |
-|   |   |        (Fotorealistisches Lochraster, Kupfer-Pads,                       |                     |
-| [S| R |         Leiterbahnen, Bauteile mit Farbringen,                            | - Bauteilsuche      |
-| e | u |         stufenloser Zoom & Pan)                                           | - Parameter-Inputs  |
-| l | l |                                                                           | - Baum-Hierarchie   |
-| e | e |                                                                           |                     |
-| c | r |                                                                           |                     |
-| t] |                                                                           |                     |
+|   | [Horizontales Lineal: Loch 1..N mit mitfahrendem Zeiger-Marker]               | [Rechte Seitenleiste|
+| T +---+---------------------------------------------------------------------------+ [Bauteil-Auswahl]   |
+| O | V |                                                                           |                     |
+| O | e |                                                                           | (o) Widerstand      |
+| L | r |                                                                           | ( ) Kondensator     |
+| B | t |                       ZENTRALER PERFBOARD CANVAS                          | ( ) LED             |
+| A | . |                                                                           | ( ) Diode           |
+| R |   |               - Klares grünes Lochraster                                  | ( ) Transistor      |
+|   | R |               - Echte Widerstandsfarbringe                                | ( ) IC (DIP)        |
+| [1| u |               - Bunte Kabel & Silberdraht                                 | ( ) Taster          |
+|  2| l |               - Flüssiger Zoom & Pan                                      +---------------------+
+|  3| e |                                                                           | [Eigenschaften]     |
+|  ]| r |                                                                           | Bezeichner: R1      |
+|   |   |                                                                           | Wert: 10k Ω         |
+|   |   |                                                                           | [Farbringe-Vorschau]|
 +---+---+---------------------------------------------------------------------------+---------------------+
-| [Statusleiste] Loch: X: 14, Y: 8 | Realmaß: 35.56 x 20.32 mm | Ebene: Top Layer | Zoom: 125% [====]     |
+| [Statusleiste] Loch: X: 14, Y: 8 | Realmaß: 35.56 x 20.32 mm | Ebene: Bauteilseite | Zoom: 125%          |
 +---------------------------------------------------------------------------------------------------------+
 ```
 
-### 3.2 Menüleiste (Menüs & Aktionen)
-Die Menüleiste (`TopMenuBar`) stellt den kompletten Zugriff auf alle Applikationsbefehle bereit:
+### 3.2 Menüleiste (Schlank & Fokussiert)
+Die Menüleiste enthält nur die wirklich nötigen Funktionen:
+- **Datei:** *Neu...* (`Strg+N`), *Öffnen...* (`Strg+O`), *Speichern* (`Strg+S`), *Speichern unter...*, *Export als Bild (PNG)*, *Export als Stückliste (CSV)*, *Beenden*.
+- **Bearbeiten:** *Rückgängig* (`Strg+Z`), *Wiederholen* (`Strg+Y`), *Löschen* (`Entf`), *Alles auswählen* (`Strg+A`).
+- **Ansicht:** *Bauteilseite (Oben)* (`F1`), *Lötseite (Unten)* (`F2`), *Beide Ebenen* (`F3`), *Originalgröße 100%* (`Strg+0`), *Ganzes Board anzeigen* (`Strg+F`).
+- **Platine:** *Größe ändern...* (Spalten & Zeilen), *Platine leeren*.
+- **Hilfe:** *Tastenkürzel*, *Über PerfCraft*.
 
-1. **Datei:**
-   - *Neu...* (`Strg+N`): Öffnet den `NewBoardDialog`.
-   - *Öffnen...* (`Strg+O`): Lädt eine `.perf`-Projektdatei über den systemnativen FileChooser.
-   - *Speichern* (`Strg+S`): Speichert das aktuelle Projekt direkt.
-   - *Speichern unter...* (`Strg+Umschalt+S`): Speichert unter neuem Pfad.
-   - *Trennlinie*
-   - *Exportieren als Bild (PNG)...*: Exportiert die Platine in frei wählbarer Auflösung.
-   - *Exportieren als Stückliste (CSV)...*: Erstellt eine konsolidierte Bauteilliste.
-   - *Trennlinie*
-   - *Beenden* (`Alt+F4`): Prüft auf ungespeicherte Änderungen und schließt PerfCraft.
-2. **Bearbeiten:**
-   - *Rückgängig* (`Strg+Z`): Macht die letzte Aktion im `CommandHistory` rückgängig.
-   - *Wiederholen* (`Strg+Y`): Führt die zuletzt verworfene Aktion wieder aus.
-   - *Trennlinie*
-   - *Ausschneiden* (`Strg+X`): Kopiert selektierte Komponenten in die Zwischenablage und löscht sie.
-   - *Kopieren* (`Strg+C`): Kopiert selektierte Komponenten.
-   - *Einfügen* (`Strg+V`): Fügt Komponenten an Mausposition ein.
-   - *Löschen* (`Entf`): Löscht alle markierten Objekte.
-   - *Alles auswählen* (`Strg+A`): Selektiert alle Bauteile und Leiterbahnen.
-3. **Ansicht:**
-   - *Bauteilseite (Top Layer)* (`F1`): Zeigt ausschließlich die Oberseite der Platine.
-   - *Lötseite (Bottom Layer)* (`F2`): Zeigt ausschließlich die Unterseite der Platine.
-   - *Röntgenansicht (X-Ray)* (`F3`): Durchscheinende Ansicht beider Ebenen.
-   - *Trennlinie*
-   - *Einzoomen* (`Strg++` / Mausrad oben): Erhöht den Zoom-Faktor um 15%.
-   - *Auszoomen* (`Strg+-` / Mausrad unten): Verringert den Zoom-Faktor um 15%.
-   - *Originalgröße 100%* (`Strg+0`): Setzt den Maßstab exakt auf 1:1 zurück.
-   - *Ganzes Board anzeigen* (`Strg+F`): Passt Zoom und Pan so an, dass das Board zentriert den Canvas füllt.
-   - *Trennlinie*
-   - *Lineale ein-/ausblenden* (`Strg+R`): Schaltet die horizontalen und vertikalen Rulers um.
-   - *Gitterbeschriftung umschalten*: Zahlen (1..N) oder Buchstaben/Zahlen (A..Z, 1..N).
-4. **Platine:**
-   - *Platinengröße ändern...*: Ändert Spalten- und Zeilenzahl des bestehenden Projekts.
-   - *Platine um 90° drehen*: Rotiert die gesamte Platine inklusive aller Bauteile im Uhrzeigersinn.
-   - *Platine horizontal spiegeln*: Spiegelt das Layout.
-5. **Bauteile:**
-   - *Bauteil im Uhrzeigersinn drehen* (`R`): Rotiert selektierte Bauteile um 90°.
-   - *Widerstands-Farbcode-Rechner...*: Öffnet ein schnelles Hilfstool zur Farbcode-Ermittlung.
-   - *Automatisch neu nummerieren*: Vergibt Bezeichner (R1, R2, C1, C2) geordnet von links oben nach rechts unten.
-6. **Hilfe:**
-   - *Tastaturkürzel*: Übersicht aller Schnelltasten.
-   - *Über PerfCraft*: Dialog mit Version, Entwickler-Credits und Lizenzhinweisen.
+### 3.3 Obere Befehlsleiste (Header-Bar)
+Direkt unter dem Menü liegt eine aufgeräumte Befehlsleiste:
+- **Projekt:** `Neu`, `Öffnen`, `Speichern`.
+- **Verlauf:** `Rückgängig`, `Wiederholen`.
+- **Ebenen-Wahlschalter (Segment-Button):**
+  - `Bauteilseite`: Zeigt Komponenten und farbige Kabel oben.
+  - `Lötseite`: Zeigt Kupfer-Pads und Silberdraht/Lötbrücken unten.
+  - `Beide`: Halbtransparente Röntgenansicht beider Seiten.
+- **Zoom-Gruppe:** `Vergrößern`, `Verkleinern`, `Einpassen`.
 
-### 3.3 Befehlsleiste (Top Command Bar)
-Die Befehlsleiste (`TopCommandBar`) liegt direkt unter dem Menü und enthält ergonomische Schnellzugriff-Buttons mit 16x16 Lucide-Vektor-Icons:
-- **Dateigruppe:** `Neu`, `Öffnen`, `Speichern`.
-- **Historiegruppe:** `Rückgängig` (mit Tooltip des letzten Befehls), `Wiederholen`.
-- **Ebenengruppe:** Segmentierter 3-Wege-Schalter für `Top Layer`, `Bottom Layer` und `X-Ray`.
-- **Zoomgruppe:** `Vergrößern`, `Verkleinern`, `100%`, `Einpassen`.
+### 3.4 Die 3 Kern-Werkzeuge (Linke Toolbar)
+Die linke Werkzeugleiste enthält exakt **3 große, eindeutige Schaltflächen**:
+1. **Auswahl & Bewegen (`V`):** Anklicken, Verschieben, Drehen (`R`), Löschen (`Entf`).
+2. **Kabel & Silberdraht (`W`):** Zieht Verbindungen von Loch zu Loch. Schnelle Umschaltung direkt in der Leiste zwischen:
+   - **Kabel (isoliert, bunt)** für die Oberseite.
+   - **Silberdraht (blank)** für die Unterseite / Lötstellen.
+3. **Bauteil platzieren (`C`):** Aktiviert das Platzieren des rechts ausgewählten Bauteils.
 
-### 3.4 Ebenen-Steuerung (Bauteilseite, Lötseite, Röntgen/X-Ray)
-Die Umschaltung der Arbeits- und Anzeigeebene ist das Herzstück des LochMaster-Prinzips:
-1. **Top Layer (Bauteilseite):**
-   - Fokus auf Bauteilkörpern, Silkscreen, Beschriftungen und isolierten Jumper-Drähten.
-   - Die Lötstellen und Kupfer-Pads werden als Basishintergrund angezeigt.
-   - Zinnbrücken auf der Lötseite sind unsichtbar oder maximal mit 10% Deckkraft angedeutet.
-2. **Bottom Layer (Lötseite):**
-   - Fokus auf Kupfer-Pads, Lötstellen und silbernen Zinnbrücken.
-   - Die Bauteile auf der Oberseite werden ausgeblendet oder als feine Silhouetten dargestellt.
-   - Die Platine wird horizontal gespiegelt dargestellt oder transparent durchleuchtet, sodass die Orientierung intuitiv bleibt.
-3. **X-Ray / Röntgen-Modus:**
-   - Beide Ebenen sind voll sichtbar: Die Bauteile auf der Oberseite werden mit 65% Deckkraft semitransparent gerendert.
-   - Sämtliche Lötbrücken der Unterseite scheinen klar und kontrastreich durch.
-   - Ideal für das Verdrahten komplexer Schaltungen, um Leiterbahn-Kollisionen unter Bauteilen sofort zu erkennen.
+### 3.5 Rechter Bauteil-Katalog & Eigenschaften-Inspektor
+Die rechte Seitenleiste ist in zwei übersichtliche Abschnitte unterteilt:
+- **Oben (Bauteil-Wahl):**
+  - Schnelle Liste der verfügbaren Komponenten: *Widerstand*, *Kondensator*, *LED*, *Diode*, *Transistor*, *IC (DIP-8/16)*, **Taster (6x6 mm)**.
+  - Klick auf einen Bauteiltyp wählt ihn sofort für das Platzierungs-Werkzeug vor.
+- **Unten (Eigenschaften des selektierten Objekts):**
+  - **Bezeichner:** z. B. `R1`, `C1`, `SW1`, `IC1`.
+  - **Wert:** z. B. `10k`, `100n`, `NE555`, `Rot`.
+  - **Live-Vorschau der Farbringe:** Bei Widerständen werden die 4 Farbbänder direkt im Inspektor als kleine Grafik gerendert.
+  - **Drehung:** Button zum Drehen um 90° (`R`).
 
-### 3.5 Linke CAD-Toolbox (Werkzeugleiste)
-Die vertikale Leiste (`ToolboxBar`) am linken Fensterrand ist 48 Pixel breit und enthält 8 hochspezialisierte Werkzeug-Icons:
-1. **Auswahl (`V`):** Selektieren, Verschieben, Mehrfachauswahl via Gummiband-Rechteck.
-2. **Jumper-Draht (`W`):** Verlegen isolierter Schaltdrähte auf dem Top Layer.
-3. **Lötbrücke (`T`):** Ziehen von verlöteten Zinnbrücken auf dem Bottom Layer.
-4. **Bauteil (`C`):** Direktes Platzieren des im Katalog aktiven Bauteils.
-5. **Leiterbahn-Trenner (`K`):** Lochraster-Trennung (für spätere Streifenraster-Erweiterung vorbereitet).
-6. **Text (`X`):** Platzieren von frei konfigurierbaren Beschriftungstexten auf dem Silkscreen.
-7. **Verbindungsprüfer (`N`):** Klick auf einen Pin hebt das gesamte elektrisch verbundene Netz farbig hervor.
-8. **Löschen (`Entf`):** Chirurgisches Löschen des angeklickten Elements.
+### 3.6 Der Perfboard Canvas (Clean 2D Flat-Vector Stil)
+Der Canvas verzichtet auf übertriebene 3D-Effekte und setzt auf maximale visuelle Klarheit:
+- **Substrat:** Ein angenehmes, sattes Platinengrün (`#1B4D2E`).
+- **Kupfer-Pads:** Saubere, gold-kupferne Kreise (`#D4AF37`) mit schwarzem Bohrungs-Zentrum (`#121212`).
+- **Bauteilkörper:** Klare Vektorformen mit hohem Kontrast:
+  - Widerstand: Beiger Zylinder mit exakten Farbringen.
+  - Taster: Quadratischer grauer Rahmen mit zentriertem rundem Tasterknopf und 4 Pins.
+  - Kondensator: Runder Zylinder mit weißem Minuspol-Streifen oder gelbe Scheibe.
+  - LED: Farbiger transparenter Kreis mit Abflachung.
+  - IC: Dunkles Rechteck mit Pin-1-Kerbe.
+- **Leitungen:**
+  - Isolierte Kabel: Kräftige, satte Farben (Rot, Schwarz, Blau, Gelb, Grün, Weiß).
+  - Silberdraht / Lötbrücken: Silberner Vektorstrich (`#CFD8DC`) zwischen benachbarten oder entfernten Löchern.
 
-### 3.6 Dynamische Dual-Einheiten-Lineale (Ruler Engine)
-Um den zentralen Canvas liegen das **horizontale Lineal (`TopRuler`)** und das **vertikale Lineal (`LeftRuler`)**:
-- **Abmessung:** 24 Pixel Höhe (horizontal) bzw. 28 Pixel Breite (vertikal).
-- **Zwei Skalen gleichzeitig:**
-  - **Primärskala (Loch-Index):** Große Zahlen `1, 2, 3 ... N` zentriert über jeder Lochspalte/Lochzeile.
-  - **Sekundärskala (Millimeter):** Feine Teilstriche mit mm-Werten (0 mm, 2.54 mm, 5.08 mm, 10.0 mm).
-- **Echtzeit-Tracking-Marker:**
-  - Ein 2px breiter, leuchtend grüner Akzentstrich (`#00C853`) auf beiden Linealen wandert synchron mit dem Mauszeiger mit.
-  - Dadurch sieht der Entwickler sofort und ohne Nachzählen, in welcher Lochspalte und Lochzeile sich der Cursor befindet.
-- **Nullpunkt:** Exakt an der oberen linken Ecke des ersten Lochs (Koordinate 0,0).
-
-### 3.7 Zentraler Perfboard Canvas & Substrat-Rendering
-Die Zeichenfläche (`PerfBoardCanvas`) rendert die Platine fotorealistisch mit Subpixel-Genauigkeit:
-- **Platinen-Körper:** Grünes Epoxid-Substrat (`#1B4D2E`) mit abgerundeten Ecken und umlaufender Fase.
-- **Kupfer-Pads:** Ringförmige Pads um jedes Loch mit gold/kupfernem Glanz (`#D4AF37`), feiner dunkler Außenkante (`#8C6D1F`) und Innenkreis für die Bohrung (`#0D1F14`).
-- **Snapping-Engine:** Der Mauszeiger rastet magnetisch auf dem nächstgelegenen Loch-Mittelpunkt ein (Fangradius 60% des Lochabstands).
-
-### 3.8 Rechte Dock-Sidebar (Katalog, Inspektor, Projekt-Baum)
-Die rechte Seitenleiste ist 280 Pixel breit, einklappbar und über drei Material-Tabs organisiert:
-- **Tab 1: Bauteil-Katalog (`CatalogPanel`):**
-  - Live-Suchfeld oben mit Schnellfilterung.
-  - Akkordeon-Baumstruktur: *Widerstände*, *Kondensatoren*, *Dioden & LEDs*, *Transistoren*, *ICs & Sockel*, *Steckverbinder*, *Mechanik*.
-  - Grafische Miniatur-Vorschau des ausgewählten Bauteils mit Maßangabe (z. B. "Raster 4 Löcher = 10.16 mm").
-- **Tab 2: Eigenschafts-Inspektor (`InspectorPanel`):**
-  - Passt sich dynamisch an das aktuell markierte Objekt an:
-    - Bauteil-Bezeichner (z. B. `R1`, `C3`, `IC1`).
-    - Elektrischer Wert (z. B. `10k`, `100n`, `NE555`).
-    - Einheit (`Ω`, `F`, `H`, etc.).
-    - Lochraster-Spannweite (Anzahl Löcher zwischen den Pins).
-    - Ausrichtung (Drehung in 90°-Schritten: 0°, 90°, 180°, 270°).
-    - Draht-/Körperfarbe.
-- **Tab 3: Projekt-Objektbaum (`ProjectTreePanel`):**
-  - Hierarchische Auflistung sämtlicher auf dem Board verbauter Elemente.
-  - Gruppiert nach Bauteilen, Jumper-Drähten und Lötbrücken.
-  - Klick auf ein Element im Baum selektiert und zentriert es sofort auf dem Canvas.
-
-### 3.9 Echtzeit-Statusleiste & Messdaten
-Die Fußleiste (`StatusBar`) ist 28 Pixel hoch und liefert permanente Messwerte:
-- **Loch-Koordinaten:** `Loch: X: 14, Y: 8` (1-basiert für den Nutzer, 0-basiert intern).
-- **Metrische Position:** `Pos: 35.56 mm, 20.32 mm` (bezogen auf den Platinen-Nullpunkt).
-- **KiCad-Style Relativmessung:** `ΔX: +4 (10.16 mm) | ΔY: -2 (-5.08 mm) | Dist: 11.36 mm | Winkel: -26.6°` (Nullpunkt setzbar mit `Leertaste`).
-- **Aktiver Layer:** `Ebene: Bauteilseite (Top)`.
-- **Zoom-Steuerung:** Prozentanzeige (`125%`) mit integriertem Schieberegler.
-
-### 3.10 KiCad-inspiriertes Appearance- & Sichtbarkeits-Panel
-Angelehnt an das moderne **KiCad Appearance Panel** verfügt PerfCraft über eine kompakte Sichtbarkeitsleiste mit schnellen Ein-Klick-Augensymbolen (👁) zur selektiven Schaltung visueller Schichten:
-- 👁 **Silkscreen (F.SilkS):** Bauteilbeschriftungen, Pin-1-Punkte, Textmarkierungen.
-- 👁 **Bauteilkörper (F.Fab):** 2D/3D-Darstellung der Gehäusekörper (Widerstände, ICs, Elkos).
-- 👁 **Top Jumper-Drähte (F.Cu Wires):** Isolierte Schaltdrähte der Bauteilseite.
-- 👁 **Ratsnest / Airwires:** Gestrichelte logische Fluglinien unvollständiger Netze.
-- 👁 **Kupfer-Pads & Bohrungen:** Pads und Löcher des Lochrasters.
-- 👁 **Bottom Lötbrücken (B.Cu Traces):** Zinnbrücken und Leiterbahnen der Lötseite.
-- 👁 **DRC-Warnmarker:** Rote/Gelbe Fehlerindikatoren bei Kollisionen oder offenen Netzen.
+### 3.7 Lineale (Rulers) & Statusleiste
+- **Lineale oben und links:** Zeigen die Loch-Nummern `1, 2, 3 ... N` und feine mm-Marken. Ein kleiner grüner Marker wandert mit dem Mauszeiger mit.
+- **Statusleiste unten:**
+  - `Loch: X: 14, Y: 8`
+  - `Maß: 35.56 mm x 20.32 mm`
+  - `Aktives Werkzeug: Kabel (Rot)`
+  - `Zoom: 125%`
 
 ---
 
-## 4. Interaktives Werkzeug-System (CAD Tools & State Machine)
+## 4. Die 3 Kern-Werkzeuge im Detail
 
-PerfCraft implementiert für die Werkzeugleiste das **State-Pattern**. Die zentrale Schnittstelle `Tool` definiert den einheitlichen Lebenszyklus für alle Benutzerinteraktionen auf der Arbeitsfläche:
+### 4.1 Werkzeug 1: Auswahl & Verschieben (`V`)
+- **Aktivierung:** Taste `V` oder Klick auf das Zeiger-Icon.
+- **Bedienung:**
+  - **Klick auf Bauteil oder Leitung:** Wählt das Element aus, hebt es mit einer feinen grünen Kontur hervor und zeigt seine Werte im rechten Inspektor an.
+  - **Ziehen (Drag & Drop):** Verschiebt das Bauteil flüssig über das Board; die Pins rasten magnetisch auf den Lochmitten ein.
+  - **Taste `R`:** Dreht das selektierte Bauteil um 90° im Uhrzeigersinn.
+  - **Taste `Entf`:** Löscht das ausgewählte Element sofort.
+  - **Gummiband-Rahmen:** Ziehen ins Leere spannt ein grünes Auswahlrechteck auf, um mehrere Bauteile gleichzeitig zu markieren und zu bewegen.
+
+### 4.2 Werkzeug 2: Universelles Draht- & Kabel-Werkzeug (`W`)
+Anstatt den Nutzer mit separaten Werkzeugen für Lötbrücken, Drähte, Jumper und Kabel zu verwirren, vereint PerfCraft alle Leitungen in **einem einzigen, intuitiven Werkzeug**:
+
+- **Aktivierung:** Taste `W` oder Klick auf das Leitungs-Icon.
+- **Typ-Umschaltung in der Leiste:**
+  - **Isoliertes Kabel:**
+    - Für die Bauteilseite (Top Layer).
+    - Schnellauswahl der Farbe: Rot (VCC), Schwarz (GND), Blau, Gelb, Grün, Weiß.
+    - Wird als satter, farbiger Leitungsstrich mit Anschlusspins gezeichnet.
+  - **Silberdraht / Brücke:**
+    - Für die Lötseite (Bottom Layer) oder blanke Brücken.
+    - Wird als silberner Leitungsstrich (`#CFD8DC`) gezeichnet.
+- **Workflow:**
+  1. Klick auf Start-Loch verankert den Beginn der Leitung.
+  2. Mausbewegung zeigt eine elastische Vorschau-Linie mit Einrasten auf Ziel-Löcher.
+  3. Optionaler Zwischenklick erzeugt einen 90°-Knick für saubere, rechtwinklige Leitungsverlegung.
+  4. Klick auf das Ziel-Loch schließt die Leitung ab.
+  5. `Escape` bricht das Ziehen jederzeit ab.
+
+### 4.3 Werkzeug 3: Bauteil-Platzierungs-Werkzeug (`C`)
+- **Aktivierung:** Taste `C` oder direkter Klick auf ein Bauteil in der rechten Auswahlliste.
+- **Workflow:**
+  1. Bauteil rechts anklicken (z. B. *Widerstand 10k* oder *Taster*).
+  2. Auf dem Canvas folgt eine saubere, halbtransparente Vorschau (Ghost) dem Mauszeiger und rastet magnetisch auf den Löchern ein.
+  3. Taste `R` dreht das Bauteil vor dem Absetzen in die gewünschte Richtung (0°, 90°, 180°, 270°).
+  4. Ein Linksklick setzt das Bauteil fest auf das Lochraster.
+  5. PerfCraft vergibt automatisch den nächsten Bezeichner (z. B. `R1` -> `R2`, `SW1` -> `SW2`).
+  6. Das Werkzeug bleibt aktiv, sodass man sofort weitere gleiche Bauteile platzieren kann; Rechtsklick oder `Escape` beendet das Platzieren.
+
+---
+
+## 5. Bauteil-Bibliothek (Inklusive Taster & Widerstands-Farbbänder)
+
+### 5.1 Taster (4-Pin Kurzhubtaster / Tactile Switch 6x6 mm)
+Der Kurzhubtaster ist eine unverzichtbare Komponente für Prototypen und wird in PerfCraft als vollwertiges Standard-Bauteil geführt:
+- **Mechanische Geometrie:**
+  - Gehäuse: 6.0 mm x 6.0 mm.
+  - Pin-Abstand: Spreizung über **3 Löcher horizontal x 2 Löcher vertikal** (oder gedreht 2x3 Löcher).
+  - Pins 1 & 2 sind intern gebrückt (Kontaktseite A), Pins 3 & 4 sind intern gebrückt (Kontaktseite B).
+- **Clean 2D Rendering:**
+  - Quadratischer Gehäusekörper in Dunkelgrau (`#37474F`).
+  - Vier metallische Lötfähnchen (`#B0BEC5`) an den Ecken, die in den Loch-Bohrungen verankert sind.
+  - Zentrierter, runder Tasterknopf in Schwarz (`#212121`) mit feiner Kontur.
+  - Standard-Bezeichner: `SW1`, `SW2` (Switch).
+
+```text
+       Pin 1 (o)-------(o) Pin 2  (intern verbunden A)
+             |  [ (o) ]  |        (Runder Knopf)
+       Pin 3 (o)-------(o) Pin 4  (intern verbunden B)
+```
+
+### 5.2 Widerstände (Axial 0207 mit echten Farbringen)
+- **Geometrie:** Standard-Spannweite 4 Löcher (10.16 mm) oder 5 Löcher (12.7 mm).
+- **Clean 2D Rendering:**
+  - Beigefarbener Zylinderkörper (`#D7CCC8`).
+  - Zwei silberne Anschlussbeinchen (`#B0BEC5`).
+  - **Echte Farbbänder:** Vier exakt berechnete Farbringe entsprechend dem eingestellten Ohm-Wert (z. B. Braun-Schwarz-Orange-Gold für 10kΩ).
+  - Standard-Bezeichner: `R1`, `R2`.
+
+```text
+(Pin 1)-----[ = | = | = | = ]-----(Pin 2)
+  X=0          Farbringe            X=4
+```
+
+### 5.3 Kondensatoren (Keramik & Elko)
+- **Keramikkondensator (MLCC / Scheibe):**
+  - Spannweite: 1 oder 2 Löcher.
+  - Gelb-orangefarbener flacher Block (`#FFA726`) mit Kapazitätsaufdruck (z. B. `104`).
+- **Elektrolytkondensator (Radialer Elko):**
+  - Spannweite: 1 bis 2 Löcher.
+  - Runder Zylinderkopf (Draufsicht) in Dunkelblau (`#1565C0`) mit weißem Minuspol-Streifen (`- - -`) zur klaren Polaritätskontrolle.
+
+### 5.4 Dioden & LEDs
+- **Diode (1N4148 / 1N4007):**
+  - Spannweite: 3 bis 4 Löcher.
+  - Zylindrischer Körper mit gut sichtbarem weißem oder schwarzem **Kathodenring**.
+- **Leuchtdiode (LED 3mm / 5mm):**
+  - Spannweite: 1 Loch zwischen Anode (+) und Kathode (-).
+  - Farbiger Kreis (Rot, Grün, Gelb, Blau, Kaltweiß) mit **Abflachung** an der Kathodenseite.
+
+### 5.5 Transistoren (TO-92 Dreibeiner)
+- **Geometrie:** 3 Pins in einer Reihe (Lochabstand 2.54 mm: Pin 1, 2, 3 z. B. E-B-C).
+- **Rendering:** Schwarzes Halbkreis-Gehäuse mit planer Vorderseite und Beschriftung (z. B. `BC547`).
+
+### 5.6 Integrierte Schaltungen (DIL/DIP-8 & DIP-16 Sockel/ICs)
+- **Geometrie:**
+  - DIP-8: 2 Reihen à 4 Pins, Reihenabstand 3 Löcher (7.62 mm).
+  - DIP-16: 2 Reihen à 8 Pins, Reihenabstand 3 Löcher (7.62 mm).
+- **Rendering:**
+  - Dunkelgrauer IC-Körper (`#263238`).
+  - Halbkreisförmige Kerbe (Notch) an Kopfseite und Punkt an Pin 1.
+  - Zentrierte Beschriftung (z. B. `NE5532`, `TL072`).
+
+### 5.7 Stiftleisten & Klemmen
+- **Stiftleisten:** 1x2 bis 1x8 Pins mit schwarzen Isolatorkörpern und goldenen Kontakten.
+- **Schraubklemmen:** 2-polig und 3-polig im Raster 5.08 mm (2 Löcher) in PCB-Grün mit Schraubenöffnungen.
+
+### 5.8 Konkrete 2D-Zeichenroutinen (`ComponentRenderer.java`)
+
+Die Klasse `ComponentRenderer` setzt das Clean 2D Flat-Vector Prinzip in performantem JavaFX-Code um:
 
 ```java
-package de.exit.perfcraft.ui.tool;
+package de.exit.perfcraft.ui.canvas;
 
-import de.exit.perfcraft.model.HoleCoord;
+import de.exit.perfcraft.model.PlacedComponent;
+import de.exit.perfcraft.service.ResistorColorCode;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.paint.Color;
 
-public interface Tool {
-    void onMouseDown(MouseEvent e, HoleCoord gridPos);
-    void onMouseMove(MouseEvent e, HoleCoord gridPos);
-    void onMouseDragged(MouseEvent e, HoleCoord gridPos);
-    void onMouseUp(MouseEvent e, HoleCoord gridPos);
-    void onKeyPressed(KeyEvent e);
-    void renderOverlay(GraphicsContext gc, CoordinateTransform transform);
-    void reset();
-    String getStatusMessage();
+public class ComponentRenderer {
+
+    /**
+     * Rendert einen 4-Pin Kurzhubtaster (6x6 mm) im Clean 2D Vektorstil.
+     */
+    public static void renderTactileSwitch(GraphicsContext gc, CoordinateTransform ct, PlacedComponent comp) {
+        double x1 = ct.gridToScreenX(comp.getStart().x());
+        double y1 = ct.gridToScreenY(comp.getStart().y());
+        double hs = ct.getHoleSpacingPx();
+
+        // 3x2 Löcher Bounding-Box
+        double width = hs * 2.6;
+        double height = hs * 1.6;
+        double centerX = x1 + (hs * 1.0);
+        double centerY = y1 + (hs * 0.5);
+
+        // 1. Metall-Pins an den 4 Ecken
+        gc.setFill(Color.web("#B0BEC5"));
+        double pinSize = hs * 0.35;
+        gc.fillRect(x1 - pinSize/2, y1 - pinSize/2, pinSize, pinSize);
+        gc.fillRect(x1 + (hs * 2) - pinSize/2, y1 - pinSize/2, pinSize, pinSize);
+        gc.fillRect(x1 - pinSize/2, y1 + hs - pinSize/2, pinSize, pinSize);
+        gc.fillRect(x1 + (hs * 2) - pinSize/2, y1 + hs - pinSize/2, pinSize, pinSize);
+
+        // 2. Quadratischer Gehäusekörper
+        gc.setFill(Color.web("#37474F"));
+        gc.fillRoundRect(centerX - width/2, centerY - height/2, width, height, 4, 4);
+        gc.setStroke(Color.web("#546E7A"));
+        gc.setLineWidth(1.5);
+        gc.strokeRoundRect(centerX - width/2, centerY - height/2, width, height, 4, 4);
+
+        // 3. Metall-Deckplatte
+        double plateW = width * 0.75;
+        double plateH = height * 0.75;
+        gc.setFill(Color.web("#78909C"));
+        gc.fillRoundRect(centerX - plateW/2, centerY - plateH/2, plateW, plateH, 3, 3);
+
+        // 4. Zentrierter runder Tasterknopf
+        double btnRadius = Math.min(plateW, plateH) * 0.38;
+        gc.setFill(Color.web("#212121"));
+        gc.fillOval(centerX - btnRadius, centerY - btnRadius, btnRadius * 2, btnRadius * 2);
+        gc.setStroke(Color.web("#424242"));
+        gc.setLineWidth(1.0);
+        gc.strokeOval(centerX - btnRadius, centerY - btnRadius, btnRadius * 2, btnRadius * 2);
+
+        // 5. Bezeichner Text
+        gc.setFill(Color.web("#ECEFF1"));
+        gc.fillText(comp.getDesignator(), centerX - 10, centerY - height/2 - 3);
+    }
+
+    /**
+     * Rendert einen axialen Widerstand mit echten, akkuraten Farbringen.
+     */
+    public static void renderResistor(GraphicsContext gc, CoordinateTransform ct, PlacedComponent comp) {
+        double x1 = ct.gridToScreenX(comp.getStart().x());
+        double y1 = ct.gridToScreenY(comp.getStart().y());
+        double x2 = ct.gridToScreenX(comp.getEnd().x());
+        double y2 = ct.gridToScreenY(comp.getEnd().y());
+
+        // 1. Silberne Anschlussdrähte
+        gc.setStroke(Color.web("#B0BEC5"));
+        gc.setLineWidth(2.0);
+        gc.strokeLine(x1, y1, x2, y2);
+
+        // 2. Widerstandskörper mittig
+        double midX = (x1 + x2) / 2.0;
+        double midY = (y1 + y2) / 2.0;
+        double bodyLength = ct.getHoleSpacingPx() * 2.4;
+        double bodyHeight = ct.getHoleSpacingPx() * 0.85;
+
+        // Horizontale Ausrichtung (oder entsprechend Drehung)
+        double bx = midX - bodyLength / 2.0;
+        double by = midY - bodyHeight / 2.0;
+
+        gc.setFill(Color.web("#D7CCC8")); // Sandfarben / Beige
+        gc.fillRoundRect(bx, by, bodyLength, bodyHeight, 4, 4);
+        gc.setStroke(Color.web("#A1887F"));
+        gc.setLineWidth(1.0);
+        gc.strokeRoundRect(bx, by, bodyLength, bodyHeight, 4, 4);
+
+        // 3. Echte Farbringe
+        ResistorColorCode.Bands bands = ResistorColorCode.parseAndCalculate(comp.getValue());
+        if (bands != null) {
+            double bandW = bodyLength * 0.08;
+            double spacing = bodyLength * 0.18;
+            double startOffset = bx + bodyLength * 0.20;
+
+            drawBand(gc, startOffset + 0 * spacing, by, bandW, bodyHeight, bands.band1().getHexColor());
+            drawBand(gc, startOffset + 1 * spacing, by, bandW, bodyHeight, bands.band2().getHexColor());
+            drawBand(gc, startOffset + 2 * spacing, by, bandW, bodyHeight, bands.multiplier().getHexColor());
+            drawBand(gc, startOffset + 3.2 * spacing, by, bandW, bodyHeight, bands.tolerance().getHexColor());
+        }
+
+        // 4. Bezeichner & Wert
+        gc.setFill(Color.web("#E0E0E0"));
+        gc.fillText(comp.getDesignator() + " (" + comp.getValue() + ")", bx, by - 4);
+    }
+
+    private static void drawBand(GraphicsContext gc, double x, double y, double w, double h, String hexColor) {
+        gc.setFill(Color.web(hexColor));
+        gc.fillRect(x, y, w, h);
+    }
 }
 ```
 
-### 4.1 Auswahl-Werkzeug (Pointer / Selection Tool - `V`)
-- **Modus-Aktivierung:** Taste `V` oder Klick auf das Zeiger-Icon in der Toolbox.
-- **Zustände (Internal State Machine):**
-  - `IDLE`: Bereit für Klick oder Drag. Hover über Bauteilen hebt diese dezent hervor.
-  - `DRAGGING_OBJECT`: Ein oder mehrere selektierte Objekte werden über das Board verschoben.
-  - `MARQUEE_SELECTION`: Ziehen ins Leere spannt ein Auswahl-Rechteck auf.
-- **Einzelklick auf Objekt:** Selektiert das Bauteil oder die Leiterbahn, zeigt Griffe an den Pins an und aktualisiert den Inspektor.
-- **Shift-Klick (Multi-Selektion):** Fügt das angeklickte Objekt zur aktuellen Auswahl hinzu oder entfernt es bei erneutem Klick.
-- **Klick ins Leere:** Hebt die gesamte Selektion auf.
-- **Gummiband-Rahmen (Marquee Selection):** Ziehen mit gedrückter linker Maustaste spannt ein halbtransparentes grünes Rechteck (`rgba(0, 200, 83, 0.15)`) mit gestrichelter grüner Kontur auf. Alle Objekte, deren Bounding-Box das Rechteck schneidet, werden markiert.
-- **Verschieben:** Selektierte Bauteile können per Drag-and-Drop verschoben werden. Das Einrasten erfolgt exakt an ganzzahligen Loch-Koordinaten.
-- **Drehen (`R`):** Dreht alle aktuell selektierten Bauteile um ihren Schwerpunkt um 90° im Uhrzeigersinn.
-- **Feinverschiebung (Nudging):** Pfeiltasten `Hoch`, `Runter`, `Links`, `Rechts` verschieben selektierte Objekte um genau 1 Loch.
-
-### 4.2 Jumper-Draht-Werkzeug (Top Layer Wire Tool - `W`)
-- **Modus-Aktivierung:** Taste `W` oder Klick auf das Draht-Icon.
-- **Workflow & Zustände:**
-  1. `WAITING_FOR_START`: Mauszeiger rastet magnetisch auf Pads ein. Ein Klick verankert den Startpunkt `HoleCoord start`.
-  2. `ROUTING_WIRE`:
-     - Während der Mausbewegung wird ein elastischer Vorschau-Draht in gewählter Farbe gerendert.
-     - **Orthogonaler Knick (90° Routing):** Standardmäßig wird der Draht rechtwinklig über Zwischenkoordinaten geroutet.
-     - Drücken der `Umschalt`-Taste (Shift) erzwingt rein diagonale oder freie Linienführung.
-     - Klick auf ein Zwischenloch fixiert einen Knickpunkt (Biegeradius).
-  3. `COMPLETED`: Klick auf das Zielloch erstellt den fertigen `WireTrace` (Typ `JUMPER_WIRE`), fügt ihn über das `AddTraceCommand` in die Projektdaten ein und schaltet zurück in den Zustand `WAITING_FOR_START`.
-  4. `Escape`: Bricht das aktuelle Verlegen ab und verwirft Zwischenpunkte.
-- **Drahtfarben:** Wählbar in der Toolbar über ein Dropdown:
-  - Rot (`#E53935` - typisch Spannungsversorgung VCC)
-  - Schwarz (`#212121` - typisch Masse GND)
-  - Blau (`#1E88E5` - Signale)
-  - Gelb (`#FDD835` - Busse / Taktsignale)
-  - Grün (`#43A047` - analoge Netze)
-  - Weiß (`#FAFAFA` - Sonderleitungen)
-- **Rendering:**
-  - Isolierter Draht mit 3.5px Linienstärke, rundem Abschluss (`StrokeLineCap.ROUND`).
-  - Metallische Anschlusspins (`#CFD8DC`) an den beiden Endlöchern.
-
-### 4.3 Lötbrücken-Werkzeug (Bottom Layer Solder Bridge Tool - `T`)
-- **Modus-Aktivierung:** Taste `T` oder Klick auf das Lötzinn-Icon.
-- **Zweck:** Verbinden zweier oder mehrerer benachbarter Kupfer-Pads auf der Platinenunterseite durch eine massive Zinnbrücke.
-- **Zustände:**
-  - `WAIT_PAD`: Maus rastet auf Loch-Pads der Unterseite ein.
-  - `DRAG_SOLDER`: Mit gedrückter Maustaste über benachbarte Pads ziehen; das Tool erzeugt kontinuierlich verbundene Zinnbrücken zwischen benachbarten Löchern.
-- **Einschränkung:** Lötbrücken dürfen maximal zwischen direkt benachbarten Pads (horizontal, vertikal oder diagonal, $\Delta X \le 1, \Delta Y \le 1$) gezogen werden. Bei größeren Distanzen wird der Nutzer gewarnt oder ein blanker Schaltdraht vorgeschlagen.
-- **Rendering:**
-  - Zusammenhängende Lötzinnraupe (`#CFD8DC` Basis, `#ECEFF1` metallischer Glanzstrich).
-  - Volle Füllung des Pad-Innenraums unter Beibehaltung der Bohrungs-Maske.
-
-### 4.4 Bauteil-Platzierungs-Werkzeug (Component Placement Tool - `C`)
-- **Modus-Aktivierung:** Taste `C` oder Auswahl eines Bauteils aus dem rechten Katalog.
-- **Ghost-Vorschau (Placement Preview):**
-  - Das ausgewählte Bauteil schwebt als halbtransparenter "Geist" mit dem Mauszeiger über das Board.
-  - Die Anschlusspins rasten magnetisch auf den Bohrungen ein.
-- **Validierungs-Matrix:**
-  - Gültige Position (alle Pins liegen im Bereich $0 \le X < \text{Cols}$ und $0 \le Y < \text{Rows}$): Ghost leuchtet in Bauteilfarbe mit 70% Deckkraft.
-  - Ungültige Position (Pins außerhalb des Platinenrands): Ghost färbt sich rot (`rgba(255, 82, 82, 0.7)`), Klick wird mit dezentem Tonsignal ignoriert.
-- **Interaktive Steuerung während der Platzierung:**
-  - Taste `R`: Dreht das Bauteil sofort um 90° im Uhrzeigersinn um seinen Haupt-Pin.
-  - Taste `+` / `-`: Vergrößert bzw. verkleinert den Rasterabstand (z. B. bei Widerständen 3, 4, 5 oder 6 Löcher).
-  - Linksklick: Platziert das Bauteil, generiert den nächsten Bezeichner (`R1`, `R2`) und bleibt aktiv für die nächste Platzierung.
-  - `Escape` oder Rechtsklick: Beendet das Werkzeug und wechselt zum Auswahl-Werkzeug.
-
-### 4.5 Text- & Beschriftungs-Werkzeug (Silkscreen Text Tool - `X`)
-- **Modus-Aktivierung:** Taste `X` oder Klick auf das Text-Icon.
-- **Workflow:**
-  1. Klick auf eine Position der Platine öffnet ein Inline-Eingabefeld direkt auf dem Canvas.
-  2. Nutzer tippt den Text ein (z. B. `+12V`, `GND`, `AUDIO-IN`).
-  3. `Enter` bestätigt den Text; er wird als Vektor-Silkscreen auf dem Platinen-Substrat verankert.
-- **Eigenschaften im Inspektor:**
-  - Textinhalt, Schriftgröße (6pt bis 20pt), Rotation (0°, 90°, 180°, 270°), Ebene (Top / Bottom).
-
-### 4.6 Verbindungsprüfer (Continuity & Net Highlighter Tool - `N`)
-- **Modus-Aktivierung:** Taste `N` oder Klick auf das Testspitzen-Icon.
-- **Funktion:** Simuliert einen akustisch/optischen Durchgangsprüfer (Multimeter im Pieps-Modus).
-- **Graph-Traversierungs-Algorithmus (Breadth-First Search):**
-  1. Starte an dem angeklickten Pad `HoleCoord start`.
-  2. Suche alle Bauteil-Pins, Drahtbrücken-Punkte und Lötbrücken, die mit diesem Pad verbunden sind.
-  3. Bei Lötbrücken: Traversiere rekursiv zu allen angrenzenden Pads.
-  4. Bei Jumper-Drähten: Traversiere zum Ziel-Pad des Jumpers.
-  5. Sammle die gesamte zusammenhängende Netzknoten-Menge in `Set<HoleCoord> activeNet`.
-- **Visuelle Rückmeldung:**
-  - Das gesamte ermittelte Netz wird mit einem pulsierenden, neongelben Kontur-Glow (`#FFEE58`) umrahmt.
-  - Der Rest der Platine wird mit einer leichten dunklen Vignette (40% Alpha) überzogen.
-  - Die Statusleiste zeigt: `Netzprüfung: 6 verbundene Pins, 3 Leiterbahnen, Gesamtlänge: 45.7 mm`.
-
-### 4.7 Lösch-Werkzeug (Eraser / Delete Tool - `Entf`)
-- **Modus-Aktivierung:** Klick auf das Radiergummi-Icon in der Toolbox oder Taste `Entf` bei selektierten Objekten.
-- **Chirurgische Einzel-Löschung:** Klick auf ein beliebiges Bauteil, einen Jumper oder eine Lötbrücke entfernt exakt das getroffene Element.
-- **Massen-Löschung:** Sind bereits mehrere Objekte ausgewählt, löscht ein Klick auf `Entf` die gesamte Auswahl über ein einziges `DeleteSelectionCommand` (1-Klick Undo stellt alles wieder her).
-
-### 4.8 Ratsnest / Airwire-Engine (Logische Netze & Flugdrähte wie in KiCad)
-Wie im **KiCad PCB Editor** unterstützt PerfCraft ein logisches Netz- und Ratsnest-System:
-- **Konzept:** Der Entwickler kann logische Netze definieren (z. B. `VCC`, `GND`, `SDA`, `SCL`, `SIGNAL_IN`). Bauteil-Pins können einem Netz zugewiesen werden.
-- **Dynamische Fluglinien (Airwires):**
-  - Unverbundene Pins desselben Netzes werden über haardünne, gestrichelte Vektorlinien (`#64B5F6`, 1px gestrichelt) miteinander verbunden.
-  - Ein Minimum-Spanning-Tree (MST / Kruskal-Algorithmus) berechnet stets die kürzesten elastischen Linien zwischen den Pins.
-- **Automatisches Verschwinden:**
-  - Sobald der Entwickler eine physische Verbindung (Zinnbrücke auf der Lötseite oder Jumper-Draht auf der Bauteilseite) zwischen zwei Pins zieht, erkennt die Engine den geschlossenen Strompfad und blendet die entsprechende Ratsnest-Linie **in Echtzeit aus**.
-- **Globaler Toggle:** Über Taste `F10` oder das Augensymbol im Appearance-Panel kann das Ratsnest jederzeit ein- und ausgeblendet werden.
-
-### 4.9 Design Rule Check (DRC) & Kollisions-Engine (KiCad-Standard)
-Inspiriert vom **KiCad DRC** führt PerfCraft eine automatisierte Layout-Verifikation durch (`Menü: Platine -> Designregeln prüfen (DRC)` oder Taste `F7`):
-1. **Bauteil-Kollisionsprüfung (Physical Overlap):**
-   - Prüft, ob sich zwei Bauteilkörper physisch überschneiden (z. B. zwei große axiale Elkos oder ICs, die im selben Bauraum platziert wurden).
-   - Verwendet 2D-Polygon-SAT (Separating Axis Theorem) für rotierte Bauteil-Körper.
-2. **Kurzschluss-Erkennung (Net Short-Circuit Check):**
-   - Erkennt, wenn eine Zinnbrücke oder ein Jumper zwei voneinander getrennte, benannte Netze (z. B. `VCC` und `GND`) galvanisch kurzschließt.
-3. **Offene Pins (Unconnected Pins Check):**
-   - Identifiziert Pins von Komponenten, die keinem Netz angehören und weder mit einem Draht noch einer Zinnbrücke kontaktiert sind.
-   - Visuelle Markierung: Ein kleiner orangefarbener Kreis mit Kreuz (`#FF9800`) markiert die unverbundenen Pins.
-4. **Platinenrand-Freiraum (Board Edge Clearance):**
-   - Warnt, wenn Bauteile oder Zinnbrücken weniger als 1 Lochschritt vom mechanischen Platinenrand entfernt liegen.
-5. **Ergebnis-Panel:**
-   - Ein aufklappbares Panel listet alle Fehler und Warnungen strukturiert auf. Klick auf eine Zeile zoomt und zentriert die Kamera direkt auf das betroffene Bauteil.
-
-### 4.10 Relatives Koordinaten-Messwerkzeug (KiCad Leertasten-Delta-Modus)
-Aus **KiCad** übernommen ist die intuitive Ein-Tasten-Relativmessung:
-- Drücken der **`Leertaste` (Space)** setzt an der aktuellen Cursor-Position einen temporären lokalen Nullpunkt $(X_0, Y_0)$.
-- Bei jeder Mausbewegung berechnet PerfCraft die relative Differenz und zeigt sie mit extrem hohem Kontrast in der Statusleiste:
-  $$\Delta X = X - X_0 \quad (\text{Löcher und mm})$$
-  $$\Delta Y = Y - Y_0 \quad (\text{Löcher und mm})$$
-  $$\text{Distanz} = \sqrt{\Delta X^2 + \Delta Y^2} \times 2.54\text{ mm}$$
-  $$\text{Winkel} = \text{atan2}(-\Delta Y, \Delta X) \times \frac{180}{\pi}$$
-- Erneutes Drücken der `Leertaste` setzt den Nullpunkt auf die neue Position; `Escape` kehrt zur absoluten Anzeige zurück.
-
 ---
 
-## 5. Bauteil-Bibliothek & Footprint-Spezifikationen
+## 6. Widerstands-Farbcode-Engine (Mathematik & IEC 60062)
 
-Jedes Bauteil wird in PerfCraft durch einen streng typisierten Footprint definiert, der die mechanische Geometrie im 2.54 mm Lochraster festlegt:
+PerfCraft berechnet die Farbringe vollautomatisch aus dem eingegebenen Widerstandswert.
 
-```text
-Lochabstand Pitch: 2.54 mm (Standard 0.1 Zoll)
-1 Lochschritt = 1 Grid-Unit (GU)
-```
+### 6.1 Farbwert-Tabelle (Exakte Hex-Werte für Canvas)
 
-### 5.1 Passive Bauteile
-
-#### 5.1.1 Axial-Widerstand (Kohleschicht / Metallschicht 0.25W)
-- **Standard-Spannweite:** 4 Löcher (10.16 mm) oder 5 Löcher (12.7 mm) horizontal/vertikal.
-- **Körperabmessungen:** Länge 6.5 mm, Durchmesser 2.5 mm, zentriert zwischen den Anschlusspins.
-- **Footprint-Geometrie (4 Löcher horizontal):**
-  ```text
-  (Pin 1)---[===|===|===|===]---(Pin 2)
-     X=0          Körper          X=4
-  ```
-- **Rendering:**
-  - Körper in Beige/Hellbraun (`#D7CCC8` für Kohleschicht 5%) oder Hellblau (`#90CAF9` für Metallschicht 1%).
-  - Zylindrischer Körper mit abgerundeten Endkappen.
-  - Gebogene Drahtanschlüsse (Silber `#B0BEC5`), die rechtwinklig in die Kupferlöcher abtauchen.
-  - Vier oder fünf farbige Coderinge direkt auf dem Zylinder.
-
-#### 5.1.2 Keramikkondensator (Scheibe / MLCC)
-- **Standard-Spannweite:** 1 Loch (2.54 mm) oder 2 Löcher (5.08 mm).
-- **Footprint-Geometrie (2 Löcher):**
-  ```text
-  (Pin 1)-----[ || ]-----(Pin 2)
-     X=0       Scheibe     X=2
-  ```
-- **Rendering:**
-  - Flache gelb-orangefarbene Scheibe (`#FFA726`) oder blauer Block (`#42A5F5`).
-  - Aufschrift der Kapazität (z. B. `104` für 100nF).
-
-#### 5.1.3 Elektrolytkondensator (Radial)
-- **Standard-Spannweite:** 1 Loch (2.54 mm) bis 3 Löcher (7.62 mm) je nach Baugröße.
-- **Footprint-Geometrie:**
-  ```text
-     (Pin +)       (Pin -)
-       X=0           X=1
-      [   ( + )   - - -   ]
-  ```
-- **Rendering:**
-  - Kreisförmiger Zylinderkopf (Draufsicht) in Dunkelblau (`#1565C0`) oder Schwarz (`#212121`).
-  - Weißer Minuspol-Streifen mit `-`-Symbolen zur visuellen Polaritätsprüfung.
-  - Durchmesser: 5 mm, 6.3 mm, 8 mm oder 10 mm.
-
-#### 5.1.4 Trimm-Potentiometer (3-Pin)
-- **Pinbelegung:** Dreieckig angeordnet oder linear im 2.54 mm bzw. 5.08 mm Raster.
-- **Footprint-Geometrie (Dreieckig):**
-  ```text
-  (Pin 1)-------(Pin 3)
-     \           /
-      \  [ (o) ]/
-       (Pin 2 / Schleifer)
-  ```
-- **Rendering:** Blaues Kunststoffgehäuse (`#1976D2`) mit weißem Drehschlitz im Zentrum.
-
-### 5.2 Aktive Bauteile
-
-#### 5.2.1 Diode (1N4148 / 1N4007)
-- **Standard-Spannweite:** 3 bis 4 Löcher.
-- **Footprint-Geometrie (4 Löcher):**
-  ```text
-  (Anode)----[ === | == | ]----(Kathode)
-    X=0         Körper  Ring     X=4
-  ```
-- **Rendering:**
-  - Kleinsignal (1N4148): Transparent-oranger Glaskörper (`#FF7043`) mit schwarzem Kathodenring.
-  - Leistung (1N4007): Schwarzer Kunststoffzylinder (`#212121`) mit silbernem Kathodenring.
-
-#### 5.2.2 Leuchtdiode (LED 3mm / 5mm)
-- **Standard-Spannweite:** 1 Loch (2.54 mm) zwischen Anode (+) und Kathode (-).
-- **Rendering:**
-  - Farbige Kuppel (Rot, Grün, Gelb, Blau, Kaltweiß).
-  - Abflachung am Rand zur Kennzeichnung der Kathode.
-  - Feiner innerer Reflexionskegel.
-
-#### 5.2.3 Transistor (TO-92 Gehäuse)
-- **Pinbelegung:** 3 Pins in einer Reihe (Raster 2.54 mm: Pin 1, 2, 3 z. B. E-B-C).
-- **Footprint-Geometrie:**
-  ```text
-  (E)   (B)   (C)
-  X=0   X=1   X=2
-  [ (_______) ]  (Halbkreis-Körper)
-  ```
-- **Rendering:**
-  - Halbkreis-förmiges schwarzes Epoxid-Gehäuse mit planer Vorderseite.
-  - Beschriftung (z. B. `BC547`, `2N3904`).
-
-### 5.3 Integrierte Schaltungen (DIL/DIP-Sockel & ICs)
-
-PerfCraft unterstützt die gesamte Standard-DIL-Palette mit doppelseitigen Pinreihen:
-- **DIP-4, DIP-8, DIP-14, DIP-16, DIP-18, DIP-20, DIP-24 (schmal), DIP-28, DIP-40.**
-- **Reihenabstand:**
-  - Standard (Narrow): 3 Lochschritte = 7.62 mm (0.3 Zoll) für DIP-4 bis DIP-28.
-  - Wide: 6 Lochschritte = 15.24 mm (0.6 Zoll) für DIP-24W, DIP-28W, DIP-40.
-- **Footprint-Geometrie (DIP-8 Beispiel):**
-  ```text
-      (Notch / Kerbe)
-         [ ( ) ]
-  Pin 1 (o)   (o) Pin 8
-  Pin 2 (o)   (o) Pin 7
-  Pin 3 (o)   (o) Pin 6
-  Pin 4 (o)   (o) Pin 5
-         [-----]
-  ```
-- **Rendering:**
-  - Dunkelgrauer IC-Körper (`#263238`) mit matter Textur.
-  - Halbkreisförmige Einkerbung (Notch) an Pin 1 / Kopfseite.
-  - Weißer Markierungspunkt (Dot) direkt an Pin 1.
-  - Silberne Kontakt-Pins (`#CFD8DC`) auf den Pads.
-  - Laser-Gravur-Text mittig (z. B. `NE5532P`, `ATmega328P`).
-
-### 5.4 Steckverbinder & Mechanik
-
-#### 5.4.1 Stiftleisten (Pin Headers)
-- **Typen:** 1-reihig (1x1 bis 1x40 Pins), 2-reihig (2x2 bis 2x40 Pins).
-- **Rendering:** Schwarze quadratische Kunststoffisolatoren mit vergoldeten quadratischen Stiftkontakten (`#FFD54F`).
-
-#### 5.4.2 Schraubklemmen (Terminal Blocks)
-- **Rastermaß:** 5.08 mm (2 Lochschritte) für 2-polige und 3-polige Klemmen.
-- **Rendering:** Grünes Gehäuse (`#2E7D32`) mit metallischen Schrauböffnungen von oben.
-
-#### 5.4.3 Kurzhubtaster (Tactile Push Button 6x6 mm)
-- **Footprint:** 4 Pins im Raster 6.5 mm x 4.5 mm (typisch auf 3x2 Löcher gespreizt).
-- **Rendering:** Silberner Metallkragen mit rundem schwarzem Betätigungsknopf in der Mitte.
-
----
-
-## 6. Widerstands-Farbcode-Engine (Mathematik & Algorithmus)
-
-PerfCraft enthält eine bidirektionale Berechnungs-Engine gemäß **IEC 60062** für 4-Band- und 5-Band-Farbcodierungen.
-
-### 6.1 Die Farbwert-Tabelle
-
-| Farbe | Kennziffer (Band 1-3) | Multiplikator | Toleranz | Hex-Farbcode |
+| Farbe | Ziffer | Multiplikator | Toleranz | Hex-Farbcode auf Canvas |
 | :--- | :--- | :--- | :--- | :--- |
-| **Schwarz** | 0 | $10^0 = 1$ | - | `#212121` |
+| **Schwarz** | 0 | $10^0 = 1$ | - | `#1A1A1A` |
 | **Braun** | 1 | $10^1 = 10$ | $\pm 1\%$ | `#6D4C41` |
 | **Rot** | 2 | $10^2 = 100$ | $\pm 2\%$ | `#D32F2F` |
 | **Orange** | 3 | $10^3 = 1.000$ | - | `#F57C00` |
@@ -599,66 +455,177 @@ PerfCraft enthält eine bidirektionale Berechnungs-Engine gemäß **IEC 60062** 
 | **Silber** | - | $10^{-2} = 0.01$ | $\pm 10\%$ | `#9E9E9E` |
 
 ### 6.2 Parsing-Algorithmus (String zu Ohm)
-Die Engine verarbeitet Eingaben flexibel und fehlertolerant:
-- `"10k"` -> $10.000\ \Omega$
+Der Parser versteht alle gängigen Schreibweisen:
+- `"10k"` oder `"10kΩ"` -> $10.000\ \Omega$
 - `"4k7"` oder `"4.7k"` -> $4.700\ \Omega$
-- `"470R"` oder `"470"` -> $470\ \Omega$
+- `"470"` oder `"470R"` -> $470\ \Omega$
 - `"1M"` -> $1.000.000\ \Omega$
-- `"0R22"` oder `"0.22"` -> $0.22\ \Omega$
+- `"0.22"` oder `"0R22"` -> $0.22\ \Omega$
 
-### 6.3 Ring-Generierungs-Algorithmus (4-Band Standard)
-1. Extrahiere den numerischen Ohmwert $R$.
-2. Ermittle die ersten beiden signifikanten Ziffern $d_1$ und $d_2$:
-   $$d_1 = \lfloor R / 10^{\lfloor \log_{10}(R) \rfloor} \rfloor$$
-   $$d_2 = \lfloor (R / 10^{\lfloor \log_{10}(R) \rfloor - 1}) \rfloor \pmod{10}$$
-3. Ermittle den Multiplikator-Exponenten:
-   $$exp = \lfloor \log_{10}(R) \rfloor - 1$$
-4. Mappe $d_1$, $d_2$, $exp$ und die gewählte Toleranz (Standard Gold = 5%) auf die Farb-Enums.
-5. Das Array `[Band1, Band2, Multiplier, Tolerance]` wird direkt an den `ComponentRenderer` übergeben.
+### 6.3 Vollständige Implementierung von `ResistorColorCode.java`
+
+```java
+package de.exit.perfcraft.service;
+
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class ResistorColorCode {
+
+    public enum ResistorColor {
+        BLACK(0, 1.0, null, "#1A1A1A"),
+        BROWN(1, 10.0, 1.0, "#6D4C41"),
+        RED(2, 100.0, 2.0, "#D32F2F"),
+        ORANGE(3, 1_000.0, null, "#F57C00"),
+        YELLOW(4, 10_000.0, null, "#FBC02D"),
+        GREEN(5, 100_000.0, 0.5, "#388E3C"),
+        BLUE(6, 1_000_000.0, 0.25, "#1976D2"),
+        VIOLET(7, 10_000_000.0, 0.1, "#7B1FA2"),
+        GRAY(8, 100_000_000.0, 0.05, "#616161"),
+        WHITE(9, 1_000_000_000.0, null, "#EEEEEE"),
+        GOLD(-1, 0.1, 5.0, "#C5A059"),
+        SILVER(-2, 0.01, 10.0, "#9E9E9E");
+
+        private final int digit;
+        private final double multiplier;
+        private final Double tolerance;
+        private final String hexColor;
+
+        ResistorColor(int digit, double multiplier, Double tolerance, String hexColor) {
+            this.digit = digit;
+            this.multiplier = multiplier;
+            this.tolerance = tolerance;
+            this.hexColor = hexColor;
+        }
+
+        public int getDigit() { return digit; }
+        public double getMultiplier() { return multiplier; }
+        public Double getTolerance() { return tolerance; }
+        public String getHexColor() { return hexColor; }
+
+        public static ResistorColor fromDigit(int d) {
+            for (ResistorColor c : values()) {
+                if (c.digit == d) return c;
+            }
+            return BLACK;
+        }
+
+        public static ResistorColor fromMultiplierExponent(int exp) {
+            return switch (exp) {
+                case -2 -> SILVER;
+                case -1 -> GOLD;
+                case 0 -> BLACK;
+                case 1 -> BROWN;
+                case 2 -> RED;
+                case 3 -> ORANGE;
+                case 4 -> YELLOW;
+                case 5 -> GREEN;
+                case 6 -> BLUE;
+                case 7 -> VIOLET;
+                case 8 -> GRAY;
+                case 9 -> WHITE;
+                default -> BLACK;
+            };
+        }
+
+        public static ResistorColor fromTolerance(double percent) {
+            if (Math.abs(percent - 1.0) < 0.01) return BROWN;
+            if (Math.abs(percent - 2.0) < 0.01) return RED;
+            if (Math.abs(percent - 0.5) < 0.01) return GREEN;
+            if (Math.abs(percent - 0.25) < 0.01) return BLUE;
+            if (Math.abs(percent - 0.1) < 0.01) return VIOLET;
+            if (Math.abs(percent - 10.0) < 0.01) return SILVER;
+            return GOLD; // Standard 5%
+        }
+    }
+
+    public record Bands(ResistorColor band1, ResistorColor band2, ResistorColor multiplier, ResistorColor tolerance) {}
+
+    private static final Pattern RESISTOR_PATTERN = Pattern.compile(
+        "^\\s*([0-9]+(?:[.,][0-9]+)?)\\s*([kKMmRΩ]?)\\s*$", Pattern.CASE_INSENSITIVE
+    );
+
+    private static final Pattern SHORT_PREFIX_PATTERN = Pattern.compile(
+        "^\\s*([0-9]+)\\s*([kKMmR])\\s*([0-9]+)?\\s*$", Pattern.CASE_INSENSITIVE
+    );
+
+    public static Double parseOhms(String input) {
+        if (input == null || input.isBlank()) return null;
+        String clean = input.trim().replace("Ω", "").replace("ohm", "").trim();
+
+        // Match z. B. "4k7"
+        Matcher sm = SHORT_PREFIX_PATTERN.matcher(clean);
+        if (sm.matches()) {
+            double whole = Double.parseDouble(sm.group(1));
+            String prefix = sm.group(2).toUpperCase(Locale.ROOT);
+            double fraction = sm.group(3) != null ? Double.parseDouble("0." + sm.group(3)) : 0.0;
+            double mult = switch (prefix) {
+                case "K" -> 1_000.0;
+                case "M" -> 1_000_000.0;
+                default -> 1.0;
+            };
+            return (whole + fraction) * mult;
+        }
+
+        // Match z. B. "10k" oder "470"
+        Matcher m = RESISTOR_PATTERN.matcher(clean);
+        if (m.matches()) {
+            double val = Double.parseDouble(m.group(1).replace(",", "."));
+            String unit = m.group(2).toUpperCase(Locale.ROOT);
+            double mult = switch (unit) {
+                case "K" -> 1_000.0;
+                case "M" -> 1_000_000.0;
+                default -> 1.0;
+            };
+            return val * mult;
+        }
+        return null;
+    }
+
+    public static Bands calculate4Band(double ohms, double tolerancePercent) {
+        if (ohms <= 0) return null;
+        int exponent = (int) Math.floor(Math.log10(ohms)) - 1;
+        double normalized = ohms / Math.pow(10, exponent);
+        int val = (int) Math.round(normalized);
+        int d1 = (val / 10) % 10;
+        int d2 = val % 10;
+
+        ResistorColor b1 = ResistorColor.fromDigit(d1);
+        ResistorColor b2 = ResistorColor.fromDigit(d2);
+        ResistorColor mult = ResistorColor.fromMultiplierExponent(exponent);
+        ResistorColor tol = ResistorColor.fromTolerance(tolerancePercent);
+        return new Bands(b1, b2, mult, tol);
+    }
+
+    public static Bands parseAndCalculate(String input) {
+        Double ohms = parseOhms(input);
+        if (ohms == null) return null;
+        return calculate4Band(ohms, 5.0); // 5% Standard Gold
+    }
+}
+```
 
 ---
 
-## 7. Canvas Rendering-Pipeline & Grafik-Mathematik
+## 7. Canvas Rendering-Pipeline (Clean 2D Flat-Vector statt Pseudofotorealismus)
 
-### 7.1 Koordinaten-Systeme
+### 7.1 Visuelle Farbabstimmung (Substrat, Pads, Bauteile)
+- **Kein Rauschen / Keine Pseudo-Texturen:** Klare, saubere Flächen für ermüdungsfreies Arbeiten.
+- **Substrat:** `#1B4D2E` (Platinengrün) mit feinem Rand `#143922`.
+- **Lochraster-Pads:**
+  - Außenring: `#D4AF37` (Warmes Kupfer/Gold).
+  - Innenkreis: `#121212` (Bohrung).
+  - Durchmesser Pad: ca. 75% des Lochabstands (1.9 mm).
+  - Durchmesser Bohrung: ca. 35% des Lochabstands (0.9 mm).
+- **Kontrast:** Alle Elemente sind so abgestimmt, dass sie sich sofort vom dunkelgrünen Substrat abheben.
 
-PerfCraft rechnet durchgängig in drei strikt getrennten Koordinatenräumen:
-
-```text
-[Screen Space]  (Pixel auf Monitor: 0 .. CanvasWidth, 0 .. CanvasHeight)
-      ▲
-      │  Transformation via Matrix (scale, translateX, translateY)
-      ▼
-[World Space]   (Metrische Platinen-Millimeter: 0.0 mm .. WidthMm)
-      ▲
-      │  Rasterung via Pitch (2.54 mm)
-      ▼
-[Grid Space]    (Ganzzahlige Loch-Indizes: X = 0..Cols-1, Y = 0..Rows-1)
-```
-
-**Mathematische Umrechnungsformeln:**
-$$X_{\text{world}} = X_{\text{grid}} \times 2.54\text{ mm}$$
-$$Y_{\text{world}} = Y_{\text{grid}} \times 2.54\text{ mm}$$
-
-$$X_{\text{screen}} = (X_{\text{world}} \times \text{pixelsPerMm} \times \text{scale}) + \text{translateX}$$
-$$Y_{\text{screen}} = (Y_{\text{world}} \times \text{pixelsPerMm} \times \text{scale}) + \text{translateY}$$
-
-Umgekehrt für Maus-Picking (Screen zu Grid):
-$$X_{\text{world}} = \frac{X_{\text{screen}} - \text{translateX}}{\text{pixelsPerMm} \times \text{scale}}$$
-$$X_{\text{grid}} = \text{round}\left(\frac{X_{\text{world}}}{2.54}\right)$$
-
-### 7.2 Transformationsmatrix, Zoom & Pan
-- **Zentrierter Zoom um Mauszeiger:**
-  Beim Drehen des Mausrads wird nicht der Platinen-Ursprung skaliert, sondern der Punkt unter dem Cursor fixiert:
-  $$\text{scale}_{\text{neu}} = \text{scale}_{\text{alt}} \times 1.15^{\text{delta}}$$
-  $$\text{translateX} = X_{\text{mouse}} - (X_{\text{mouse}} - \text{translateX}) \times \frac{\text{scale}_{\text{neu}}}{\text{scale}_{\text{alt}}}$$
-  $$\text{translateY} = Y_{\text{mouse}} - (Y_{\text{mouse}} - \text{translateY}) \times \frac{\text{scale}_{\text{neu}}}{\text{scale}_{\text{alt}}}$$
-- **Pan (Verschieben):**
-  Ziehen mit mittlerer Maustaste oder Leertaste addiert das Maus-Delta direkt auf `translateX` und `translateY`.
+### 7.2 Koordinatensysteme (Screen vs. World vs. Grid)
+- **Screen-Space:** Pixel auf der Bildschirmoberfläche.
+- **World-Space:** Millimeter auf der Platine (Pitch = 2.54 mm).
+- **Grid-Space:** Ganzzahlige Lochkoordinaten $X \in [0, \text{Cols}-1], Y \in [0, \text{Rows}-1]$.
 
 ### 7.3 Vollständige Implementierung von `CoordinateTransform.java`
-
-Die Transformationsklasse kapselt alle Umrechnungen thread-sicher und recheneffizient:
 
 ```java
 package de.exit.perfcraft.ui.canvas;
@@ -671,8 +638,8 @@ public class CoordinateTransform {
     private static final double PITCH_MM = 2.54;
 
     private double scale = 1.0;
-    private double translateX = 50.0;
-    private double translateY = 50.0;
+    private double translateX = 40.0;
+    private double translateY = 40.0;
     private final double pixelsPerMm;
 
     public CoordinateTransform() {
@@ -710,7 +677,7 @@ public class CoordinateTransform {
     }
 
     public void applyZoom(double zoomFactor, double pivotX, double pivotY) {
-        double newScale = Math.clamp(scale * zoomFactor, 0.15, 12.0);
+        double newScale = Math.clamp(scale * zoomFactor, 0.2, 8.0);
         double actualFactor = newScale / scale;
         translateX = pivotX - (pivotX - translateX) * actualFactor;
         translateY = pivotY - (pivotY - translateY) * actualFactor;
@@ -725,8 +692,8 @@ public class CoordinateTransform {
     public void resetView(double canvasWidth, double canvasHeight, int boardCols, int boardRows) {
         double boardWidthPx = boardCols * PITCH_MM * pixelsPerMm;
         double boardHeightPx = boardRows * PITCH_MM * pixelsPerMm;
-        double scaleX = (canvasWidth - 100) / boardWidthPx;
-        double scaleY = (canvasHeight - 100) / boardHeightPx;
+        double scaleX = (canvasWidth - 80) / boardWidthPx;
+        double scaleY = (canvasHeight - 80) / boardHeightPx;
         this.scale = Math.clamp(Math.min(scaleX, scaleY), 0.3, 3.0);
         this.translateX = (canvasWidth - (boardWidthPx * scale)) / 2.0;
         this.translateY = (canvasHeight - (boardHeightPx * scale)) / 2.0;
@@ -738,106 +705,86 @@ public class CoordinateTransform {
 }
 ```
 
-### 7.4 Viewport-Culling für Hochleistungs-Rendering
-Um auch bei riesigen Platinen (z. B. 150x150 Löcher = 22.500 Pads) konstante 60 FPS zu garantieren, berechnet der Renderer vor jedem Frame die sichtbare Bounding-Box:
-$$\text{col}_{\text{min}} = \max\left(0, \lfloor \text{ScreenToGridX}(0) \rfloor - 1\right)$$
-$$\text{col}_{\text{max}} = \min\left(\text{Cols} - 1, \lceil \text{ScreenToGridX}(\text{Width}) \rceil + 1\right)$$
-$$\text{row}_{\text{min}} = \max\left(0, \lfloor \text{ScreenToGridY}(0) \rfloor - 1\right)$$
-$$\text{row}_{\text{max}} = \min\left(\text{Rows} - 1, \lceil \text{ScreenToGridY}(\text{Height}) \rceil + 1\right)$$
-Nur Löcher und Komponenten innerhalb dieses Fensters werden an die GPU übergeben.
+### 7.4 Zoom, Pan & Magnetisches Pad-Snapping
+- **Stufenloser Zoom:** Mausrad drehen zoomt zentriert um den aktuellen Mauszeigerpunkt.
+- **Flüssiger Pan:** Mittlere Maustaste gedrückt halten oder Leertaste + Linke Maustaste verschiebt das Board.
+- **Magnetisches Snapping:** Nähert sich der Mauszeiger einem Loch auf weniger als 65% des Lochabstands, springt die Vorschau exakt auf das Pad-Zentrum.
 
-### 7.4 Multi-Layer Zeichenschichten & Z-Index
-Jeder Zeichenzyklus arbeitet eine streng definierte Ebenenhierarchie ab:
-1. **Layer 0 (Substrat):** PCB-Hintergrundfläche mit Kantenfase und Platinenrändern.
-2. **Layer 1 (Lötseite - Traces):** Zinnbrücken und Kupferverbindungen auf dem Bottom Layer.
-3. **Layer 2 (Pads & Bohrungen):** Kupfer-Ringe und schwarze Bohrlöcher.
-4. **Layer 3 (Bauteilseite - Silkscreen):** Textaufdrucke, Umrisse und Bestückungsdruck.
-5. **Layer 4 (Bauteilseite - Jumper-Drähte):** Isolierte Schaltdrähte mit Pins.
-6. **Layer 5 (Bauteilkörper):** Widerstände, Kondensatoren, ICs, Sockel, Dioden.
-7. **Layer 6 (Net Highlighter):** Leuchtende Netzkonturen bei aktivem Verbindungsprüfer.
-8. **Layer 7 (Selektions- & Ghost-Overlay):** Transparenter Platzierungs-Geist und Selektionsrahmen.
+### 7.5 Ebenen-Rendering (Bauteilseite, Lötseite, Beide / Röntgen)
+- **Modus 1 (Bauteilseite):** Zeigt das Substrat, die Pads, Bauteilkörper und farbige Kabel oben. Silberdrähte der Unterseite sind ausgeblendet.
+- **Modus 2 (Lötseite):** Zeigt das Substrat, die Pads und Silberdrähte/Lötbrücken unten. Bauteilkörper der Oberseite sind ausgeblendet.
+- **Modus 3 (Beide / Röntgen):** Zeigt beide Ebenen gleichzeitig: Bauteile auf der Oberseite werden mit 60% Transparenz gerendert, sodass Silberdrähte und Lötpunkte darunter klar durchscheinen.
 
 ---
 
 ## 8. Vollständiges Datenmodell & `.perf` Dateiformat
 
 ### 8.1 JSON-Schemaspezifikation
-Das Projekt-Dateiformat `*.perf` ist ein strikt strukturiertes JSON-Dokument:
+Das Projekt-Dateiformat `*.perf` speichert alle Daten in einem sauberen, lesbaren JSON-Dokument:
 
 ```json
 {
   "formatVersion": 1,
   "generator": "PerfCraft 1.0.0",
-  "createdAt": "2026-10-20T21:30:00Z",
-  "modifiedAt": "2026-10-20T21:45:00Z",
   "project": {
-    "name": "Audio-Vorverstaerker-Mono",
-    "description": "Mikrofon-Vorstufe mit NE5532 und passiver Klangregelung",
-    "author": "PerfCraft User",
+    "name": "Taster-LED-Schaltung",
     "board": {
-      "columns": 30,
-      "rows": 20,
-      "pitchMm": 2.54,
-      "boardColor": "#1B4D2E",
-      "padStyle": "ROUND_PAD"
+      "columns": 24,
+      "rows": 18,
+      "pitchMm": 2.54
     },
     "components": [
       {
-        "id": "comp-101",
+        "id": "c-1",
+        "type": "TACTILE_SWITCH",
+        "designator": "SW1",
+        "value": "Taster 6x6",
+        "start": { "x": 5, "y": 4 },
+        "rotation": 0,
+        "layer": "TOP"
+      },
+      {
+        "id": "c-2",
         "type": "RESISTOR_AXIAL",
         "designator": "R1",
         "value": "10k",
         "unit": "Ω",
-        "tolerance": "5%",
-        "start": { "x": 4, "y": 3 },
-        "end": { "x": 8, "y": 3 },
+        "start": { "x": 10, "y": 4 },
+        "end": { "x": 14, "y": 4 },
         "rotation": 0,
-        "layer": "TOP",
-        "colorCode": ["BROWN", "BLACK", "ORANGE", "GOLD"]
+        "layer": "TOP"
       },
       {
-        "id": "comp-102",
-        "type": "IC_DIP",
-        "designator": "IC1",
-        "value": "NE5532",
-        "unit": "",
-        "pinCount": 8,
-        "rowSpacingHoles": 3,
-        "start": { "x": 12, "y": 6 },
+        "id": "c-3",
+        "type": "LED",
+        "designator": "LED1",
+        "value": "Rot",
+        "start": { "x": 16, "y": 4 },
+        "end": { "x": 17, "y": 4 },
         "rotation": 0,
         "layer": "TOP"
       }
     ],
-    "traces": [
+    "wires": [
       {
-        "id": "trace-201",
-        "type": "SOLDER_BRIDGE",
-        "layer": "BOTTOM",
-        "color": "#CFD8DC",
-        "points": [
-          { "x": 4, "y": 3 },
-          { "x": 4, "y": 4 }
-        ]
-      },
-      {
-        "id": "trace-202",
-        "type": "JUMPER_WIRE",
+        "id": "w-1",
+        "kind": "CABLE",
         "layer": "TOP",
         "color": "#E53935",
         "points": [
-          { "x": 8, "y": 3 },
-          { "x": 12, "y": 6 }
+          { "x": 5, "y": 4 },
+          { "x": 10, "y": 4 }
         ]
-      }
-    ],
-    "texts": [
+      },
       {
-        "id": "txt-301",
-        "text": "+12V",
-        "position": { "x": 2, "y": 1 },
-        "fontSize": 10,
-        "color": "#FFFFFF",
-        "layer": "TOP"
+        "id": "w-2",
+        "kind": "SILVER_WIRE",
+        "layer": "BOTTOM",
+        "color": "#CFD8DC",
+        "points": [
+          { "x": 14, "y": 4 },
+          { "x": 16, "y": 4 }
+        ]
       }
     ]
   }
@@ -848,6 +795,8 @@ Das Projekt-Dateiformat `*.perf` ist ein strikt strukturiertes JSON-Dokument:
 
 1. **`HoleCoord.java` (Record):**
    ```java
+   package de.exit.perfcraft.model;
+
    public record HoleCoord(int x, int y) {
        public double toMmX(double pitch) { return x * pitch; }
        public double toMmY(double pitch) { return y * pitch; }
@@ -858,79 +807,273 @@ Das Projekt-Dateiformat `*.perf` ist ein strikt strukturiertes JSON-Dokument:
        }
    }
    ```
-2. **`BoardConfig.java`:**
-   Enthält Spalten (5..200), Zeilen (5..200), Pitch (Standard 2.54mm) und Substratfarben.
-3. **`ComponentType.java` (Enum):**
-   `RESISTOR_AXIAL`, `CAPACITOR_CERAMIC`, `CAPACITOR_ELECTROLYTIC`, `DIODE`, `LED`, `TRANSISTOR_TO92`, `IC_DIP`, `PIN_HEADER`, `TERMINAL_BLOCK`, `TACTILE_SWITCH`.
+
+2. **`ComponentType.java` (Enum):**
+   ```java
+   package de.exit.perfcraft.model;
+
+   public enum ComponentType {
+       TACTILE_SWITCH("Taster (6x6 mm)", "SW"),
+       RESISTOR_AXIAL("Widerstand (Axial)", "R"),
+       CAPACITOR_CERAMIC("Kondensator (Keramik)", "C"),
+       CAPACITOR_ELECTROLYTIC("Kondensator (Elko)", "C"),
+       DIODE("Diode", "D"),
+       LED("LED", "LED"),
+       TRANSISTOR_TO92("Transistor (TO-92)", "Q"),
+       IC_DIP("IC (DIP)", "IC"),
+       PIN_HEADER("Stiftleiste", "J"),
+       TERMINAL_BLOCK("Schraubklemme", "TB");
+
+       private final String displayName;
+       private final String defaultPrefix;
+
+       ComponentType(String displayName, String defaultPrefix) {
+           this.displayName = displayName;
+           this.defaultPrefix = defaultPrefix;
+       }
+
+       public String getDisplayName() { return displayName; }
+       public String getDefaultPrefix() { return defaultPrefix; }
+   }
+   ```
+
+3. **`WireKind.java` (Enum):**
+   ```java
+   package de.exit.perfcraft.model;
+
+   public enum WireKind {
+       CABLE("Isoliertes Kabel", "#E53935", BoardLayer.TOP),
+       SILVER_WIRE("Silberdraht / Bruecke", "#CFD8DC", BoardLayer.BOTTOM);
+
+       private final String displayName;
+       private final String defaultColor;
+       private final BoardLayer defaultLayer;
+
+       WireKind(String displayName, String defaultColor, BoardLayer defaultLayer) {
+           this.displayName = displayName;
+           this.defaultColor = defaultColor;
+           this.defaultLayer = defaultLayer;
+       }
+
+       public String getDisplayName() { return displayName; }
+       public String getDefaultColor() { return defaultColor; }
+       public BoardLayer getDefaultLayer() { return defaultLayer; }
+   }
+   ```
+
 4. **`PlacedComponent.java`:**
-   Repräsentiert ein physisch auf dem Board platziertes Bauteil mit ID, Bezeichner, Wert, Pin-Koordinaten, Drehung und visuellen Attributen.
+   ```java
+   package de.exit.perfcraft.model;
+
+   import java.util.Objects;
+
+   public class PlacedComponent {
+       private String id;
+       private ComponentType type;
+       private String designator;
+       private String value;
+       private HoleCoord start;
+       private HoleCoord end;
+       private int rotation; // 0, 1, 2, 3 (x90 Grad)
+       private BoardLayer layer;
+
+       public PlacedComponent() {}
+
+       public PlacedComponent(String id, ComponentType type, String designator, String value,
+                              HoleCoord start, HoleCoord end, int rotation, BoardLayer layer) {
+           this.id = id;
+           this.type = type;
+           this.designator = designator;
+           this.value = value;
+           this.start = start;
+           this.end = end;
+           this.rotation = rotation;
+           this.layer = layer;
+       }
+
+       public String getId() { return id; }
+       public void setId(String id) { this.id = id; }
+       public ComponentType getType() { return type; }
+       public void setType(ComponentType type) { this.type = type; }
+       public String getDesignator() { return designator; }
+       public void setDesignator(String designator) { this.designator = designator; }
+       public String getValue() { return value; }
+       public void setValue(String value) { this.value = value; }
+       public HoleCoord getStart() { return start; }
+       public void setStart(HoleCoord start) { this.start = start; }
+       public HoleCoord getEnd() { return end; }
+       public void setEnd(HoleCoord end) { this.end = end; }
+       public int getRotation() { return rotation; }
+       public void setRotation(int rotation) { this.rotation = rotation; }
+       public BoardLayer getLayer() { return layer; }
+       public void setLayer(BoardLayer layer) { this.layer = layer; }
+
+       public void rotate90() {
+           this.rotation = (this.rotation + 1) % 4;
+       }
+
+       @Override
+       public boolean equals(Object o) {
+           if (this == o) return true;
+           if (o == null || getClass() != o.getClass()) return false;
+           PlacedComponent that = (PlacedComponent) o;
+           return Objects.equals(id, that.id);
+       }
+
+       @Override
+       public int hashCode() {
+           return Objects.hash(id);
+       }
+   }
+   ```
+
 5. **`WireTrace.java`:**
-   Repräsentiert eine Leiterbahn, Zinnbrücke oder einen isolierten Jumper-Draht mit Koordinaten-Liste, Ebene und Farbe.
-6. **`BoardLayer.java` (Enum):**
-   `TOP` (Bauteilseite), `BOTTOM` (Lötseite), `BOTH` (Röntgen/X-Ray).
+   ```java
+   package de.exit.perfcraft.model;
+
+   import java.util.ArrayList;
+   import java.util.List;
+   import java.util.Objects;
+
+   public class WireTrace {
+       private String id;
+       private WireKind kind;
+       private BoardLayer layer;
+       private String color;
+       private List<HoleCoord> points = new ArrayList<>();
+
+       public WireTrace() {}
+
+       public WireTrace(String id, WireKind kind, BoardLayer layer, String color, List<HoleCoord> points) {
+           this.id = id;
+           this.kind = kind;
+           this.layer = layer;
+           this.color = color;
+           if (points != null) this.points.addAll(points);
+       }
+
+       public String getId() { return id; }
+       public void setId(String id) { this.id = id; }
+       public WireKind getKind() { return kind; }
+       public void setKind(WireKind kind) { this.kind = kind; }
+       public BoardLayer getLayer() { return layer; }
+       public void setLayer(BoardLayer layer) { this.layer = layer; }
+       public String getColor() { return color; }
+       public void setColor(String color) { this.color = color; }
+       public List<HoleCoord> getPoints() { return points; }
+       public void setPoints(List<HoleCoord> points) { this.points = points; }
+
+       @Override
+       public boolean equals(Object o) {
+           if (this == o) return true;
+           if (o == null || getClass() != o.getClass()) return false;
+           WireTrace wireTrace = (WireTrace) o;
+           return Objects.equals(id, wireTrace.id);
+       }
+
+       @Override
+       public int hashCode() {
+           return Objects.hash(id);
+       }
+   }
+   ```
+
+6. **`BoardConfig.java`:**
+   ```java
+   package de.exit.perfcraft.model;
+
+   public class BoardConfig {
+       private int columns = 24;
+       private int rows = 18;
+       private double pitchMm = 2.54;
+
+       public BoardConfig() {}
+
+       public BoardConfig(int columns, int rows, double pitchMm) {
+           this.columns = Math.clamp(columns, 5, 200);
+           this.rows = Math.clamp(rows, 5, 200);
+           this.pitchMm = pitchMm > 0 ? pitchMm : 2.54;
+       }
+
+       public int getColumns() { return columns; }
+       public void setColumns(int columns) { this.columns = Math.clamp(columns, 5, 200); }
+       public int getRows() { return rows; }
+       public void setRows(int rows) { this.rows = Math.clamp(rows, 5, 200); }
+       public double getPitchMm() { return pitchMm; }
+       public void setPitchMm(double pitchMm) { this.pitchMm = pitchMm; }
+   }
+   ```
+
 7. **`PerfProject.java`:**
-   Wurzelklasse mit Projektmetadaten, BoardConfig, Bauteilliste, Leiterbahnen und Textlabels.
+   ```java
+   package de.exit.perfcraft.model;
+
+   import java.util.ArrayList;
+   import java.util.List;
+
+   public class PerfProject {
+       private String name = "Unbenanntes-Projekt";
+       private BoardConfig board = new BoardConfig();
+       private List<PlacedComponent> components = new ArrayList<>();
+       private List<WireTrace> wires = new ArrayList<>();
+
+       public PerfProject() {}
+
+       public PerfProject(String name, BoardConfig board) {
+           this.name = name;
+           this.board = board;
+       }
+
+       public String getName() { return name; }
+       public void setName(String name) { this.name = name; }
+       public BoardConfig getBoard() { return board; }
+       public void setBoard(BoardConfig board) { this.board = board; }
+       public List<PlacedComponent> getComponents() { return components; }
+       public void setComponents(List<PlacedComponent> components) { this.components = components; }
+       public List<WireTrace> getWires() { return wires; }
+       public void setWires(List<WireTrace> wires) { this.wires = wires; }
+   }
+   ```
 
 ---
 
 ## 9. Undo/Redo Transaktions-Architektur (Command Pattern)
 
-Sämtliche zustandsverändernden Benutzeraktionen werden über das **Command-Entwurfsmuster** gekapselt:
+Alle Aktionen werden über das Command-Muster abgesichert:
 
-```text
-       CommandHistory
-      ┌───────────────┐
-      │ - undoStack   │
-      │ - redoStack   │
-      └───────┬───────┘
-              │ execute(cmd)
-              ▼
-      <<interface>> Command
-      ┌─────────────────────────┐
-      │ + execute()             │
-      │ + undo()                │
-      │ + getDescription()      │
-      └─────────────────────────┘
-              ▲
-    ┌─────────┴────────┬─────────────────────┐
-    │                  │                     │
-PlaceComponentCmd  DeleteSelectionCmd    MoveComponentCmd
+```java
+public interface Command {
+    void execute();
+    void undo();
+    String getDescription();
+}
 ```
 
-### Konkrete Command-Implementierungen:
-1. **`PlaceComponentCommand`:** Fügt ein Bauteil hinzu; Undo entfernt es restlos.
-2. **`DeleteSelectionCommand`:** Löscht mehrere Bauteile und Leiterbahnen auf einmal; Undo stellt die gesamte gelöschte Gruppe mit originalen IDs und Positionen wieder her.
-3. **`MoveComponentCommand`:** Speichert Start- und Zielkoordinaten; Undo schiebt das Bauteil exakt zurück.
-4. **`RotateComponentCommand`:** Rotiert das Bauteil um 90°; Undo dreht es um 270° (bzw. -90°).
-5. **`AddTraceCommand`:** Fügt einen Jumper oder eine Lötbrücke hinzu; Undo löscht die Verbindung.
-6. **`EditPropertiesCommand`:** Ändert Wert oder Bezeichner; Undo stellt alte Werte wieder her.
+### Konkrete Commands:
+- **`PlaceComponentCommand`:** Setzt ein Bauteil aufs Board; Undo entfernt es.
+- **`AddWireCommand`:** Fügt ein Kabel oder einen Silberdraht hinzu; Undo löscht die Leitung.
+- **`MoveComponentCommand`:** Speichert Start- und Zielkoordinate; Undo schiebt das Bauteil exakt zurück.
+- **`RotateComponentCommand`:** Dreht das Bauteil um 90°; Undo dreht es um 270°.
+- **`DeleteSelectionCommand`:** Löscht markierte Bauteile/Leitungen; Undo stellt alle Objekte wieder her.
+- **`ChangePropertyCommand`:** Ändert Wert oder Bezeichner; Undo stellt alte Werte wieder her.
 
 ---
 
-## 10. Stücklisten- (BOM) & Export-Engine
+## 10. Stücklisten- (BOM) & Export-Engine (PNG & CSV)
 
-### 10.1 Konsolidierungs-Algorithmus (`ExportService`)
-Die Stücklisten-Engine aggregiert alle auf dem Board verbauten Komponenten automatisch:
-1. Gruppierung nach **Bauteiltyp** und **elektrischem Wert** (z. B. alle Widerstände mit Wert `10k`).
-2. Zusammenfassung der Bezeichner zu kommagetrennten Listen (z. B. `R1, R2, R5, R8`).
-3. Zählung der Gesamtanzahl (`Quantity`).
-4. Ermittlung der Pin-Spannweite (z. B. "Pitch: 10.16 mm / 4 Löcher").
-
-### 10.2 CSV-Export (RFC 4180 konform)
+### 10.1 Konsolidierter CSV-Export
+Die Stücklisten-Engine aggregiert alle Bauteile nach Typ und Wert:
 ```text
 Pos;Bauteiltyp;Wert;Bezeichner;Menge;Rasterabstand
-1;Widerstand (Axial);10k Ω;R1, R2;2;10.16 mm
-2;Widerstand (Axial);470 Ω;R3;1;10.16 mm
-3;Kondensator (Keramik);100n F;C1, C2;2;2.54 mm
-4;Kondensator (Elektrolyt);47u F;C3;1;2.54 mm
-5;IC (DIP-8);NE5532;IC1;1;7.62 mm
+1;Taster (6x6 mm);Kurzhubtaster;SW1;1;3x2 Löcher
+2;Widerstand (Axial);10k Ω;R1;1;10.16 mm
+3;LED (5mm);Rot;LED1;1;2.54 mm
 ```
 
-### 10.3 Hochauflösender Bildexport (PNG)
-Der PNG-Export rendert die gesamte Platine ohne Anwendungs-UI auf einen Off-Screen JavaFX-Canvas:
-- Wählbare Auflösung: Standard (150 DPI), Druckqualität (300 DPI) oder Ultra-HD (600 DPI).
-- Wählbare Ansicht: Nur Bauteilseite, Nur Lötseite oder Beide Ebenen (Röntgen).
-- Wählbarer Hintergrund: Transparent (RGBA) oder Weißes Papier.
+### 10.2 Hochauflösender Bildexport (PNG)
+- Rendert das Board ohne Anwendungsrahmen in eine PNG-Datei.
+- Wählbare DPI (150 DPI für Bildschirm, 300 DPI für Druck).
+- Wählbare Ansicht: Bauteilseite, Lötseite oder Beide Ebenen.
 
 ---
 
@@ -938,38 +1081,27 @@ Der PNG-Export rendert die gesamte Platine ohne Anwendungs-UI auf einen Off-Scre
 
 | Taste / Geste | Kontext | Ausgelöste Aktion |
 | :--- | :--- | :--- |
-| `V` | Global | Auswahl-Werkzeug aktivieren |
-| `M` | Bei Selektion | **KiCad Move:** Bauteil aufnehmen und frei verschieben |
-| `G` | Bei Selektion | **KiCad Drag:** Bauteil verschieben und verbundene Drähte elastisch mitführen |
-| `E` | Bei Selektion | **KiCad Edit:** Eigenschafts-Dialog sofort öffnen |
-| `D` | Bei Selektion | **KiCad Duplicate:** Bauteil sofort duplizieren |
-| `R` | Bei Ghost / Selektion | Bauteil um 90° im Uhrzeigersinn drehen |
-| `F` | Bei Selektion | **KiCad Flip:** Bauteil zwischen Top- und Bottom-Layer spiegeln |
-| `W` | Global | Jumper-Draht-Werkzeug aktivieren |
-| `T` | Global | Lötbrücken-Werkzeug aktivieren |
+| `V` | Global | Auswahl- & Verschiebe-Werkzeug aktivieren |
+| `W` | Global | Leitungs-Werkzeug (Kabel & Silberdraht) aktivieren |
 | `C` | Global | Bauteil-Platzierungs-Werkzeug aktivieren |
-| `X` | Global | Text-Werkzeug aktivieren |
-| `N` oder `` ` `` (Backtick) | Global | **KiCad Net Highlight:** Netz unter Cursor leuchtend hervorheben |
-| `Leertaste` | Canvas | **KiCad Delta-Origin:** Setzt lokalen Nullpunkt für Relativmessung ($\Delta X=0, \Delta Y=0$) |
-| `Entf` | Auswahl aktiv | Alle selektierten Bauteile und Leiterbahnen löschen |
-| `Strg + Z` | Global | Letzten Befehl rückgängig machen (Undo) |
-| `Strg + Y` | Global | Zuletzt verworfenen Befehl wiederholen (Redo) |
+| `R` | Bei Vorschau / Selektion | Bauteil um 90° im Uhrzeigersinn drehen |
+| `Entf` | Bei Selektion | Ausgewähltes Bauteil oder Leitung löschen |
+| `Strg + Z` | Global | Rückgängig (Undo) |
+| `Strg + Y` | Global | Wiederholen (Redo) |
 | `Strg + S` | Global | Projekt speichern |
 | `Strg + O` | Global | Projekt öffnen |
-| `Strg + N` | Global | Neues Board erstellen Dialog öffnen |
-| `Strg + A` | Global | Alle Objekte auf dem Board selektieren |
-| `Strg + 0` | Canvas | Zoom auf 100% (1:1 Originalgröße) |
-| `Strg + F` | Canvas | Zoom "Fit to Window" (Platine bildschirmfüllend zentrieren) |
-| `F1` | Global | Ebene auf Bauteilseite (Top Layer) umschalten |
-| `F2` | Global | Ebene auf Lötseite (Bottom Layer) umschalten |
-| `F3` | Global | Ebene auf Röntgenansicht (X-Ray) umschalten |
-| `F7` | Global | **KiCad DRC:** Design Rule Check (Kollisionen & Kurzschlüsse) ausführen |
-| `F10` | Global | **KiCad Ratsnest:** Gestrichelte Fluglinien (Airwires) umschalten |
-| `Mausrad oben/unten` | Canvas | Stufenloser Zoom zentriert um Mauszeiger |
+| `Strg + N` | Global | Neues Board Dialog öffnen |
+| `Strg + A` | Global | Alle Objekte auswählen |
+| `Strg + 0` | Canvas | Zoom auf 100% zurücksetzen |
+| `Strg + F` | Canvas | Board bildschirmfüllend einpassen |
+| `F1` | Global | Bauteilseite anzeigen |
+| `F2` | Global | Lötseite anzeigen |
+| `F3` | Global | Beide Seiten anzeigen (Röntgenansicht) |
+| `Mausrad` | Canvas | Stufenloser Zoom zentriert um Cursor |
 | `Mittlere Maustaste Drag` | Canvas | Platine verschieben (Pan) |
-| `Leertaste (gedrückt halten) + Drag`| Canvas | Platine verschieben (Pan-Alternative) |
-| `Pfeiltasten` | Auswahl aktiv | Markierte Objekte um genau 1 Loch verschieben |
-| `Escape` | Im Werkzeug | Aktiven Zeichen-/Verlege-Vorgang abbrechen oder Netz-Highlighting aufheben |
+| `Leertaste + Linke Maus`| Canvas | Platine verschieben (Pan-Alternative) |
+| `Pfeiltasten` | Bei Selektion | Selektiertes Bauteil um 1 Loch verschieben |
+| `Escape` | Im Werkzeug | Aktiven Vorgang abbrechen / Auswahl aufheben |
 
 ---
 
@@ -977,83 +1109,61 @@ Der PNG-Export rendert die gesamte Platine ohne Anwendungs-UI auf einen Off-Scre
 
 | Nr. | Situation / Edge Case | Systemverhalten | Feedback an den Nutzer |
 | :--- | :--- | :--- | :--- |
-| **E1** | Board-Dimension < 5 oder > 200 im Neudialog | Button "Erstellen" wird deaktiviert, Textfeld rot umrandet | Tooltip: "Zulässiger Bereich: 5 bis 200 Löcher" |
-| **E2** | Bauteil ragt beim Platzieren über Platinenrand | Platzierung wird gesperrt, Klick löst keine Aktion aus | Ghost-Vorschau färbt sich rot (`#FF5252`) |
-| **E3** | Zwei Bauteile teilen sich denselben Anschluss-Pin | Ist physikalisch auf Lochrastern erlaubt (z. B. 2 Drähte in 1 Loch) | Subtiler gelber Warn-Glow an der betroffenen Bohrung |
-| **E4** | Lötbrücke über Distanz > 1 Loch versucht | Aktion wird blockiert (Lötzinn überbrückt nur Nachbarpads) | Hinweis: "Für größere Distanzen Jumper-Draht (W) nutzen" |
-| **E5** | Laden einer korrupten oder unvollständigen `.perf`-Datei | JSON-Parser fängt Exception ab, Projekt wird nicht überschrieben | Dialog: "Ungültiges Dateiformat. Die Datei konnte nicht gelesen werden." |
-| **E6** | Laden einer Datei mit höherer FormatVersion | Abwärtskompatibilitäts-Check | Warnung: "Datei wurde mit einer neueren PerfCraft-Version erstellt" |
-| **E7** | Speichern auf schreibgeschütztes Medium / Verzeichnis | `IOException` wird sauber abgefangen | Rote Fehlermeldung in Statusleiste: "Fehler beim Speichern" |
-| **E8** | Ungültiger Widerstandswert eingetippt (z. B. "12xyz") | Vorheriger gültiger Wert bleibt bestehen | Keine Farbcode-Ringe, Textfeld leuchtet kurz orange |
-| **E9** | Zoom-Faktor übersteigt 1000% oder fällt unter 10% | Schieberegler und Mausrad werden geclamped | Zoom bleibt exakt auf Maximal-/Minimalwert arretiert |
-| **E10**| Schließen des Fensters bei ungespeicherten Änderungen | `WindowCloseRequestHandler` fängt Schließevent ab | Material-Dialog mit drei Optionen: "Speichern", "Verwerfen", "Abbrechen" |
-| **E11**| Export einer komplett leeren Platine | Bild wird gerendert (nur Platine ohne Teile) | Stücklisten-Export zeigt Hinweis: "Keine Bauteile auf dem Board" |
-| **E12**| Undo-Stack ist leer | Undo-Button und Menüpunkt werden ausgegraut | Klick bewirkt nichts, kein Fehler im Log |
+| **E1** | Ungültige Board-Größe (<5 oder >200) | Button "Erstellen" deaktiviert | Tooltip: "Zulässiger Bereich: 5 bis 200 Löcher" |
+| **E2** | Bauteil ragt beim Platzieren über den Platinenrand | Platzierung gesperrt, Klick ignoriert | Vorschau färbt sich rot (`#FF5252`) |
+| **E3** | Zwei Bauteile teilen sich denselben Anschluss | Erlaubt (z. B. 2 Anschlüsse in 1 Loch) | Subtiler gelber Warn-Glow an der Bohrung |
+| **E4** | Laden einer ungültigen oder korrupten `.perf`-Datei | Parsing-Fehler abgefangen, Fallback | Dialog: "Datei konnte nicht gelesen werden" |
+| **E5** | Schreibgeschütztes Dateisystem beim Speichern | Exception abgefangen | Rote Meldung: "Fehler beim Speichern der Datei" |
+| **E6** | Ungültiger Widerstandswert (z. B. "xyz") | Vorheriger Wert bleibt erhalten | Keine Farbringe, Eingabefeld leuchtet kurz orange |
+| **E7** | Schließen des Fensters mit ungespeicherten Daten | Schließ-Event abgefangen | Dialog: "Möchten Sie vor dem Schließen speichern?" |
+| **E8** | Zoom-Grenzen erreicht | Clamping auf 20% bis 800% | Zoom arretiert stabil am Anschlag |
 
 ---
 
 ## 13. Phasenweise Implementierungs-Roadmap
 
 ### Phase 1: Projekt-Setup & Maven-Infrastruktur
-- [x] Maven `pom.xml` mit Java 21, JavaFX 21, Jackson Databind und JUnit 5 initialisiert.
+- [x] Maven `pom.xml` mit Java 21, JavaFX 21, Jackson Databind und JUnit 5 eingerichtet.
 - [x] Basis-Package `de.exit.perfcraft` angelegt.
 - [x] App-Icons (SVG, PNG, ICO) generiert und in Fensterleiste eingebunden.
-- [x] `material-dark.css` Grund-Stylesheet erstellt.
+- [x] `material-dark.css` bereitgestellt.
 - [x] **Verifikation:** `mvn clean test` läuft fehlerfrei durch.
 
-### Phase 2: Kern-Datenmodell & Serialisierungs-Engine
-- [ ] Implementierung der Klassen im Package `de.exit.perfcraft.model`:
-  - `HoleCoord` Record mit Nachbarschafts- und Distanzmethoden.
-  - `BoardConfig` mit Spalten, Zeilen, Pitch (2.54 mm) und Validierungslogik.
-  - `ComponentType` Enum mit allen Gehäusevarianten.
-  - `PlacedComponent` mit Pin-Listen, Bezeichner, Wert und Farbcode.
-  - `WireTrace` mit Layer (`TOP`/`BOTTOM`), Segmenten und Farb-Attributen.
-  - `PerfProject` Wurzelklasse mit Metadaten.
-- [ ] Implementierung von `ProjectStorageService` mit Jackson Databind für `.perf`-Dateien.
-- [ ] Unit-Tests in `PerfProjectTest` für fehlerfreie Serialisierung und Deserialisierung.
-- [ ] **Verifikation:** 100% aller Tests in `mvn test` bestehen.
+### Phase 2: Kern-Datenmodell & Serialisierung
+- [ ] Datenmodellklassen in `de.exit.perfcraft.model` implementieren:
+  - `HoleCoord` Record.
+  - `ComponentType` Enum (inkl. `TACTILE_SWITCH`).
+  - `WireKind` Enum (`CABLE`, `SILVER_WIRE`).
+  - `PlacedComponent` & `WireTrace`.
+  - `BoardConfig` & `PerfProject`.
+- [ ] `ProjectStorageService` mit Jackson Databind für `.perf`-Dateien erstellen.
+- [ ] Unit-Tests in `PerfProjectTest` für fehlerfreie Serialisierung/Deserialisierung.
+- [ ] **Verifikation:** 100% bestandene Unit-Tests in `mvn test`.
 
-### Phase 3: High-DPI Canvas & LochMaster-Lineale (Rulers)
-- [ ] Implementierung der mathematischen Koordinaten-Engine (`CoordinateTransform`).
-- [ ] `PerfBoardCanvas` mit flüssigem Pan (Mausrad-Drag) und stufenlosem Zoom (zentriert um Cursor).
-- [ ] Fotorealistisches Rendering von Epoxid-Substrat, Kupfer-Pads und Bohrlöchern mit Viewport-Culling.
-- [ ] `RulerCanvas`: Horizontales und vertikales Lineal mit Loch-Indizes, mm-Teilung und synchron mitfahrendem Tracking-Marker.
-- [ ] Layer-Rendering: Umschaltung zwischen Top Layer, Bottom Layer und X-Ray Modus.
-- [ ] **Verifikation:** Interaktive Platine reagiert latenzfrei auf Zoom, Pan und Mausbewegungen.
+### Phase 3: Canvas-Engine & Clean 2D Vektor-Rendering
+- [ ] `CoordinateTransform` mit Zoom, Pan und magnetischem Pad-Snapping implementieren.
+- [ ] `PerfBoardCanvas` mit klarem dunkelgrünem Substrat und Kupferpads erstellen.
+- [ ] Horizontales und vertikales Loch-Lineal mit mitfahrendem Zeiger-Marker anbinden.
+- [ ] Ebenen-Umschaltung (Bauteilseite, Lötseite, Beide/Röntgen) umsetzen.
+- [ ] **Verifikation:** Interaktiver Start via `mvn exec:java`, flüssiges Pannen und Zoomen.
 
-### Phase 4: CAD-Werkzeuge & Interaktions-Modi
-- [ ] State-Machine für aktive Werkzeuge (`EditorState`).
-- [ ] `ToolboxBar`: Linke Werkzeugleiste mit 8 Buttons (`V`, `W`, `T`, `C`, `X`, `N`, `Entf`).
-- [ ] Jumper-Draht-Tool (`WireTool`): Verlegen isolierter Schaltdrähte auf dem Top Layer.
-- [ ] Lötbrücken-Tool (`SolderTool`): Ziehen von Zinnbrücken auf dem Bottom Layer.
-- [ ] Bauteil-Platzierungs-Tool (`PlacementTool`) mit Ghost-Vorschau und Pad-Magnetismus.
-- [ ] Selektions- & Verschiebe-Werkzeug mit Gummiband-Rechteck und Drehung (`R`).
-- [ ] **Verifikation:** Bauteile und Drähte lassen sich fehlerfrei platzieren, drehen, verschieben und löschen.
+### Phase 4: Die 3 Kern-Werkzeuge & Bauteil-Rendering
+- [ ] Auswahl- und Verschiebe-Werkzeug (`V`) mit Rotation (`R`) und Löschen (`Entf`).
+- [ ] Leitungs-Werkzeug (`W`) für isolierte bunte Kabel und blanken Silberdraht.
+- [ ] Bauteil-Platzierungs-Werkzeug (`C`) mit magnetischer Vorschau.
+- [ ] Bauteil-Renderer:
+  - Taster (6x6 mm mit 4 Pins).
+  - Widerstand mit echten, berechneten Farbringen (`ResistorColorCode`).
+  - Kondensatoren, LEDs, Dioden, ICs.
+- [ ] **Verifikation:** Bauteile (inkl. Taster) und Leitungen lassen sich intuitiv platzieren und bewegen.
 
-### Phase 5: Bauteil-Renderer & Widerstands-Farbcode
-- [ ] `ResistorColorCode` Engine mit bidirektionalem Parser (String <-> Farbbänder).
-- [ ] `ComponentRenderer` für alle Footprints:
-  - Axial-Widerstände mit exakten Farbringen.
-  - Keramik- und Elektrolytkondensatoren mit Polaritätsmarkierung.
-  - Dioden (1N4148 / 1N4007) mit Kathodenring.
-  - LEDs in 5 Farben mit Abflachung.
-  - Transistoren (TO-92) mit 3 Pins.
-  - DIL/DIP-Sockel & ICs (DIP-8 bis DIP-40) mit Notch und Pin-1 Markierung.
-  - Stiftleisten und Schraubklemmen.
-- [ ] Unit-Tests in `ResistorColorCodeTest` für alle Standard-E12- und E24-Widerstandswerte.
-- [ ] **Verifikation:** Alle Bauteile werden mit fotorealistischer Vektorpräzision gerendert.
-
-### Phase 6: LochMaster-Workbench UI, Dock-Panels & Undo/Redo
-- [ ] `WorkbenchView`: Vollständiges CAD-Layout mit TopCommandBar, ToolboxBar, Rulers, Canvas, Sidebar und StatusBar.
-- [ ] `SidebarContainer`:
-  - `CatalogPanel` mit kategorisierter Bauteil-Bibliothek und Suchfeld.
-  - `InspectorPanel` zur Live-Bearbeitung selektierter Komponenten.
-  - `ProjectTreePanel` mit hierarchischer Bauteilliste.
-- [ ] `StatusBar`: Live-Anzeige von Loch-Koordinaten, mm-Maßen, Layer und Zoom-Schieberegler.
-- [ ] `CommandHistory` (Undo/Redo für Platzieren, Verschieben, Löschen, Drehen via `Strg+Z` und `Strg+Y`).
-- [ ] `NewBoardDialog` mit Validierung von Spalten und Zeilen (5..200).
-- [ ] `ExportService`: PNG-Bildexport und CSV-Stücklistenexport (BOM).
-- [ ] **Verifikation:** End-to-End Workflow-Test (Neu -> Entwurf -> Verdrahtung -> Stückliste -> Speichern -> Laden).
+### Phase 5: Aufgeräumte UI, Inspektor & Export
+- [ ] Header-Bar mit Neu, Öffnen, Speichern, Undo/Redo und Layer-Wahlschalter.
+- [ ] Linke 3-Button-Toolbar (`V`, `W`, `C`).
+- [ ] Rechte Seitenleiste mit Bauteil-Liste und Werte-Inspektor (inkl. Farbband-Vorschau).
+- [ ] `CommandHistory` für Undo/Redo (`Strg+Z`, `Strg+Y`).
+- [ ] PNG-Bildexport und CSV-Stücklistenexport (BOM).
+- [ ] **Verifikation:** Kompletter End-to-End Workflow fehlerfrei getestet.
 
 ---
 
