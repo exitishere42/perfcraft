@@ -21,6 +21,7 @@
    - 3.7 Zentraler Perfboard Canvas & Substrat-Rendering
    - 3.8 Rechte Dock-Sidebar (Katalog, Inspektor, Projekt-Baum)
    - 3.9 Echtzeit-Statusleiste & Messdaten
+   - 3.10 KiCad-inspiriertes Appearance- & Sichtbarkeits-Panel
 4. [Interaktives Werkzeug-System (CAD Tools & State Machine)](#4-interaktives-werkzeug-system-cad-tools--state-machine)
    - 4.1 Auswahl-Werkzeug (Pointer / Selection Tool)
    - 4.2 Jumper-Draht-Werkzeug (Top Layer Wire Tool)
@@ -29,6 +30,9 @@
    - 4.5 Text- & Beschriftungs-Werkzeug (Silkscreen Text Tool)
    - 4.6 Verbindungsprüfer (Continuity & Net Highlighter Tool)
    - 4.7 Lösch-Werkzeug (Eraser / Delete Tool)
+   - 4.8 Ratsnest / Airwire-Engine (Logische Netze & Flugdrähte wie in KiCad)
+   - 4.9 Design Rule Check (DRC) & Kollisions-Engine (KiCad-Standard)
+   - 4.10 Relatives Koordinaten-Messwerkzeug (KiCad Leertasten-Delta-Modus)
 5. [Bauteil-Bibliothek & Footprint-Spezifikationen](#5-bauteil-bibliothek--footprint-spezifikationen)
    - 5.1 Passive Bauteile (Widerstände, Kondensatoren, Potentiometer)
    - 5.2 Aktive Bauteile (Dioden, LEDs, Transistoren)
@@ -275,9 +279,19 @@ Die rechte Seitenleiste ist 280 Pixel breit, einklappbar und über drei Material
 Die Fußleiste (`StatusBar`) ist 28 Pixel hoch und liefert permanente Messwerte:
 - **Loch-Koordinaten:** `Loch: X: 14, Y: 8` (1-basiert für den Nutzer, 0-basiert intern).
 - **Metrische Position:** `Pos: 35.56 mm, 20.32 mm` (bezogen auf den Platinen-Nullpunkt).
-- **Distanz-Messung (beim Ziehen):** `ΔX: 4 Löcher (10.16 mm) | L: 5.6 Löcher (14.22 mm)`.
+- **KiCad-Style Relativmessung:** `ΔX: +4 (10.16 mm) | ΔY: -2 (-5.08 mm) | Dist: 11.36 mm | Winkel: -26.6°` (Nullpunkt setzbar mit `Leertaste`).
 - **Aktiver Layer:** `Ebene: Bauteilseite (Top)`.
 - **Zoom-Steuerung:** Prozentanzeige (`125%`) mit integriertem Schieberegler.
+
+### 3.10 KiCad-inspiriertes Appearance- & Sichtbarkeits-Panel
+Angelehnt an das moderne **KiCad Appearance Panel** verfügt PerfCraft über eine kompakte Sichtbarkeitsleiste mit schnellen Ein-Klick-Augensymbolen (👁) zur selektiven Schaltung visueller Schichten:
+- 👁 **Silkscreen (F.SilkS):** Bauteilbeschriftungen, Pin-1-Punkte, Textmarkierungen.
+- 👁 **Bauteilkörper (F.Fab):** 2D/3D-Darstellung der Gehäusekörper (Widerstände, ICs, Elkos).
+- 👁 **Top Jumper-Drähte (F.Cu Wires):** Isolierte Schaltdrähte der Bauteilseite.
+- 👁 **Ratsnest / Airwires:** Gestrichelte logische Fluglinien unvollständiger Netze.
+- 👁 **Kupfer-Pads & Bohrungen:** Pads und Löcher des Lochrasters.
+- 👁 **Bottom Lötbrücken (B.Cu Traces):** Zinnbrücken und Leiterbahnen der Lötseite.
+- 👁 **DRC-Warnmarker:** Rote/Gelbe Fehlerindikatoren bei Kollisionen oder offenen Netzen.
 
 ---
 
@@ -393,6 +407,41 @@ public interface Tool {
 - **Modus-Aktivierung:** Klick auf das Radiergummi-Icon in der Toolbox oder Taste `Entf` bei selektierten Objekten.
 - **Chirurgische Einzel-Löschung:** Klick auf ein beliebiges Bauteil, einen Jumper oder eine Lötbrücke entfernt exakt das getroffene Element.
 - **Massen-Löschung:** Sind bereits mehrere Objekte ausgewählt, löscht ein Klick auf `Entf` die gesamte Auswahl über ein einziges `DeleteSelectionCommand` (1-Klick Undo stellt alles wieder her).
+
+### 4.8 Ratsnest / Airwire-Engine (Logische Netze & Flugdrähte wie in KiCad)
+Wie im **KiCad PCB Editor** unterstützt PerfCraft ein logisches Netz- und Ratsnest-System:
+- **Konzept:** Der Entwickler kann logische Netze definieren (z. B. `VCC`, `GND`, `SDA`, `SCL`, `SIGNAL_IN`). Bauteil-Pins können einem Netz zugewiesen werden.
+- **Dynamische Fluglinien (Airwires):**
+  - Unverbundene Pins desselben Netzes werden über haardünne, gestrichelte Vektorlinien (`#64B5F6`, 1px gestrichelt) miteinander verbunden.
+  - Ein Minimum-Spanning-Tree (MST / Kruskal-Algorithmus) berechnet stets die kürzesten elastischen Linien zwischen den Pins.
+- **Automatisches Verschwinden:**
+  - Sobald der Entwickler eine physische Verbindung (Zinnbrücke auf der Lötseite oder Jumper-Draht auf der Bauteilseite) zwischen zwei Pins zieht, erkennt die Engine den geschlossenen Strompfad und blendet die entsprechende Ratsnest-Linie **in Echtzeit aus**.
+- **Globaler Toggle:** Über Taste `F10` oder das Augensymbol im Appearance-Panel kann das Ratsnest jederzeit ein- und ausgeblendet werden.
+
+### 4.9 Design Rule Check (DRC) & Kollisions-Engine (KiCad-Standard)
+Inspiriert vom **KiCad DRC** führt PerfCraft eine automatisierte Layout-Verifikation durch (`Menü: Platine -> Designregeln prüfen (DRC)` oder Taste `F7`):
+1. **Bauteil-Kollisionsprüfung (Physical Overlap):**
+   - Prüft, ob sich zwei Bauteilkörper physisch überschneiden (z. B. zwei große axiale Elkos oder ICs, die im selben Bauraum platziert wurden).
+   - Verwendet 2D-Polygon-SAT (Separating Axis Theorem) für rotierte Bauteil-Körper.
+2. **Kurzschluss-Erkennung (Net Short-Circuit Check):**
+   - Erkennt, wenn eine Zinnbrücke oder ein Jumper zwei voneinander getrennte, benannte Netze (z. B. `VCC` und `GND`) galvanisch kurzschließt.
+3. **Offene Pins (Unconnected Pins Check):**
+   - Identifiziert Pins von Komponenten, die keinem Netz angehören und weder mit einem Draht noch einer Zinnbrücke kontaktiert sind.
+   - Visuelle Markierung: Ein kleiner orangefarbener Kreis mit Kreuz (`#FF9800`) markiert die unverbundenen Pins.
+4. **Platinenrand-Freiraum (Board Edge Clearance):**
+   - Warnt, wenn Bauteile oder Zinnbrücken weniger als 1 Lochschritt vom mechanischen Platinenrand entfernt liegen.
+5. **Ergebnis-Panel:**
+   - Ein aufklappbares Panel listet alle Fehler und Warnungen strukturiert auf. Klick auf eine Zeile zoomt und zentriert die Kamera direkt auf das betroffene Bauteil.
+
+### 4.10 Relatives Koordinaten-Messwerkzeug (KiCad Leertasten-Delta-Modus)
+Aus **KiCad** übernommen ist die intuitive Ein-Tasten-Relativmessung:
+- Drücken der **`Leertaste` (Space)** setzt an der aktuellen Cursor-Position einen temporären lokalen Nullpunkt $(X_0, Y_0)$.
+- Bei jeder Mausbewegung berechnet PerfCraft die relative Differenz und zeigt sie mit extrem hohem Kontrast in der Statusleiste:
+  $$\Delta X = X - X_0 \quad (\text{Löcher und mm})$$
+  $$\Delta Y = Y - Y_0 \quad (\text{Löcher und mm})$$
+  $$\text{Distanz} = \sqrt{\Delta X^2 + \Delta Y^2} \times 2.54\text{ mm}$$
+  $$\text{Winkel} = \text{atan2}(-\Delta Y, \Delta X) \times \frac{180}{\pi}$$
+- Erneutes Drücken der `Leertaste` setzt den Nullpunkt auf die neue Position; `Escape` kehrt zur absoluten Anzeige zurück.
 
 ---
 
@@ -890,13 +939,19 @@ Der PNG-Export rendert die gesamte Platine ohne Anwendungs-UI auf einen Off-Scre
 | Taste / Geste | Kontext | Ausgelöste Aktion |
 | :--- | :--- | :--- |
 | `V` | Global | Auswahl-Werkzeug aktivieren |
+| `M` | Bei Selektion | **KiCad Move:** Bauteil aufnehmen und frei verschieben |
+| `G` | Bei Selektion | **KiCad Drag:** Bauteil verschieben und verbundene Drähte elastisch mitführen |
+| `E` | Bei Selektion | **KiCad Edit:** Eigenschafts-Dialog sofort öffnen |
+| `D` | Bei Selektion | **KiCad Duplicate:** Bauteil sofort duplizieren |
+| `R` | Bei Ghost / Selektion | Bauteil um 90° im Uhrzeigersinn drehen |
+| `F` | Bei Selektion | **KiCad Flip:** Bauteil zwischen Top- und Bottom-Layer spiegeln |
 | `W` | Global | Jumper-Draht-Werkzeug aktivieren |
 | `T` | Global | Lötbrücken-Werkzeug aktivieren |
 | `C` | Global | Bauteil-Platzierungs-Werkzeug aktivieren |
 | `X` | Global | Text-Werkzeug aktivieren |
-| `N` | Global | Verbindungsprüfer (Continuity Tester) aktivieren |
+| `N` oder `` ` `` (Backtick) | Global | **KiCad Net Highlight:** Netz unter Cursor leuchtend hervorheben |
+| `Leertaste` | Canvas | **KiCad Delta-Origin:** Setzt lokalen Nullpunkt für Relativmessung ($\Delta X=0, \Delta Y=0$) |
 | `Entf` | Auswahl aktiv | Alle selektierten Bauteile und Leiterbahnen löschen |
-| `R` | Bei Ghost oder Selektion | Bauteil um 90° im Uhrzeigersinn drehen |
 | `Strg + Z` | Global | Letzten Befehl rückgängig machen (Undo) |
 | `Strg + Y` | Global | Zuletzt verworfenen Befehl wiederholen (Redo) |
 | `Strg + S` | Global | Projekt speichern |
@@ -908,11 +963,13 @@ Der PNG-Export rendert die gesamte Platine ohne Anwendungs-UI auf einen Off-Scre
 | `F1` | Global | Ebene auf Bauteilseite (Top Layer) umschalten |
 | `F2` | Global | Ebene auf Lötseite (Bottom Layer) umschalten |
 | `F3` | Global | Ebene auf Röntgenansicht (X-Ray) umschalten |
+| `F7` | Global | **KiCad DRC:** Design Rule Check (Kollisionen & Kurzschlüsse) ausführen |
+| `F10` | Global | **KiCad Ratsnest:** Gestrichelte Fluglinien (Airwires) umschalten |
 | `Mausrad oben/unten` | Canvas | Stufenloser Zoom zentriert um Mauszeiger |
 | `Mittlere Maustaste Drag` | Canvas | Platine verschieben (Pan) |
-| `Leertaste + Linke Maus`| Canvas | Platine verschieben (Pan-Alternative) |
+| `Leertaste (gedrückt halten) + Drag`| Canvas | Platine verschieben (Pan-Alternative) |
 | `Pfeiltasten` | Auswahl aktiv | Markierte Objekte um genau 1 Loch verschieben |
-| `Escape` | Im Werkzeug | Aktiven Zeichen-/Verlege-Vorgang abbrechen |
+| `Escape` | Im Werkzeug | Aktiven Zeichen-/Verlege-Vorgang abbrechen oder Netz-Highlighting aufheben |
 
 ---
 
