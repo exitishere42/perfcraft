@@ -37,6 +37,10 @@ public class PerfBoardCanvas extends Canvas {
     private double lastDragX;
     private double lastDragY;
 
+    // KiCad & Tinkercad Inspirations
+    private java.util.Set<HoleCoord> highlightedNet = java.util.Collections.emptySet();
+    private String hoveredTerminalText = null;
+
     private BiConsumer<Integer, Integer> onHoverCoordinate;
     private Consumer<PlacedComponent> onComponentSelected;
     private Runnable onProjectModified;
@@ -84,6 +88,17 @@ public class PerfBoardCanvas extends Canvas {
             HoleCoord grid = transform.screenToGrid(e.getX(), e.getY());
 
             if (e.getButton() == MouseButton.PRIMARY) {
+                if (e.isControlDown() || e.isShortcutDown()) {
+                    // KiCad Style: Ctrl+Click toggles Net Highlighting
+                    if (!highlightedNet.isEmpty()) {
+                        highlightedNet = java.util.Collections.emptySet();
+                    } else {
+                        highlightedNet = de.exit.perfcraft.service.ContinuityService.findConnectedNet(project, grid);
+                    }
+                    render();
+                    return;
+                }
+
                 if (activeTool == ActiveTool.SELECT) {
                     // Selektion / Hit-Test
                     PlacedComponent hit = findComponentAt(grid);
@@ -160,7 +175,11 @@ public class PerfBoardCanvas extends Canvas {
             if (onHoverCoordinate != null) {
                 onHoverCoordinate.accept(currentHoverGrid.x(), currentHoverGrid.y());
             }
-            if (activeTool == ActiveTool.WIRE && wireStartHole != null) {
+
+            // Tinkercad Style: Detect terminal hover
+            hoveredTerminalText = detectTerminalLabel(currentHoverGrid);
+
+            if ((activeTool == ActiveTool.WIRE && wireStartHole != null) || hoveredTerminalText != null) {
                 render();
             }
         });
@@ -261,6 +280,13 @@ public class PerfBoardCanvas extends Canvas {
             for (int r = 0; r < rows; r++) {
                 double px = transform.gridToScreenX(c);
                 double py = transform.gridToScreenY(r);
+                HoleCoord currentHole = new HoleCoord(c, r);
+
+                // KiCad Style: Highlighted Net Glow
+                if (highlightedNet.contains(currentHole)) {
+                    gc.setFill(Color.web("#FFEE58")); // Neongelb
+                    gc.fillOval(px - padR - 3, py - padR - 3, (padR + 3) * 2, (padR + 3) * 2);
+                }
 
                 // Reines Silber-Pad (#CFD8DC) mit Rand (#90A4AE)
                 gc.setFill(Color.web("#CFD8DC"));
@@ -328,6 +354,47 @@ public class PerfBoardCanvas extends Canvas {
             }
             gc.setGlobalAlpha(1.0);
         }
+
+        // 6. Tinkercad Style: Terminal Tooltip Badge
+        if (hoveredTerminalText != null && currentHoverGrid != null) {
+            double hx = transform.gridToScreenX(currentHoverGrid.x());
+            double hy = transform.gridToScreenY(currentHoverGrid.y());
+
+            gc.setFill(Color.web("#212121"));
+            gc.setStroke(Color.web("#00C853"));
+            gc.setLineWidth(1.0);
+            double tw = hoveredTerminalText.length() * 6.5 + 12;
+            gc.fillRoundRect(hx + 10, hy - 18, tw, 20, 4, 4);
+            gc.strokeRoundRect(hx + 10, hy - 18, tw, 20, 4, 4);
+
+            gc.setFill(Color.web("#FFFFFF"));
+            gc.fillText(hoveredTerminalText, hx + 16, hy - 4);
+        }
+    }
+
+    private String detectTerminalLabel(HoleCoord grid) {
+        if (grid == null) return null;
+        for (PlacedComponent c : project.getComponents()) {
+            HoleCoord s = c.getStart();
+            HoleCoord e = c.getEnd() != null ? c.getEnd() : s;
+
+            if (c.getType() == ComponentType.TACTILE_SWITCH) {
+                if (grid.equals(s)) return c.getDesignator() + ": Terminal 1a";
+                if (grid.equals(new HoleCoord(s.x() + 2, s.y()))) return c.getDesignator() + ": Terminal 1b";
+                if (grid.equals(new HoleCoord(s.x(), s.y() + 1))) return c.getDesignator() + ": Terminal 2a";
+                if (grid.equals(new HoleCoord(s.x() + 2, s.y() + 1))) return c.getDesignator() + ": Terminal 2b";
+            } else if (c.getType() == ComponentType.RESISTOR_AXIAL) {
+                if (grid.equals(s)) return c.getDesignator() + ": Terminal 1";
+                if (grid.equals(e)) return c.getDesignator() + ": Terminal 2";
+            } else if (c.getType() == ComponentType.LED) {
+                if (grid.equals(s)) return c.getDesignator() + ": Anode (+)";
+                if (grid.equals(e)) return c.getDesignator() + ": Cathode (-)";
+            } else if (c.getType() == ComponentType.DIODE) {
+                if (grid.equals(s)) return c.getDesignator() + ": Anode";
+                if (grid.equals(e)) return c.getDesignator() + ": Cathode";
+            }
+        }
+        return null;
     }
 
     private void renderTactileSwitch(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
