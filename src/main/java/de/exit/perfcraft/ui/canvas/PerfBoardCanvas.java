@@ -7,20 +7,39 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 
+import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class PerfBoardCanvas extends Canvas {
 
+    public enum ActiveTool {
+        SELECT,
+        WIRE,
+        COMPONENT
+    }
+
     private final CoordinateTransform transform = new CoordinateTransform();
     private PerfProject project = new PerfProject();
     private BoardLayer currentLayer = BoardLayer.TOP;
+    private ActiveTool activeTool = ActiveTool.SELECT;
+
+    private WireKind activeWireKind = WireKind.CABLE;
+    private String activeWireColor = "#E53935";
+    private ComponentType activeComponentType = ComponentType.TACTILE_SWITCH;
+
     private PlacedComponent selectedComponent = null;
 
+    // Interaktions-Status
+    private HoleCoord wireStartHole = null;
+    private HoleCoord currentHoverGrid = null;
+    private boolean isDraggingObject = false;
     private double lastDragX;
     private double lastDragY;
+
     private BiConsumer<Integer, Integer> onHoverCoordinate;
     private Consumer<PlacedComponent> onComponentSelected;
+    private Runnable onProjectModified;
 
     public PerfBoardCanvas(double width, double height) {
         super(width, height);
@@ -31,7 +50,7 @@ public class PerfBoardCanvas extends Canvas {
 
     private void initDemoData() {
         project.getComponents().add(new PlacedComponent(
-                "c1", ComponentType.TACTILE_SWITCH, "SW1", "Taster 6x6",
+                "c1", ComponentType.TACTILE_SWITCH, "SW1", "6x6 mm",
                 new HoleCoord(5, 4), new HoleCoord(7, 5), 0, BoardLayer.TOP
         ));
 
@@ -41,7 +60,7 @@ public class PerfBoardCanvas extends Canvas {
         ));
 
         project.getComponents().add(new PlacedComponent(
-                "c3", ComponentType.LED, "LED1", "Rot",
+                "c3", ComponentType.LED, "LED1", "Red",
                 new HoleCoord(16, 4), new HoleCoord(17, 4), 0, BoardLayer.TOP
         ));
 
@@ -60,50 +79,89 @@ public class PerfBoardCanvas extends Canvas {
 
     private void initInteraction() {
         setOnMousePressed(e -> {
-            if (e.getButton() == MouseButton.MIDDLE || e.isSecondaryButtonDown() || e.isPrimaryButtonDown()) {
-                lastDragX = e.getX();
-                lastDragY = e.getY();
-            }
+            lastDragX = e.getX();
+            lastDragY = e.getY();
+            HoleCoord grid = transform.screenToGrid(e.getX(), e.getY());
 
             if (e.getButton() == MouseButton.PRIMARY) {
-                HoleCoord grid = transform.screenToGrid(e.getX(), e.getY());
-                // Hit testing
-                PlacedComponent hit = null;
-                for (PlacedComponent c : project.getComponents()) {
-                    int minX = Math.min(c.getStart().x(), c.getEnd() != null ? c.getEnd().x() : c.getStart().x());
-                    int maxX = Math.max(c.getStart().x(), c.getEnd() != null ? c.getEnd().x() : c.getStart().x());
-                    int minY = Math.min(c.getStart().y(), c.getEnd() != null ? c.getEnd().y() : c.getStart().y());
-                    int maxY = Math.max(c.getStart().y(), c.getEnd() != null ? c.getEnd().y() : c.getStart().y());
-
-                    if (grid.x() >= minX - 1 && grid.x() <= maxX + 1 &&
-                        grid.y() >= minY - 1 && grid.y() <= maxY + 1) {
-                        hit = c;
-                        break;
+                if (activeTool == ActiveTool.SELECT) {
+                    // Selektion / Hit-Test
+                    PlacedComponent hit = findComponentAt(grid);
+                    selectedComponent = hit;
+                    isDraggingObject = (hit != null);
+                    if (onComponentSelected != null && hit != null) {
+                        onComponentSelected.accept(hit);
                     }
+                    render();
+                } else if (activeTool == ActiveTool.WIRE) {
+                    // Draht ziehen: Start oder Ziel
+                    if (wireStartHole == null) {
+                        wireStartHole = grid;
+                    } else {
+                        if (!wireStartHole.equals(grid)) {
+                            WireTrace trace = new WireTrace(
+                                    UUID.randomUUID().toString(),
+                                    activeWireKind,
+                                    activeWireKind.getDefaultLayer(),
+                                    activeWireKind == WireKind.SILVER_WIRE ? "#CFD8DC" : activeWireColor,
+                                    java.util.List.of(wireStartHole, grid)
+                            );
+                            project.getWires().add(trace);
+                            wireStartHole = null;
+                            if (onProjectModified != null) onProjectModified.run();
+                        } else {
+                            wireStartHole = null;
+                        }
+                    }
+                    render();
+                } else if (activeTool == ActiveTool.COMPONENT) {
+                    // Bauteil platzieren
+                    placeNewComponent(grid);
+                    render();
                 }
-                selectedComponent = hit;
-                if (onComponentSelected != null && hit != null) {
-                    onComponentSelected.accept(hit);
-                }
+            } else if (e.getButton() == MouseButton.SECONDARY) {
+                // Rechtsklick: Vorgang abbrechen
+                wireStartHole = null;
                 render();
             }
         });
 
         setOnMouseDragged(e -> {
             if (e.getButton() == MouseButton.MIDDLE || e.isSecondaryButtonDown() || (e.isPrimaryButtonDown() && e.isAltDown())) {
+                // Pan
                 double dx = e.getX() - lastDragX;
                 double dy = e.getY() - lastDragY;
                 transform.pan(dx, dy);
                 lastDragX = e.getX();
                 lastDragY = e.getY();
                 render();
+            } else if (e.getButton() == MouseButton.PRIMARY && activeTool == ActiveTool.SELECT && isDraggingObject && selectedComponent != null) {
+                // Bauteil bewegen
+                HoleCoord grid = transform.screenToGrid(e.getX(), e.getY());
+                if (!grid.equals(selectedComponent.getStart())) {
+                    int dx = grid.x() - selectedComponent.getStart().x();
+                    int dy = grid.y() - selectedComponent.getStart().y();
+                    selectedComponent.setStart(grid);
+                    if (selectedComponent.getEnd() != null) {
+                        selectedComponent.setEnd(new HoleCoord(selectedComponent.getEnd().x() + dx, selectedComponent.getEnd().y() + dy));
+                    }
+                    if (onProjectModified != null) onProjectModified.run();
+                    render();
+                }
             }
         });
 
+        setOnMouseReleased(e -> {
+            isDraggingObject = false;
+        });
+
         setOnMouseMoved(e -> {
-            HoleCoord grid = transform.screenToGrid(e.getX(), e.getY());
+            currentHoverGrid = transform.screenToGrid(e.getX(), e.getY());
             if (onHoverCoordinate != null) {
-                onHoverCoordinate.accept(grid.x(), grid.y());
+                onHoverCoordinate.accept(currentHoverGrid.x(), currentHoverGrid.y());
+            }
+            if (activeTool == ActiveTool.WIRE && wireStartHole != null) {
+                render();
             }
         });
 
@@ -112,6 +170,49 @@ public class PerfBoardCanvas extends Canvas {
             transform.applyZoom(zoomFactor, e.getX(), e.getY());
             render();
         });
+    }
+
+    private PlacedComponent findComponentAt(HoleCoord grid) {
+        for (PlacedComponent c : project.getComponents()) {
+            int minX = Math.min(c.getStart().x(), c.getEnd() != null ? c.getEnd().x() : c.getStart().x());
+            int maxX = Math.max(c.getStart().x(), c.getEnd() != null ? c.getEnd().x() : c.getStart().x());
+            int minY = Math.min(c.getStart().y(), c.getEnd() != null ? c.getEnd().y() : c.getStart().y());
+            int maxY = Math.max(c.getStart().y(), c.getEnd() != null ? c.getEnd().y() : c.getStart().y());
+
+            if (grid.x() >= minX - 1 && grid.x() <= maxX + 1 &&
+                grid.y() >= minY - 1 && grid.y() <= maxY + 1) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    private void placeNewComponent(HoleCoord start) {
+        String id = UUID.randomUUID().toString();
+        int count = (int) project.getComponents().stream().filter(c -> c.getType() == activeComponentType).count() + 1;
+        String des = activeComponentType.getDefaultPrefix() + count;
+
+        PlacedComponent comp;
+        if (activeComponentType == ComponentType.TACTILE_SWITCH) {
+            comp = new PlacedComponent(id, activeComponentType, des, "6x6 mm", start, new HoleCoord(start.x() + 2, start.y() + 1), 0, BoardLayer.TOP);
+        } else if (activeComponentType == ComponentType.RESISTOR_AXIAL) {
+            comp = new PlacedComponent(id, activeComponentType, des, "10k", start, new HoleCoord(start.x() + 4, start.y()), 0, BoardLayer.TOP);
+        } else if (activeComponentType == ComponentType.LED) {
+            comp = new PlacedComponent(id, activeComponentType, des, "Red", start, new HoleCoord(start.x() + 1, start.y()), 0, BoardLayer.TOP);
+        } else if (activeComponentType == ComponentType.CAPACITOR_CERAMIC) {
+            comp = new PlacedComponent(id, activeComponentType, des, "100n", start, new HoleCoord(start.x() + 1, start.y()), 0, BoardLayer.TOP);
+        } else if (activeComponentType == ComponentType.DIODE) {
+            comp = new PlacedComponent(id, activeComponentType, des, "1N4148", start, new HoleCoord(start.x() + 3, start.y()), 0, BoardLayer.TOP);
+        } else if (activeComponentType == ComponentType.IC_DIP) {
+            comp = new PlacedComponent(id, activeComponentType, des, "DIP-8", start, new HoleCoord(start.x() + 3, start.y() + 3), 0, BoardLayer.TOP);
+        } else {
+            comp = new PlacedComponent(id, activeComponentType, des, "10k", start, new HoleCoord(start.x() + 2, start.y()), 0, BoardLayer.TOP);
+        }
+
+        project.getComponents().add(comp);
+        selectedComponent = comp;
+        if (onComponentSelected != null) onComponentSelected.accept(comp);
+        if (onProjectModified != null) onProjectModified.run();
     }
 
     public void render() {
@@ -152,7 +253,7 @@ public class PerfBoardCanvas extends Canvas {
             }
         }
 
-        // 3. Kupfer-Pads & Bohrlöcher
+        // 3. SILBER-PADS (Nutzer-Vorgabe: SILBER statt Gold!)
         double padR = Math.max(3.0, hs * 0.38);
         double drillR = Math.max(1.5, hs * 0.18);
 
@@ -161,10 +262,16 @@ public class PerfBoardCanvas extends Canvas {
                 double px = transform.gridToScreenX(c);
                 double py = transform.gridToScreenY(r);
 
-                gc.setFill(Color.web("#D4AF37")); // Gold / Kupfer
+                // Reines Silber-Pad (#CFD8DC) mit Rand (#90A4AE)
+                gc.setFill(Color.web("#CFD8DC"));
                 gc.fillOval(px - padR, py - padR, padR * 2, padR * 2);
 
-                gc.setFill(Color.web("#121212")); // Bohrung
+                gc.setStroke(Color.web("#90A4AE"));
+                gc.setLineWidth(1.0);
+                gc.strokeOval(px - padR, py - padR, padR * 2, padR * 2);
+
+                // Schwarze zentrierte Bohrung (#121212)
+                gc.setFill(Color.web("#121212"));
                 gc.fillOval(px - drillR, py - drillR, drillR * 2, drillR * 2);
             }
         }
@@ -186,6 +293,18 @@ public class PerfBoardCanvas extends Canvas {
             }
         }
 
+        // Elastische Vorschau-Linie beim Drahtziehen
+        if (activeTool == ActiveTool.WIRE && wireStartHole != null && currentHoverGrid != null) {
+            gc.setStroke(activeWireKind == WireKind.SILVER_WIRE ? Color.web("#CFD8DC") : Color.web(activeWireColor));
+            gc.setLineWidth(3.0 * transform.getScale());
+            gc.setLineDashes(4, 4);
+            gc.strokeLine(
+                    transform.gridToScreenX(wireStartHole.x()), transform.gridToScreenY(wireStartHole.y()),
+                    transform.gridToScreenX(currentHoverGrid.x()), transform.gridToScreenY(currentHoverGrid.y())
+            );
+            gc.setLineDashes(null);
+        }
+
         // 5. Komponenten
         if (currentLayer == BoardLayer.TOP || currentLayer == BoardLayer.BOTH) {
             double alpha = (currentLayer == BoardLayer.BOTH) ? 0.65 : 1.0;
@@ -199,6 +318,12 @@ public class PerfBoardCanvas extends Canvas {
                     renderResistor(gc, comp, isSel);
                 } else if (comp.getType() == ComponentType.LED) {
                     renderLED(gc, comp, isSel);
+                } else if (comp.getType() == ComponentType.CAPACITOR_CERAMIC) {
+                    renderCapacitor(gc, comp, isSel);
+                } else if (comp.getType() == ComponentType.DIODE) {
+                    renderDiode(gc, comp, isSel);
+                } else if (comp.getType() == ComponentType.IC_DIP) {
+                    renderIC(gc, comp, isSel);
                 }
             }
             gc.setGlobalAlpha(1.0);
@@ -318,6 +443,79 @@ public class PerfBoardCanvas extends Canvas {
         gc.fillText(comp.getDesignator(), px - 12, py - r - 4);
     }
 
+    private void renderCapacitor(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        double px = transform.gridToScreenX(comp.getStart().x());
+        double py = transform.gridToScreenY(comp.getStart().y());
+        double r = transform.getHoleSpacingPx() * 0.40;
+
+        gc.setFill(Color.web("#FFA726")); // Gelb-Orange Keramikkondensator
+        gc.fillRoundRect(px - r, py - r, r * 2, r * 2, 4, 4);
+
+        if (isSelected) {
+            gc.setStroke(Color.web("#00C853"));
+            gc.setLineWidth(2.0);
+            gc.strokeRect(px - r - 3, py - r - 3, (r + 3) * 2, (r + 3) * 2);
+        }
+
+        gc.setFill(Color.web("#ECEFF1"));
+        gc.fillText(comp.getDesignator(), px - 10, py - r - 4);
+    }
+
+    private void renderDiode(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        double x1 = transform.gridToScreenX(comp.getStart().x());
+        double y1 = transform.gridToScreenY(comp.getStart().y());
+        double x2 = transform.gridToScreenX(comp.getEnd().x());
+        double y2 = transform.gridToScreenY(comp.getEnd().y());
+
+        gc.setStroke(Color.web("#B0BEC5"));
+        gc.setLineWidth(2.0);
+        gc.strokeLine(x1, y1, x2, y2);
+
+        double midX = (x1 + x2) / 2.0;
+        double midY = (y1 + y2) / 2.0;
+        double bw = transform.getHoleSpacingPx() * 1.6;
+        double bh = transform.getHoleSpacingPx() * 0.5;
+
+        gc.setFill(Color.web("#FF7043")); // Glas-Körper 1N4148
+        gc.fillRect(midX - bw/2, midY - bh/2, bw, bh);
+
+        // Kathoden-Band schwarz
+        gc.setFill(Color.web("#1A1A1A"));
+        gc.fillRect(midX + bw/2 - 4, midY - bh/2, 4, bh);
+
+        if (isSelected) {
+            gc.setStroke(Color.web("#00C853"));
+            gc.setLineWidth(2.0);
+            gc.strokeRect(midX - bw/2 - 2, midY - bh/2 - 2, bw + 4, bh + 4);
+        }
+
+        gc.setFill(Color.web("#ECEFF1"));
+        gc.fillText(comp.getDesignator(), midX - 10, midY - bh/2 - 4);
+    }
+
+    private void renderIC(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        double x1 = transform.gridToScreenX(comp.getStart().x());
+        double y1 = transform.gridToScreenY(comp.getStart().y());
+        double w = transform.getHoleSpacingPx() * 3.5;
+        double h = transform.getHoleSpacingPx() * 3.5;
+
+        gc.setFill(Color.web("#263238"));
+        gc.fillRoundRect(x1 - 10, y1 - 10, w, h, 6, 6);
+
+        // Pin 1 Kerbe (Notch)
+        gc.setFill(Color.web("#121212"));
+        gc.fillOval(x1 + w/2 - 16, y1 - 16, 12, 12);
+
+        if (isSelected) {
+            gc.setStroke(Color.web("#00C853"));
+            gc.setLineWidth(2.0);
+            gc.strokeRoundRect(x1 - 12, y1 - 12, w + 4, h + 4, 8, 8);
+        }
+
+        gc.setFill(Color.web("#ECEFF1"));
+        gc.fillText(comp.getDesignator() + " (DIP)", x1 + 4, y1 + h/2);
+    }
+
     private void drawBand(GraphicsContext gc, double x, double y, double w, double h, String hexColor) {
         gc.setFill(Color.web(hexColor));
         gc.fillRect(x, y, w, h);
@@ -325,6 +523,48 @@ public class PerfBoardCanvas extends Canvas {
 
     public void setLayer(BoardLayer layer) {
         this.currentLayer = layer;
+        render();
+    }
+
+    public void setActiveTool(ActiveTool tool) {
+        this.activeTool = tool;
+        this.wireStartHole = null;
+        render();
+    }
+
+    public void setActiveWireKind(WireKind kind) {
+        this.activeWireKind = kind;
+    }
+
+    public void setActiveWireColor(String col) {
+        this.activeWireColor = col;
+    }
+
+    public void setActiveComponentType(ComponentType type) {
+        this.activeComponentType = type;
+        this.activeTool = ActiveTool.COMPONENT;
+    }
+
+    public void deleteSelected() {
+        if (selectedComponent != null) {
+            project.getComponents().remove(selectedComponent);
+            selectedComponent = null;
+            if (onProjectModified != null) onProjectModified.run();
+            render();
+        }
+    }
+
+    public void rotateSelected() {
+        if (selectedComponent != null) {
+            selectedComponent.rotate90();
+            if (onProjectModified != null) onProjectModified.run();
+            render();
+        }
+    }
+
+    public void setProject(PerfProject project) {
+        this.project = project;
+        this.selectedComponent = project.getComponents().isEmpty() ? null : project.getComponents().getFirst();
         render();
     }
 
@@ -338,5 +578,9 @@ public class PerfBoardCanvas extends Canvas {
 
     public void setOnComponentSelected(Consumer<PlacedComponent> callback) {
         this.onComponentSelected = callback;
+    }
+
+    public void setOnProjectModified(Runnable callback) {
+        this.onProjectModified = callback;
     }
 }

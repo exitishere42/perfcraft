@@ -3,36 +3,66 @@ package de.exit.perfcraft;
 import de.exit.perfcraft.model.BoardLayer;
 import de.exit.perfcraft.model.ComponentType;
 import de.exit.perfcraft.model.PlacedComponent;
+import de.exit.perfcraft.model.WireKind;
+import de.exit.perfcraft.service.ExportService;
+import de.exit.perfcraft.service.I18n;
+import de.exit.perfcraft.service.ProjectStorageService;
 import de.exit.perfcraft.service.ResistorColorCode;
 import de.exit.perfcraft.ui.canvas.PerfBoardCanvas;
+import de.exit.perfcraft.ui.dialogs.NewBoardDialog;
+import de.exit.perfcraft.ui.dialogs.SettingsDialog;
 import javafx.application.Application;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+
+import javax.imageio.ImageIO;
+import java.io.File;
+import java.io.IOException;
 
 public class PerfCraftApp extends Application {
 
+    private Stage primaryStage;
     private PerfBoardCanvas canvas;
-    private Label statCoordLabel;
-    private Label statMmLabel;
-    private Label statLayerLabel;
+    private ProjectStorageService storageService;
+
+    // UI Nodes for Dynamic Localization
+    private Label logoLabel;
+    private Button btnNew, btnOpen, btnSave, btnExport, btnSettings;
+    private Button btnLayerTop, btnLayerBottom, btnLayerBoth;
+    private Button btnToolSelect, btnToolWire, btnToolComp;
+    private Button btnWireCable, btnWireSilver;
+    private Label lblSection1, lblSection2;
+    private Label lblDesignator, lblValue, lblBandsTitle;
+    private Label statHoleLabel, statMmLabel, statLayerTitle, statLayerValue, statGridLabel;
+
     private TextField propDesignatorField;
     private TextField propValueField;
     private VBox resistorPreviewBox;
     private HBox resistorColorStrip;
     private Label resistorOhmLabel;
+    private HBox cableColorsBox;
 
     @Override
-    public void start(Stage primaryStage) {
-        primaryStage.setTitle("PerfCraft - Perfboard Designer");
+    public void start(Stage stage) {
+        this.primaryStage = stage;
+        this.storageService = new ProjectStorageService();
+
+        primaryStage.setTitle(I18n.get("app.title"));
 
         var iconStream = getClass().getResourceAsStream("/icons/icon.png");
         if (iconStream != null) {
-            primaryStage.getIcons().add(new javafx.scene.image.Image(iconStream));
+            primaryStage.getIcons().add(new Image(iconStream));
         }
 
         BorderPane root = new BorderPane();
@@ -49,27 +79,30 @@ public class PerfCraftApp extends Application {
         canvas.heightProperty().bind(canvasHolder.heightProperty());
         canvasHolder.widthProperty().addListener((obs, oldV, newV) -> canvas.render());
         canvasHolder.heightProperty().addListener((obs, oldV, newV) -> canvas.render());
-
         root.setCenter(canvasHolder);
 
-        // 3. LEFT TOOLBAR (Die 3 Kern-Tools)
+        // 3. LEFT TOOLBAR
         root.setLeft(createLeftToolbar());
 
-        // 4. RIGHT SIDEBAR (Bauteil-Wahl & Inspektor)
+        // 4. RIGHT SIDEBAR
         root.setRight(createRightSidebar());
 
         // 5. BOTTOM STATUSBAR
         root.setBottom(createStatusBar());
 
-        // Callbacks verbinden
+        // Callbacks
         canvas.setOnHoverCoordinate((gx, gy) -> {
-            statCoordLabel.setText("Loch: X: " + (gx + 1) + ", Y: " + (gy + 1));
-            statMmLabel.setText("Pos: " + String.format("%.2f", gx * 2.54) + " mm x " + String.format("%.2f", gy * 2.54) + " mm");
+            statHoleLabel.setText(I18n.get("stat.hole") + " X: " + (gx + 1) + ", Y: " + (gy + 1));
+            statMmLabel.setText(I18n.get("stat.pos") + " " + String.format("%.2f", gx * 2.54) + " mm x " + String.format("%.2f", gy * 2.54) + " mm");
         });
 
         canvas.setOnComponentSelected(this::updateInspector);
+        canvas.setOnProjectModified(() -> {
+            if (canvas.getSelectedComponent() != null) {
+                updateInspector(canvas.getSelectedComponent());
+            }
+        });
 
-        // Initiales Bauteil im Inspektor anzeigen
         if (canvas.getSelectedComponent() != null) {
             updateInspector(canvas.getSelectedComponent());
         }
@@ -80,66 +113,94 @@ public class PerfCraftApp extends Application {
             scene.getStylesheets().add(cssResource.toExternalForm());
         }
 
+        // Tastaturkürzel
+        scene.setOnKeyPressed(e -> {
+            switch (e.getCode()) {
+                case V -> activateTool(PerfBoardCanvas.ActiveTool.SELECT);
+                case W -> activateTool(PerfBoardCanvas.ActiveTool.WIRE);
+                case C -> activateTool(PerfBoardCanvas.ActiveTool.COMPONENT);
+                case R -> canvas.rotateSelected();
+                case DELETE -> canvas.deleteSelected();
+                default -> {}
+            }
+        });
+
+        I18n.addListener(lang -> applyLocalization());
+
         primaryStage.setScene(scene);
         primaryStage.show();
     }
 
     private HBox createHeaderBar() {
-        HBox header = new HBox(12);
+        HBox header = new HBox(10);
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(8, 14, 8, 14));
         header.setStyle("-fx-background-color: #1E1E1E; -fx-border-color: #2C2C2C; -fx-border-width: 0 0 1 0;");
 
-        // Logo
-        Label logo = new Label("PerfCraft");
-        logo.setStyle("-fx-text-fill: #00C853; -fx-font-weight: bold; -fx-font-size: 16px;");
+        // SVG Circuit Board Logo (28x28)
+        ImageView logoView = new ImageView();
+        var iconStream = getClass().getResourceAsStream("/icons/icon.png");
+        if (iconStream != null) {
+            logoView.setImage(new Image(iconStream));
+            logoView.setFitWidth(28);
+            logoView.setFitHeight(28);
+            logoView.setPreserveRatio(true);
+        }
+
+        logoLabel = new Label("PerfCraft");
+        logoLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16px;");
 
         Separator s1 = new Separator(javafx.geometry.Orientation.VERTICAL);
 
-        // Dateibefehle
-        Button btnNew = createIconButton("Neu");
-        Button btnOpen = createIconButton("Öffnen");
-        Button btnSave = createIconButton("Speichern");
+        btnNew = createIconButton(I18n.get("menu.new"));
+        btnNew.setOnAction(e -> NewBoardDialog.show(primaryStage, project -> {
+            canvas.setProject(project);
+            primaryStage.setTitle("PerfCraft - " + project.getName());
+        }));
+
+        btnOpen = createIconButton(I18n.get("menu.open"));
+        btnOpen.setOnAction(e -> openProject());
+
+        btnSave = createIconButton(I18n.get("menu.save"));
+        btnSave.setStyle("-fx-background-color: #242424; -fx-text-fill: #00C853; -fx-border-color: #2C2C2C; -fx-border-radius: 4px; -fx-cursor: hand; -fx-font-size: 12px; -fx-font-weight: bold;");
+        btnSave.setOnAction(e -> saveProject());
+
+        btnExport = createIconButton(I18n.get("menu.export"));
+        btnExport.setOnAction(e -> exportProject());
 
         Separator s2 = new Separator(javafx.geometry.Orientation.VERTICAL);
 
-        // Undo / Redo
-        Button btnUndo = createIconButton("↺");
-        Button btnRedo = createIconButton("↻");
-
-        // Ebenen-Schalter
         HBox layerBox = new HBox(4);
         layerBox.setPadding(new Insets(2));
         layerBox.setStyle("-fx-background-color: #121212; -fx-border-color: #2C2C2C; -fx-border-radius: 4px; -fx-background-radius: 4px;");
 
-        Button btnTop = createLayerButton("Bauteilseite", true);
-        Button btnBottom = createLayerButton("Lötseite", false);
-        Button btnBoth = createLayerButton("Beide", false);
+        btnLayerTop = createLayerButton(I18n.get("layer.top"), true);
+        btnLayerBottom = createLayerButton(I18n.get("layer.bottom"), false);
+        btnLayerBoth = createLayerButton(I18n.get("layer.both"), false);
 
-        btnTop.setOnAction(e -> {
-            updateLayerButtons(btnTop, btnBottom, btnBoth);
+        btnLayerTop.setOnAction(e -> {
+            updateLayerButtons(btnLayerTop, btnLayerBottom, btnLayerBoth);
             canvas.setLayer(BoardLayer.TOP);
-            statLayerLabel.setText("Bauteilseite");
+            statLayerValue.setText(I18n.get("layer.top"));
         });
 
-        btnBottom.setOnAction(e -> {
-            updateLayerButtons(btnBottom, btnTop, btnBoth);
+        btnLayerBottom.setOnAction(e -> {
+            updateLayerButtons(btnLayerBottom, btnLayerTop, btnLayerBoth);
             canvas.setLayer(BoardLayer.BOTTOM);
-            statLayerLabel.setText("Lötseite");
+            statLayerValue.setText(I18n.get("layer.bottom"));
         });
 
-        btnBoth.setOnAction(e -> {
-            updateLayerButtons(btnBoth, btnTop, btnBottom);
+        btnLayerBoth.setOnAction(e -> {
+            updateLayerButtons(btnLayerBoth, btnLayerTop, btnLayerBottom);
             canvas.setLayer(BoardLayer.BOTH);
-            statLayerLabel.setText("Beide (Röntgen)");
+            statLayerValue.setText(I18n.get("layer.both"));
         });
 
-        layerBox.getChildren().addAll(btnTop, btnBottom, btnBoth);
+        layerBox.getChildren().addAll(btnLayerTop, btnLayerBottom, btnLayerBoth);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // Zoom
         Button btnZoomOut = createIconButton("-");
         Button btnZoomIn = createIconButton("+");
         btnZoomOut.setOnAction(e -> {
@@ -151,7 +212,10 @@ public class PerfCraftApp extends Application {
             canvas.render();
         });
 
-        header.getChildren().addAll(logo, s1, btnNew, btnOpen, btnSave, s2, btnUndo, btnRedo, layerBox, spacer, btnZoomOut, btnZoomIn);
+        btnSettings = createIconButton("⚙ " + I18n.get("menu.settings"));
+        btnSettings.setOnAction(e -> SettingsDialog.show(primaryStage, this::applyLocalization));
+
+        header.getChildren().addAll(logoView, logoLabel, s1, btnNew, btnOpen, btnSave, btnExport, s2, layerBox, spacer, btnZoomOut, btnZoomIn, btnSettings);
         return header;
     }
 
@@ -160,76 +224,132 @@ public class PerfCraftApp extends Application {
         bar.setAlignment(Pos.TOP_CENTER);
         bar.setPadding(new Insets(12, 6, 12, 6));
         bar.setStyle("-fx-background-color: #1A1A1A; -fx-border-color: #2C2C2C; -fx-border-width: 0 1 0 0;");
-        bar.setPrefWidth(64);
+        bar.setPrefWidth(68);
 
-        Button btnSelect = createBigToolButton("↖", "Wählen", true);
-        Button btnWire = createBigToolButton("〰", "Leitung", false);
-        Button btnComp = createBigToolButton("⌖", "Bauteil", false);
+        btnToolSelect = createBigToolButton("↖", I18n.get("tool.select"), true);
+        btnToolWire = createBigToolButton("〰", I18n.get("tool.wire"), false);
+        btnToolComp = createBigToolButton("⌖", I18n.get("tool.component"), false);
 
-        btnSelect.setOnAction(e -> updateToolButtons(btnSelect, btnWire, btnComp));
-        btnWire.setOnAction(e -> updateToolButtons(btnWire, btnSelect, btnComp));
-        btnComp.setOnAction(e -> updateToolButtons(btnComp, btnSelect, btnWire));
+        btnToolSelect.setOnAction(e -> activateTool(PerfBoardCanvas.ActiveTool.SELECT));
+        btnToolWire.setOnAction(e -> activateTool(PerfBoardCanvas.ActiveTool.WIRE));
+        btnToolComp.setOnAction(e -> activateTool(PerfBoardCanvas.ActiveTool.COMPONENT));
 
         Separator s = new Separator(javafx.geometry.Orientation.HORIZONTAL);
         s.setPadding(new Insets(6, 0, 6, 0));
 
         Button btnRotate = new Button("↻");
+        btnRotate.setTooltip(new Tooltip("Rotate 90° (R)"));
         btnRotate.setStyle("-fx-background-color: #242424; -fx-text-fill: #B0BEC5; -fx-font-size: 14px; -fx-cursor: hand;");
-        btnRotate.setOnAction(e -> {
-            if (canvas.getSelectedComponent() != null) {
-                canvas.getSelectedComponent().rotate90();
-                canvas.render();
-            }
-        });
+        btnRotate.setOnAction(e -> canvas.rotateSelected());
 
         Button btnDelete = new Button("✕");
+        btnDelete.setTooltip(new Tooltip("Delete (Del)"));
         btnDelete.setStyle("-fx-background-color: #242424; -fx-text-fill: #E53935; -fx-font-size: 12px; -fx-cursor: hand;");
+        btnDelete.setOnAction(e -> canvas.deleteSelected());
 
-        bar.getChildren().addAll(btnSelect, btnWire, btnComp, s, btnRotate, btnDelete);
+        bar.getChildren().addAll(btnToolSelect, btnToolWire, btnToolComp, s, btnRotate, btnDelete);
         return bar;
+    }
+
+    private void activateTool(PerfBoardCanvas.ActiveTool tool) {
+        canvas.setActiveTool(tool);
+        btnToolSelect.setStyle(tool == PerfBoardCanvas.ActiveTool.SELECT ? getActiveToolStyle() : getInactiveToolStyle());
+        btnToolWire.setStyle(tool == PerfBoardCanvas.ActiveTool.WIRE ? getActiveToolStyle() : getInactiveToolStyle());
+        btnToolComp.setStyle(tool == PerfBoardCanvas.ActiveTool.COMPONENT ? getActiveToolStyle() : getInactiveToolStyle());
     }
 
     private VBox createRightSidebar() {
         VBox sidebar = new VBox(12);
         sidebar.setPadding(new Insets(14));
         sidebar.setStyle("-fx-background-color: #1A1A1A; -fx-border-color: #2C2C2C; -fx-border-width: 0 0 0 1;");
-        sidebar.setPrefWidth(260);
+        sidebar.setPrefWidth(270);
 
-        // 1. BAUTEIL-AUSWAHL
-        Label lblSection1 = new Label("1. BAUTEIL-AUSWAHL");
+        lblSection1 = new Label(I18n.get("sidebar.components"));
         lblSection1.setStyle("-fx-text-fill: #9E9E9E; -fx-font-size: 11px; -fx-font-weight: bold;");
 
         GridPane compGrid = new GridPane();
         compGrid.setHgap(6);
         compGrid.setVgap(6);
 
-        Button btnResistor = createCompSelectButton("Widerstand", "〰");
-        Button btnSwitch = createCompSelectButton("Taster", "⊡");
-        Button btnCap = createCompSelectButton("Kondensator", "||");
-        Button btnLed = createCompSelectButton("LED", "💡");
+        Button btnSwitch = createCompSelectButton(I18n.get("comp.switch"), "⊡");
+        Button btnResistor = createCompSelectButton(I18n.get("comp.resistor"), "〰");
+        Button btnCap = createCompSelectButton(I18n.get("comp.capacitor"), "||");
+        Button btnLed = createCompSelectButton(I18n.get("comp.led"), "💡");
+        Button btnDiode = createCompSelectButton(I18n.get("comp.diode"), "▷|");
+        Button btnIc = createCompSelectButton(I18n.get("comp.ic"), "⚏");
 
-        btnSwitch.setStyle("-fx-background-color: #242424; -fx-text-fill: #00C853; -fx-border-color: #00C853; -fx-border-radius: 4px;");
+        btnSwitch.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.TACTILE_SWITCH); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
+        btnResistor.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.RESISTOR_AXIAL); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
+        btnCap.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.CAPACITOR_CERAMIC); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
+        btnLed.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.LED); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
+        btnDiode.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.DIODE); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
+        btnIc.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.IC_DIP); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
 
-        compGrid.add(btnResistor, 0, 0);
-        compGrid.add(btnSwitch, 1, 0);
+        compGrid.add(btnSwitch, 0, 0);
+        compGrid.add(btnResistor, 1, 0);
         compGrid.add(btnCap, 0, 1);
         compGrid.add(btnLed, 1, 1);
+        compGrid.add(btnDiode, 0, 2);
+        compGrid.add(btnIc, 1, 2);
+
+        // Leitungs-Auswahl
+        VBox wireTypeBox = new VBox(6);
+        wireTypeBox.setStyle("-fx-padding: 8 0 0 0; -fx-border-color: #2C2C2C; -fx-border-width: 1 0 0 0;");
+        Label lblWireType = new Label("Wire Mode:");
+        lblWireType.setStyle("-fx-text-fill: #B0BEC5; -fx-font-size: 11px; -fx-font-weight: bold;");
+
+        HBox wireBtnBox = new HBox(6);
+        btnWireCable = new Button(I18n.get("wire.cable"));
+        btnWireSilver = new Button(I18n.get("wire.silver"));
+        btnWireCable.setStyle("-fx-background-color: #00C853; -fx-text-fill: black; -fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand;");
+        btnWireSilver.setStyle("-fx-background-color: #242424; -fx-text-fill: #B0BEC5; -fx-font-size: 11px; -fx-cursor: hand;");
+
+        btnWireCable.setOnAction(e -> {
+            canvas.setActiveWireKind(WireKind.CABLE);
+            btnWireCable.setStyle("-fx-background-color: #00C853; -fx-text-fill: black; -fx-font-size: 11px; -fx-font-weight: bold;");
+            btnWireSilver.setStyle("-fx-background-color: #242424; -fx-text-fill: #B0BEC5; -fx-font-size: 11px;");
+            cableColorsBox.setVisible(true);
+            activateTool(PerfBoardCanvas.ActiveTool.WIRE);
+        });
+
+        btnWireSilver.setOnAction(e -> {
+            canvas.setActiveWireKind(WireKind.SILVER_WIRE);
+            btnWireSilver.setStyle("-fx-background-color: #00C853; -fx-text-fill: black; -fx-font-size: 11px; -fx-font-weight: bold;");
+            btnWireCable.setStyle("-fx-background-color: #242424; -fx-text-fill: #B0BEC5; -fx-font-size: 11px;");
+            cableColorsBox.setVisible(false);
+            activateTool(PerfBoardCanvas.ActiveTool.WIRE);
+        });
+
+        wireBtnBox.getChildren().addAll(btnWireCable, btnWireSilver);
+
+        // Farb-Palette für Kabel
+        cableColorsBox = new HBox(6);
+        cableColorsBox.setAlignment(Pos.CENTER_LEFT);
+        cableColorsBox.getChildren().addAll(
+                createColorDot("#E53935"),
+                createColorDot("#212121"),
+                createColorDot("#1E88E5"),
+                createColorDot("#FDD835"),
+                createColorDot("#43A047")
+        );
+
+        wireTypeBox.getChildren().addAll(lblWireType, wireBtnBox, cableColorsBox);
 
         Separator s = new Separator(javafx.geometry.Orientation.HORIZONTAL);
 
         // 2. EIGENSCHAFTEN
-        Label lblSection2 = new Label("2. EIGENSCHAFTEN");
+        lblSection2 = new Label(I18n.get("sidebar.properties"));
         lblSection2.setStyle("-fx-text-fill: #9E9E9E; -fx-font-size: 11px; -fx-font-weight: bold;");
 
-        Label lblDesignator = new Label("Bezeichner");
+        lblDesignator = new Label(I18n.get("prop.designator"));
         lblDesignator.setStyle("-fx-text-fill: #9E9E9E; -fx-font-size: 11px;");
         propDesignatorField = new TextField("SW1");
-        propDesignatorField.setStyle("-fx-background-color: #242424; -fx-text-fill: white; -fx-border-color: #2C2C2C; -fx-border-radius: 4px;");
+        propDesignatorField.setStyle("-fx-background-color: #242424; -fx-text-fill: white; -fx-border-color: #2C2C2C;");
 
-        Label lblValue = new Label("Wert / Typ");
+        lblValue = new Label(I18n.get("prop.value"));
         lblValue.setStyle("-fx-text-fill: #9E9E9E; -fx-font-size: 11px;");
-        propValueField = new TextField("Taster 6x6");
-        propValueField.setStyle("-fx-background-color: #242424; -fx-text-fill: white; -fx-border-color: #2C2C2C; -fx-border-radius: 4px;");
+        propValueField = new TextField("6x6 mm");
+        propValueField.setStyle("-fx-background-color: #242424; -fx-text-fill: white; -fx-border-color: #2C2C2C;");
 
         propValueField.textProperty().addListener((obs, oldV, newV) -> {
             if (canvas.getSelectedComponent() != null) {
@@ -239,12 +359,11 @@ public class PerfCraftApp extends Application {
             }
         });
 
-        // Farbbänder Vorschau-Kasten
         resistorPreviewBox = new VBox(4);
         resistorPreviewBox.setPadding(new Insets(8));
         resistorPreviewBox.setStyle("-fx-background-color: #121212; -fx-border-color: #2C2C2C; -fx-border-radius: 4px;");
 
-        Label lblBandsTitle = new Label("Farbringe (IEC 60062):");
+        lblBandsTitle = new Label(I18n.get("prop.bands"));
         lblBandsTitle.setStyle("-fx-text-fill: #9E9E9E; -fx-font-size: 10px;");
 
         resistorColorStrip = new HBox(3);
@@ -259,8 +378,16 @@ public class PerfCraftApp extends Application {
         resistorPreviewBox.setVisible(false);
         resistorPreviewBox.setManaged(false);
 
-        sidebar.getChildren().addAll(lblSection1, compGrid, s, lblSection2, lblDesignator, propDesignatorField, lblValue, propValueField, resistorPreviewBox);
+        sidebar.getChildren().addAll(lblSection1, compGrid, wireTypeBox, s, lblSection2, lblDesignator, propDesignatorField, lblValue, propValueField, resistorPreviewBox);
         return sidebar;
+    }
+
+    private Region createColorDot(String hex) {
+        Region r = new Region();
+        r.setPrefSize(16, 16);
+        r.setStyle("-fx-background-color: " + hex + "; -fx-background-radius: 8px; -fx-cursor: hand; -fx-border-color: #555; -fx-border-radius: 8px;");
+        r.setOnMouseClicked(e -> canvas.setActiveWireColor(hex));
+        return r;
     }
 
     private void updateInspector(PlacedComponent comp) {
@@ -306,20 +433,126 @@ public class PerfCraftApp extends Application {
         bar.setPadding(new Insets(4, 14, 4, 14));
         bar.setStyle("-fx-background-color: #181818; -fx-border-color: #2C2C2C; -fx-border-width: 1 0 0 0;");
 
-        statCoordLabel = new Label("Loch: X: 1, Y: 1");
-        statCoordLabel.setStyle("-fx-text-fill: #9E9E9E; -fx-font-family: monospace; -fx-font-size: 11px;");
+        statHoleLabel = new Label(I18n.get("stat.hole") + " X: 1, Y: 1");
+        statHoleLabel.setStyle("-fx-text-fill: #9E9E9E; -fx-font-family: monospace; -fx-font-size: 11px;");
 
-        statMmLabel = new Label("Pos: 0.00 mm x 0.00 mm");
+        statMmLabel = new Label(I18n.get("stat.pos") + " 0.00 mm x 0.00 mm");
         statMmLabel.setStyle("-fx-text-fill: #9E9E9E; -fx-font-family: monospace; -fx-font-size: 11px;");
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        statLayerLabel = new Label("Bauteilseite");
-        statLayerLabel.setStyle("-fx-text-fill: #00C853; -fx-font-size: 11px; -fx-font-weight: bold;");
+        statLayerTitle = new Label(I18n.get("stat.layer") + " ");
+        statLayerTitle.setStyle("-fx-text-fill: #757575; -fx-font-size: 11px;");
 
-        bar.getChildren().addAll(statCoordLabel, statMmLabel, spacer, new Label("Ebene: ") {{ setStyle("-fx-text-fill: #757575; -fx-font-size: 11px;"); }}, statLayerLabel);
+        statLayerValue = new Label(I18n.get("layer.top"));
+        statLayerValue.setStyle("-fx-text-fill: #00C853; -fx-font-size: 11px; -fx-font-weight: bold;");
+
+        statGridLabel = new Label(I18n.get("stat.grid"));
+        statGridLabel.setStyle("-fx-text-fill: #9E9E9E; -fx-font-size: 11px;");
+
+        bar.getChildren().addAll(statHoleLabel, statMmLabel, spacer, statLayerTitle, statLayerValue, new Label("|") {{ setStyle("-fx-text-fill: #424242;"); }}, statGridLabel);
         return bar;
+    }
+
+    private void applyLocalization() {
+        primaryStage.setTitle(I18n.get("app.title"));
+        btnNew.setText(I18n.get("menu.new"));
+        btnOpen.setText(I18n.get("menu.open"));
+        btnSave.setText(I18n.get("menu.save"));
+        btnExport.setText(I18n.get("menu.export"));
+        btnSettings.setText("⚙ " + I18n.get("menu.settings"));
+
+        btnLayerTop.setText(I18n.get("layer.top"));
+        btnLayerBottom.setText(I18n.get("layer.bottom"));
+        btnLayerBoth.setText(I18n.get("layer.both"));
+
+        btnToolSelect.setText("↖\n" + I18n.get("tool.select"));
+        btnToolWire.setText("〰\n" + I18n.get("tool.wire"));
+        btnToolComp.setText("⌖\n" + I18n.get("tool.component"));
+
+        btnWireCable.setText(I18n.get("wire.cable"));
+        btnWireSilver.setText(I18n.get("wire.silver"));
+
+        lblSection1.setText(I18n.get("sidebar.components"));
+        lblSection2.setText(I18n.get("sidebar.properties"));
+        lblDesignator.setText(I18n.get("prop.designator"));
+        lblValue.setText(I18n.get("prop.value"));
+        lblBandsTitle.setText(I18n.get("prop.bands"));
+
+        statGridLabel.setText(I18n.get("stat.grid"));
+        statLayerTitle.setText(I18n.get("stat.layer") + " ");
+    }
+
+    private void openProject() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Open Project");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PerfCraft Project (*.perf)", "*.perf"));
+        File file = fc.showOpenDialog(primaryStage);
+        if (file != null) {
+            try {
+                var loaded = storageService.load(file);
+                canvas.setProject(loaded);
+                primaryStage.setTitle("PerfCraft - " + loaded.getName());
+            } catch (IOException e) {
+                new Alert(Alert.AlertType.ERROR, "Could not load file: " + e.getMessage()).showAndWait();
+            }
+        }
+    }
+
+    private void saveProject() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Save Project");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PerfCraft Project (*.perf)", "*.perf"));
+        fc.setInitialFileName(canvas.getProject().getName() + ".perf");
+        File file = fc.showSaveDialog(primaryStage);
+        if (file != null) {
+            try {
+                storageService.save(canvas.getProject(), file);
+            } catch (IOException e) {
+                new Alert(Alert.AlertType.ERROR, "Could not save file: " + e.getMessage()).showAndWait();
+            }
+        }
+    }
+
+    private void exportProject() {
+        ChoiceDialog<String> dialog = new ChoiceDialog<>("PNG Image", "PNG Image", "CSV Bill of Materials (BOM)");
+        dialog.setTitle("Export");
+        dialog.setHeaderText("Choose export format");
+        var result = dialog.showAndWait();
+
+        if (result.isPresent()) {
+            if (result.get().equals("PNG Image")) {
+                FileChooser fc = new FileChooser();
+                fc.setTitle("Export PNG");
+                fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Image (*.png)", "*.png"));
+                fc.setInitialFileName(canvas.getProject().getName() + ".png");
+                File f = fc.showSaveDialog(primaryStage);
+                if (f != null) {
+                    try {
+                        SnapshotParameters params = new SnapshotParameters();
+                        params.setFill(Color.TRANSPARENT);
+                        WritableImage image = canvas.snapshot(params, null);
+                        ImageIO.write(SwingFXUtils.fromFXImage(image, null), "png", f);
+                    } catch (IOException e) {
+                        new Alert(Alert.AlertType.ERROR, "Export error: " + e.getMessage()).showAndWait();
+                    }
+                }
+            } else {
+                FileChooser fc = new FileChooser();
+                fc.setTitle("Export CSV BOM");
+                fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV (*.csv)", "*.csv"));
+                fc.setInitialFileName(canvas.getProject().getName() + "_BOM.csv");
+                File f = fc.showSaveDialog(primaryStage);
+                if (f != null) {
+                    try {
+                        ExportService.exportBomToCsv(canvas.getProject(), f);
+                    } catch (IOException e) {
+                        new Alert(Alert.AlertType.ERROR, "Export error: " + e.getMessage()).showAndWait();
+                    }
+                }
+            }
+        }
     }
 
     private Button createIconButton(String text) {
@@ -346,22 +579,22 @@ public class PerfCraftApp extends Application {
 
     private Button createBigToolButton(String icon, String label, boolean active) {
         Button b = new Button(icon + "\n" + label);
-        b.setPrefSize(50, 48);
-        b.setStyle(active ?
-                "-fx-background-color: #1B4D2E; -fx-text-fill: #00C853; -fx-border-color: #00C853; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-font-size: 10px; -fx-alignment: center; -fx-cursor: hand;" :
-                "-fx-background-color: #242424; -fx-text-fill: #B0BEC5; -fx-border-color: #2C2C2C; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-font-size: 10px; -fx-alignment: center; -fx-cursor: hand;");
+        b.setPrefSize(56, 48);
+        b.setStyle(active ? getActiveToolStyle() : getInactiveToolStyle());
         return b;
     }
 
-    private void updateToolButtons(Button active, Button b2, Button b3) {
-        active.setStyle("-fx-background-color: #1B4D2E; -fx-text-fill: #00C853; -fx-border-color: #00C853; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-font-size: 10px; -fx-alignment: center; -fx-cursor: hand;");
-        b2.setStyle("-fx-background-color: #242424; -fx-text-fill: #B0BEC5; -fx-border-color: #2C2C2C; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-font-size: 10px; -fx-alignment: center; -fx-cursor: hand;");
-        b3.setStyle("-fx-background-color: #242424; -fx-text-fill: #B0BEC5; -fx-border-color: #2C2C2C; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-font-size: 10px; -fx-alignment: center; -fx-cursor: hand;");
+    private String getActiveToolStyle() {
+        return "-fx-background-color: #1B4D2E; -fx-text-fill: #00C853; -fx-border-color: #00C853; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-font-size: 10px; -fx-alignment: center; -fx-cursor: hand;";
+    }
+
+    private String getInactiveToolStyle() {
+        return "-fx-background-color: #242424; -fx-text-fill: #B0BEC5; -fx-border-color: #2C2C2C; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-font-size: 10px; -fx-alignment: center; -fx-cursor: hand;";
     }
 
     private Button createCompSelectButton(String name, String icon) {
         Button b = new Button(icon + " " + name);
-        b.setPrefWidth(110);
+        b.setPrefWidth(114);
         b.setStyle("-fx-background-color: #242424; -fx-text-fill: #E0E0E0; -fx-border-color: #2C2C2C; -fx-border-radius: 4px; -fx-font-size: 11px; -fx-alignment: center-left; -fx-cursor: hand;");
         return b;
     }
