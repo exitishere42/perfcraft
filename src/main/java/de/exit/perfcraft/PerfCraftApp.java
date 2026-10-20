@@ -15,6 +15,11 @@ public class PerfCraftApp extends Application {
     public void start(Stage primaryStage) {
         primaryStage.setTitle("PerfCraft");
 
+        var iconStream = getClass().getResourceAsStream("/icons/icon.png");
+        if (iconStream != null) {
+            primaryStage.getIcons().add(new javafx.scene.image.Image(iconStream));
+        }
+
         StackPane root = new StackPane();
         Label label = new Label("PerfCraft - Perfboard Circuit Designer");
         root.getChildren().add(label);

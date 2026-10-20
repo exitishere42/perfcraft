@@ -92,13 +92,73 @@ PerfCraft schließt diese Lücke durch ein hochpräzises, interaktives Lochraste
 
 ---
 
-## 3. Architektur & Dateistruktur
+## 3. UI-Layout nach LochMaster-Vorbild (CAD-Workbench)
+
+PerfCraft orientiert sich strukturell und ergonomisch am bewährten **LochMaster 4.0 Layout**, übersetzt in das moderne **Material Design 2 Dark Theme**:
+
+```text
++-----------------------------------------------------------------------------------------------+
+| [Menüleiste] Datei  Bearbeiten  Ansicht  Platine  Bauteile  Hilfe                             |
++-----------------------------------------------------------------------------------------------+
+| [Befehlsleiste] [Neu] [Öffnen] [Speichern] | [Undo] [Redo] | [Top] [Bottom] [X-Ray] | [+][-][Fit]|
++---+---------------------------------------------------------------------+---------------------+
+| T | [Horizontales Lineal / Rulers: Loch-Index 1..N & mm-Skala mit Fadenkreuz-Marker]          |
+| O +---+-----------------------------------------------------------------+ [Rechte Dock-Leiste]|
+| O | V |                                                                 | Tabs / Accordion:   |
+| L | e |                                                                 | 1. Bauteil-Katalog  |
+| B | r |                                                                 |    - Widerstände    |
+| O | t |                    ZENTRALER PERFBOARD CANVAS                   |    - Kondensatoren  |
+| X | . |                                                                 |    - Halbleiter/ICs |
+|   |   |        (Fotorealistisches Lochraster, Kupfer-Pads,             |    - Steckverbinder |
+| [S| R |         Leiterbahnen, Bauteile mit Farbringen,                  | 2. Inspektor        |
+| e | u |         stufenloser Zoom & Pan)                                 |    - Designator (R1)|
+| l | l |                                                                 |    - Wert (10k Ω)   |
+| e | e |                                                                 |    - Pins / Raster  |
+| c | r |                                                                 | 3. Projekt-Baum     |
+| t] |                                                                 |    - Alle Komponenten|
++---+---+-----------------------------------------------------------------+---------------------+
+| [Statusleiste] Loch: X: 14, Y: 8 | Maß: 35.56 x 20.32 mm | Ebene: Bauteilseite | Zoom: 125% [====] |
++-----------------------------------------------------------------------------------------------+
+```
+
+### Die 6 Hauptbereiche der LochMaster-Architektur:
+1. **Hauptmenüleiste & Schnell-Befehlsleiste (Top):**
+   - Menüs: Datei, Bearbeiten, Ansicht, Platine, Extras.
+   - Schnell-Befehlsleiste: Aktionen (Neu, Öffnen, Speichern), Historie (Rückgängig, Wiederholen), Ebenen-Umschalter (**Bauteilseite**, **Lötseite**, **Röntgen / X-Ray**) und Zoom-Buttons.
+2. **Linke CAD-Werkzeugleiste (Toolbox):**
+   - Schlanke Vertikalleiste für schnelle Werkzeugwechsel:
+     - **Auswahl** (`V`) – Bauteile/Leiterbahnen markieren, verschieben.
+     - **Drahtbrücke** (`W`) – Isolierte Jumper-Drähte auf Bauteilseite ziehen.
+     - **Lötpunkt / Lötbrücke** (`T`) – Zinnbrücken auf Lötseite verbinden.
+     - **Bauteil platzieren** (`C`) – Direktes Platzieren aus der Schnellauswahl.
+     - **Beschriftung / Text** (`X`) – Freie Notizen & Markierungen auf der Platine.
+     - **Löschen** (`Entf`) – Markierte Objekte entfernen.
+3. **Dynamische Lineale (Rulers - Horizontal & Vertikal):**
+   - Exakte Skalierung passend zum 2.54 mm Raster (gleichzeitige Anzeige von **Loch-Nummern 1..N** und Millimeter-Marken).
+   - Ein aktiver Kontrast-Marker auf beiden Linealen folgt der aktuellen Mauszeigerposition in Echtzeit.
+4. **Zentraler High-DPI Canvas:**
+   - Dunkelgrünes PCB-Substrat (`#1B4D2E`), goldglänzende Kupferpads (`#D4AF37`) und schwarze Bohrungen.
+   - Nahtloser Zoom (zentriert um Mauszeiger) und Pan via Mausrad-Klick/Drag.
+   - Im **X-Ray / Röntgen-Modus** werden beide Ebenen gleichzeitig dargestellt: Bauteile halbtransparent auf der Oberseite, Lötbahnen auf der Unterseite.
+5. **Rechte Dock-Seitenleiste (3-teilig):**
+   - **Tab 1: Bauteil-Katalog:** Baumstruktur mit Kategorien (Passiv, Aktiv, ICs/Sockel, Stecker, Schalter) inklusive Suchfeld und Bauteil-Vorschau.
+   - **Tab 2: Eigenschafts-Inspektor:** Ändern von Bauteilwerten (z. B. 10kΩ, 100nF), Designator (R1, C1), Lochabstand und Ausrichtung (0°, 90°, 180°, 270°).
+   - **Tab 3: Projekt-Baum (Explorer):** Hierarchische Liste aller verbauten Komponenten und Brücken zur schnellen Selektion auch verdeckter Teile.
+6. **Echtzeit-Statusleiste (Bottom):**
+   - Live-Anzeige der Lochkoordinate (`Loch: X: 14, Y: 8`), Realmaß in mm (`35.56 mm, 20.32 mm`), aktive Ebene und stufenloser Zoom-Schieberegler.
+
+---
+
+## 4. Architektur & Dateistruktur
 
 ```text
 perfcraft/
 ├── pom.xml
 ├── .gitignore
 ├── README.md
+├── icon.svg
+├── icon.png
+├── icon.ico
 ├── src/
 │   ├── main/
 │   │   ├── java/
@@ -114,7 +174,7 @@ perfcraft/
 │   │   │               │   ├── ComponentType.java    # RESISTOR, CAPACITOR, LED, IC, etc.
 │   │   │               │   ├── PlacedComponent.java  # Position, Pins, Rotation, Wert, Label
 │   │   │               │   ├── WireTrace.java        # Start, Ende, Layer (TOP/BOTTOM), Farbe
-│   │   │               │   ├── BoardLayer.java       # TOP, BOTTOM, BOTH
+│   │   │               │   ├── BoardLayer.java       # TOP, BOTTOM, BOTH (X-Ray)
 │   │   │               │   └── PerfProject.java      # Wurzelobjekt für .perf JSON
 │   │   │               │
 │   │   │               ├── service/                  # Logik & I/O
@@ -126,14 +186,25 @@ perfcraft/
 │   │   │               ├── ui/                       # Präsentation & Controls
 │   │   │               │   ├── theme/
 │   │   │               │   │   └── MaterialTheme.java    # Farbdefinitionen & CSS-Generierung
+│   │   │               │   ├── workbench/            # LochMaster-Workbench Layout
+│   │   │               │   │   ├── WorkbenchView.java    # Hauptlayout (Top, Left, Center, Right, Bottom)
+│   │   │               │   │   ├── TopCommandBar.java    # Menü & Schnell-Aktionen (Undo, Redo, Zoom)
+│   │   │               │   │   ├── ToolboxBar.java       # Linke CAD-Leiste (Select, Wire, Solder, etc.)
+│   │   │               │   │   ├── LayerControlBar.java  # Ebenen-Wahlschalter (Top / Bottom / X-Ray)
+│   │   │               │   │   ├── StatusBar.java        # Loch-Koordinaten, mm-Maße, Layer, Zoom
+│   │   │               │   │   └── sidebar/
+│   │   │               │   │       ├── SidebarContainer.java # Tabs für Katalog, Inspektor, Baum
+│   │   │               │   │       ├── ComponentCatalogPanel.java # Bauteil-Baum nach Kategorien
+│   │   │               │   │       ├── InspectorPanel.java        # Eigenschaften des markierten Objekts
+│   │   │               │   │       └── ProjectTreePanel.java      # Hierarchischer Objektbaum
 │   │   │               │   ├── canvas/
 │   │   │               │   │   ├── PerfBoardCanvas.java  # Hauptzeichenfläche (Pan, Zoom, Grid)
+│   │   │               │   │   ├── RulerCanvas.java      # Dynamische Lochraster-Lineale mit Marker
 │   │   │               │   │   ├── ComponentRenderer.java# Zeichnet Widerstände, ICs etc.
 │   │   │               │   │   └── TraceRenderer.java    # Zeichnet Lötbrücken & Jumper
-│   │   │               │   ├── dialogs/
-│   │   │               │   │   ├── NewBoardDialog.java   # Dialog für Board-Dimensionen
-│   │   │               │   │   └── ComponentEditDialog.java # Wert & Eigenschaften anpassen
-│   │   │               │   └── MainView.java         # Toolbar, Sidebar, Canvas, Inspector
+│   │   │               │   └── dialogs/
+│   │   │               │       ├── NewBoardDialog.java   # Dialog für Board-Dimensionen
+│   │   │               │       └── ComponentEditDialog.java # Wert & Eigenschaften anpassen
 │   │   │               │
 │   │   │               └── state/
 │   │   │                   └── EditorState.java      # Aktives Tool, Selektion, aktiver Layer
@@ -141,7 +212,7 @@ perfcraft/
 │   │   └── resources/
 │   │       ├── css/
 │   │       │   └── material-dark.css                 # Dark-Theme Stylesheet
-│   │       └── icons/                                # App- & Tool-Icons (SVG/PNG)
+│   │       └── icons/                                # App- & Tool-Icons (SVG/PNG/ICO)
 │   │
 │   └── test/
 │       └── java/
@@ -157,7 +228,7 @@ perfcraft/
 
 ---
 
-## 4. Datenmodell & Dateiformat (`.perf`)
+## 5. Datenmodell & Dateiformat (`.perf`)
 
 ### 4.1 JSON-Spezifikation (`.perf`)
 ```json
@@ -214,7 +285,7 @@ perfcraft/
 
 ---
 
-## 5. Detaillierte Features mit "Definition of Done" (DoD)
+## 6. Detaillierte Features mit "Definition of Done" (DoD)
 
 ### Feature 1: Neues Board & Startansicht
 - **Beschreibung:** Startansicht mit Aktionen "Neues Board", "Öffnen" und Dialog zur Abfrage von Spalten (5..200), Zeilen (5..200) und Projektname.
@@ -223,17 +294,18 @@ perfcraft/
   - Nach Klick auf "Erstellen" initialisiert sich der Canvas mit exakt der gewünschten Matrix.
   - Standard-Größe bei Öffnung: 24 Spalten x 18 Zeilen.
 
-### Feature 2: High-DPI Lochraster-Canvas mit Zoom & Pan
-- **Beschreibung:** Flüssiges Rendering der Platine mit Kupferringen, Lochöffnungen und Grid-Koordinaten.
+### Feature 2: CAD-Workbench mit Rulers, Zoom & Pan (LochMaster-Stil)
+- **Beschreibung:** Flüssiges Rendering der Platine mit Kupferringen, Bohrungen und umgebenden dynamischen Loch-/mm-Linealen (Rulers) mit mitfahrendem Mauszeiger-Marker.
 - **Definition of Done:**
   - Drehen am Mausrad zoomt stufenlos mit Fokuspunkt unter dem Mauszeiger.
+  - Horizontale und vertikale Lineale zeigen Loch-Nummern (1..N) und mm-Werte passend zum aktuellen Zoom und Pan.
+  - Marker auf beiden Linealen visualisieren in Echtzeit die aktuelle Cursorposition.
   - Ziehen mit mittlerer Maustaste oder Leertaste+Klick verschiebt das Board flüssig (Pan).
-  - Pads rasten exakt auf ganzzahlige Lochkoordinaten ein.
 
-### Feature 3: Bauteile platzieren & manipulieren
-- **Beschreibung:** Auswahl eines Bauteils aus der linken Leiste (Widerstand, Kondensator, LED, IC DIP, Stiftleiste) und Platzierung auf den Board-Löchern.
+### Feature 3: Linke CAD-Toolbox & Bauteil-Platzierung
+- **Beschreibung:** Schnellauswahl über die linke Werkzeugleiste (`V` = Auswählen, `W` = Draht, `T` = Lötbrücke, `C` = Bauteil, `X` = Text, `Entf` = Löschen) und Platzierung auf den Board-Löchern.
 - **Definition of Done:**
-  - Vorschau des Bauteils folgt dem Cursor mit Einrastung auf Pads.
+  - Vorschau des Werkzeugs / Bauteils folgt dem Cursor mit magnetischem Einrasten auf den Pads.
   - Klick platziert das Bauteil und vergibt fortlaufende Nummer (R1, R2, etc.).
   - Taste `R` dreht das Bauteil um 90 Grad.
   - Selektiertes Bauteil zeigt Eigenschaften im rechten Inspektor.
@@ -244,14 +316,20 @@ perfcraft/
   - Eingabe von "10k" erzeugt Ringe: Braun (1), Schwarz (0), Orange (10^3), Gold (5%).
   - Eigene Unit-Tests decken alle Standard-E12/E24-Werte fehlerfrei ab.
 
-### Feature 5: Lötbrücken & Jumper-Verdrahtung
-- **Beschreibung:** Ziehen von Leiterbahnen / Lötbrücken auf dem Bottom-Layer und isolierten Drähten auf dem Top-Layer.
+### Feature 5: Lötbrücken & Jumper-Verdrahtung mit Layer-Steuerung
+- **Beschreibung:** Ziehen von Leiterbahnen / Lötbrücken auf dem Bottom-Layer und isolierten Drähten auf dem Top-Layer mit Ebenen-Umschaltung (Top, Bottom, Röntgen / X-Ray).
 - **Definition of Done:**
   - Im Bottom-Layer gezeichnete Bahnen werden als silberne Lötbahn dargestellt.
   - Im Top-Layer gezeichnete Bahnen werden als farbige Jumper-Drähte mit End-Pins dargestellt.
-  - Schalter in der Toolbar ("Top Layer", "Bottom Layer", "Beide Ebenen") steuert Transparenz und Sichtbarkeit.
+  - Schalter in der Befehlsleiste ("Top Layer", "Bottom Layer", "Röntgen") schaltet zwischen reiner Oberseite, reiner Unterseite und durchscheinender Röntgen-Ansicht um.
 
-### Feature 6: Speichern, Laden & Export
+### Feature 6: Rechte Dock-Leiste & Projekt-Explorer
+- **Beschreibung:** 3-teiliges Seitenpanel mit Katalog (kategorisierte Bauteile mit Suche), Inspektor (Werte & Drehung ändern) und hierarchischem Projekt-Objektbaum.
+- **Definition of Done:**
+  - Klick im Projekt-Baum selektiert das Bauteil auf dem Canvas und hebt es optisch hervor.
+  - Änderungen im Inspektor aktualisieren das Bauteil auf dem Canvas sofort.
+
+### Feature 7: Speichern, Laden & Export
 - **Beschreibung:** Persistenz im `.perf`-Format sowie Bildexport und BOM.
 - **Definition of Done:**
   - Datei -> Speichern (`Strg+S`) schreibt eine gültige `.perf`-JSON-Datei auf Festplatte.
@@ -261,7 +339,7 @@ perfcraft/
 
 ---
 
-## 6. Fehlermatrix & Edge Cases
+## 7. Fehlermatrix & Edge Cases
 
 | Situation / Ausnahme | Systemverhalten | Feedback an Nutzer |
 | :--- | :--- | :--- |
@@ -273,12 +351,13 @@ perfcraft/
 
 ---
 
-## 7. Phasenweise Implementierungs-Roadmap
+## 8. Phasenweise Implementierungs-Roadmap
 
 ### Phase 1: Setup & Maven-Infrastruktur
 - [ ] Maven `pom.xml` mit Java 21, JavaFX 21, Jackson Databind, JUnit 5 einrichten.
 - [ ] Grundstruktur anlegen (`de.exit.perfcraft`).
 - [ ] Material Design 2 Dark CSS Grundgerüst (`material-dark.css`) bereitstellen.
+- [ ] App-Icon in Fensterleiste einbinden.
 - [ ] **Verifikation:** `mvn clean test` und `mvn compile` laufen fehlerfrei durch.
 
 ### Phase 2: Datenmodell & Serialisierung
@@ -287,28 +366,31 @@ perfcraft/
 - [ ] Unit-Tests für Serialisierung und Deserialisierung schreiben.
 - [ ] **Verifikation:** 100% bestandene Unit-Tests in `PerfProjectTest`.
 
-### Phase 3: Canvas-Engine & Perfboard-Rendering
-- [ ] `PerfBoardCanvas` mit Zoom- und Pan-Unterstützung implementieren.
-- [ ] Grid-Rendering (PCB-Grün, Kupfer-Ringe, Loch-Masken, Koordinaten).
-- [ ] Ebenen-Umschaltung (Top-Layer, Bottom-Layer, Both) mit Alpha-Transparenz.
-- [ ] **Verifikation:** Interaktiver Start via `mvn exec:java`, flüssiges Zoomen und Pannen.
+### Phase 3: Canvas-Engine & LochMaster-Rulers
+- [ ] `PerfBoardCanvas` mit stufenlosem Zoom und flüssigem Pan implementieren.
+- [ ] Grid-Rendering (PCB-Grün, Kupfer-Ringe, Loch-Masken).
+- [ ] `RulerCanvas` (Horizontales & vertikales Loch-Lineal mit mitfahrendem Cursor-Marker).
+- [ ] Ebenen-Umschaltung (Top-Layer, Bottom-Layer, Röntgen/X-Ray) mit Alpha-Transparenz.
+- [ ] **Verifikation:** Interaktiver Start via `mvn exec:java`, flüssiges Zoomen, Pannen und Lineal-Tracking.
 
 ### Phase 4: Werkzeuge, Bauteile & Leiterbahnen
 - [ ] Bauteil-Renderer für Widerstände (inkl. `ResistorColorCode`), Kondensatoren, LEDs, ICs und Stiftleisten.
+- [ ] Linke Toolbox (`ToolboxBar`) für schnellen Werkzeugwechsel (Select, Wire, Solder, Component, Text, Delete).
 - [ ] Leiterbahn- & Jumper-Tool (Lötbrücken auf Bottom, isolierte Drähte auf Top).
 - [ ] Selektions- und Verschiebe-Werkzeug, Drehung (`R`), Löschen (`Entf`).
 - [ ] **Verifikation:** Alle Bauteil-Typen lassen sich platzieren, drehen, verschieben und mit Traces verbinden.
 
-### Phase 5: UI-Integration, Dialoge & Undo/Redo
-- [ ] Willkommensansicht und `NewBoardDialog` integrieren.
-- [ ] Toolbar und Eigenschafts-Inspektor im Material-Dark-Stil anbinden.
+### Phase 5: Workbench-Layout, Dock-Sidebar & Undo/Redo
+- [ ] LochMaster-Workbench-Layout (`WorkbenchView` mit TopCommandBar, ToolboxBar, Rulers, Canvas, Sidebar, StatusBar).
+- [ ] Rechte Dock-Sidebar (`SidebarContainer` mit Katalog, Inspektor, Projektbaum).
+- [ ] Echtzeit-Statusleiste (Loch-Koordinaten, mm-Werte, Layer, Zoom-Slider).
 - [ ] `CommandHistory` für Undo/Redo (`Strg+Z`, `Strg+Y`) einbinden.
 - [ ] PNG-Export und Stücklisten-Export (BOM) implementieren.
 - [ ] **Verifikation:** Kompletter End-to-End Workflow (Neu -> Zeichnen -> Speichern -> Laden -> Export).
 
 ---
 
-## 8. Start- und Testbefehle
+## 9. Start- und Testbefehle
 - **Kompilieren:** `mvn clean compile`
 - **Unit-Tests ausführen:** `mvn test`
 - **Anwendung starten:** `mvn exec:java`
