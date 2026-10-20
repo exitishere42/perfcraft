@@ -1,0 +1,15 @@
+/* PerfCraft - Material Design 2 Dark Theme */
+.root {
+    -fx-base: #121212;
+    -fx-background: #121212;
+    -fx-control-inner-background: #1E1E1E;
+    -fx-accent: #00C853;
+    -fx-focus-color: #00C853;
+    -fx-faint-focus-color: transparent;
+    -fx-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -fx-text-fill: #E0E0E0;
+}
+
+.label {
+    -fx-text-fill: #E0E0E0;
+}
