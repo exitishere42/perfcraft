@@ -86,7 +86,7 @@ powershell -NoProfile -Command ^
     "}"
 
 :: ------------------------------------------------------------------------------
-:: 4. .perf Dateityp und eigenes Dokumenten-Icon in der Windows Registry registrieren
+:: 4. .perf Dateityp und Dokumenten-Icon in der Windows Registry registrieren
 :: ------------------------------------------------------------------------------
 echo [*] Registriere .perf Dateityp mit eigenem Dokumenten-Icon...
 powershell -NoProfile -Command ^
@@ -96,9 +96,14 @@ powershell -NoProfile -Command ^
     "New-Item -Path 'HKCU:\Software\Classes\PerfCraft.Project' -Value 'PerfCraft Project' -Force | Out-Null; " ^
     "New-Item -Path 'HKCU:\Software\Classes\PerfCraft.Project\DefaultIcon' -Value $docIcon -Force | Out-Null; " ^
     "New-Item -Path 'HKCU:\Software\Classes\PerfCraft.Project\shell\open\command' -Value ('\"' + $exe + '\" \"%1\"') -Force | Out-Null; " ^
+    "New-Item -Path 'HKCU:\Software\Classes\perf_auto_file\DefaultIcon' -Value $docIcon -Force | Out-Null; " ^
+    "New-Item -Path 'HKCU:\Software\Classes\Applications\perfcraft.exe\DefaultIcon' -Value $docIcon -Force | Out-Null; " ^
     "New-Item -Path 'HKCU:\Software\Classes\Applications\perfcraft.exe\SupportedTypes' -Force | Out-Null; " ^
     "New-ItemProperty -Path 'HKCU:\Software\Classes\Applications\perfcraft.exe\SupportedTypes' -Name '.perf' -Value '' -Force | Out-Null; " ^
-    "Write-Output '[OK] .perf Dateiverknuepfung mit perfcraft.exe eingerichtet.'"
+    "$code = 'using System; using System.Runtime.InteropServices; public class S { [DllImport(\"shell32.dll\")] public static extern void SHChangeNotify(int e, uint f, IntPtr i1, IntPtr i2); }'; " ^
+    "Add-Type -TypeDefinition $code; " ^
+    "[S]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero); " ^
+    "Write-Output '[OK] .perf Dokumenten-Icon registriert und Explorer benachrichtigt.'"
 
 echo ==================================================================
 echo   [OK] Installation erfolgreich abgeschlossen!
