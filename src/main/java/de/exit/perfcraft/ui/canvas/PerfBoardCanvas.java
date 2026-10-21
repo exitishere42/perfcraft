@@ -179,7 +179,7 @@ public class PerfBoardCanvas extends Canvas {
             // Tinkercad Style: Detect terminal hover
             hoveredTerminalText = detectTerminalLabel(currentHoverGrid);
 
-            if ((activeTool == ActiveTool.WIRE && wireStartHole != null) || hoveredTerminalText != null) {
+            if ((activeTool == ActiveTool.WIRE && wireStartHole != null) || activeTool == ActiveTool.COMPONENT || hoveredTerminalText != null) {
                 render();
             }
         });
@@ -338,21 +338,31 @@ public class PerfBoardCanvas extends Canvas {
 
             for (PlacedComponent comp : project.getComponents()) {
                 boolean isSel = (comp == selectedComponent);
-                if (comp.getType() == ComponentType.TACTILE_SWITCH) {
-                    renderTactileSwitch(gc, comp, isSel);
-                } else if (comp.getType() == ComponentType.RESISTOR_AXIAL) {
-                    renderResistor(gc, comp, isSel);
-                } else if (comp.getType() == ComponentType.LED) {
-                    renderLED(gc, comp, isSel);
-                } else if (comp.getType() == ComponentType.CAPACITOR_CERAMIC) {
-                    renderCapacitor(gc, comp, isSel);
-                } else if (comp.getType() == ComponentType.DIODE) {
-                    renderDiode(gc, comp, isSel);
-                } else if (comp.getType() == ComponentType.IC_DIP) {
-                    renderIC(gc, comp, isSel);
-                }
+                renderComponentInstance(gc, comp, isSel);
             }
             gc.setGlobalAlpha(1.0);
+        }
+
+        // 5b. Tinkercad Style: Semi-transparent Ghost Preview floating at mouse cursor
+        if (activeTool == ActiveTool.COMPONENT && currentHoverGrid != null) {
+            gc.save();
+            gc.setGlobalAlpha(0.60);
+            PlacedComponent ghost = createDummyComponent(activeComponentType, currentHoverGrid);
+            renderComponentInstance(gc, ghost, false);
+
+            // Highlight snap target holes
+            gc.setStroke(Color.web("#00E676"));
+            gc.setLineWidth(2.0);
+            double holeSpacing = transform.getHoleSpacingPx();
+            double sx = transform.gridToScreenX(ghost.getStart().x());
+            double sy = transform.gridToScreenY(ghost.getStart().y());
+            gc.strokeOval(sx - holeSpacing * 0.45, sy - holeSpacing * 0.45, holeSpacing * 0.9, holeSpacing * 0.9);
+            if (ghost.getEnd() != null) {
+                double ex = transform.gridToScreenX(ghost.getEnd().x());
+                double ey = transform.gridToScreenY(ghost.getEnd().y());
+                gc.strokeOval(ex - holeSpacing * 0.45, ey - holeSpacing * 0.45, holeSpacing * 0.9, holeSpacing * 0.9);
+            }
+            gc.restore();
         }
 
         // 6. Tinkercad Style: Terminal Tooltip Badge
@@ -370,6 +380,39 @@ public class PerfBoardCanvas extends Canvas {
             gc.setFill(Color.web("#FFFFFF"));
             gc.fillText(hoveredTerminalText, hx + 16, hy - 4);
         }
+    }
+
+    private void renderComponentInstance(GraphicsContext gc, PlacedComponent comp, boolean isSel) {
+        if (comp.getType() == ComponentType.TACTILE_SWITCH) {
+            renderTactileSwitch(gc, comp, isSel);
+        } else if (comp.getType() == ComponentType.RESISTOR_AXIAL) {
+            renderResistor(gc, comp, isSel);
+        } else if (comp.getType() == ComponentType.LED) {
+            renderLED(gc, comp, isSel);
+        } else if (comp.getType() == ComponentType.CAPACITOR_CERAMIC) {
+            renderCapacitor(gc, comp, isSel);
+        } else if (comp.getType() == ComponentType.DIODE) {
+            renderDiode(gc, comp, isSel);
+        } else if (comp.getType() == ComponentType.IC_DIP) {
+            renderIC(gc, comp, isSel);
+        }
+    }
+
+    private PlacedComponent createDummyComponent(ComponentType type, HoleCoord start) {
+        if (type == ComponentType.TACTILE_SWITCH) {
+            return new PlacedComponent("ghost", type, "SW", "6x6 mm", start, new HoleCoord(start.x() + 2, start.y() + 1), 0, BoardLayer.TOP);
+        } else if (type == ComponentType.RESISTOR_AXIAL) {
+            return new PlacedComponent("ghost", type, "R", "10k", start, new HoleCoord(start.x() + 4, start.y()), 0, BoardLayer.TOP);
+        } else if (type == ComponentType.LED) {
+            return new PlacedComponent("ghost", type, "D", "Red", start, new HoleCoord(start.x() + 1, start.y()), 0, BoardLayer.TOP);
+        } else if (type == ComponentType.CAPACITOR_CERAMIC) {
+            return new PlacedComponent("ghost", type, "C", "100n", start, new HoleCoord(start.x() + 1, start.y()), 0, BoardLayer.TOP);
+        } else if (type == ComponentType.DIODE) {
+            return new PlacedComponent("ghost", type, "D", "1N4148", start, new HoleCoord(start.x() + 3, start.y()), 0, BoardLayer.TOP);
+        } else if (type == ComponentType.IC_DIP) {
+            return new PlacedComponent("ghost", type, "U", "DIP-8", start, new HoleCoord(start.x() + 3, start.y() + 3), 0, BoardLayer.TOP);
+        }
+        return new PlacedComponent("ghost", type, "COMP", "10k", start, new HoleCoord(start.x() + 2, start.y()), 0, BoardLayer.TOP);
     }
 
     private String detectTerminalLabel(HoleCoord grid) {
