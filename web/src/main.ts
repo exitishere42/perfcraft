@@ -165,6 +165,19 @@ function setToolActive(btn: HTMLElement, tool: 'SELECT' | 'WIRE' | 'COMPONENT') 
   canvas.setActiveTool(tool);
 }
 
+canvas.onToolChanged = (tool) => {
+  if (tool === 'SELECT') {
+    [toolSelect, toolWire, toolComp].forEach((b) => b.classList.remove('active'));
+    toolSelect.classList.add('active');
+  } else if (tool === 'WIRE') {
+    [toolSelect, toolWire, toolComp].forEach((b) => b.classList.remove('active'));
+    toolWire.classList.add('active');
+  } else if (tool === 'COMPONENT') {
+    [toolSelect, toolWire, toolComp].forEach((b) => b.classList.remove('active'));
+    toolComp.classList.add('active');
+  }
+};
+
 toolSelect.addEventListener('click', () => setToolActive(toolSelect, 'SELECT'));
 toolWire.addEventListener('click', () => setToolActive(toolWire, 'WIRE'));
 toolComp.addEventListener('click', () => setToolActive(toolComp, 'COMPONENT'));

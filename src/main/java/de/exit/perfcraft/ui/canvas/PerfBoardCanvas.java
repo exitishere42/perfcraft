@@ -45,6 +45,7 @@ public class PerfBoardCanvas extends Canvas {
 
     private BiConsumer<Integer, Integer> onHoverCoordinate;
     private Consumer<PlacedComponent> onComponentSelected;
+    private Consumer<ActiveTool> onToolChanged;
     private Runnable onProjectModified;
     private Consumer<String> onWarningNotification;
 
@@ -186,9 +187,13 @@ public class PerfBoardCanvas extends Canvas {
                     render();
                 }
             } else if (e.getButton() == MouseButton.SECONDARY) {
-                // Rechtsklick: Vorgang abbrechen
+                // Rechtsklick: Vorgang abbrechen und zurück zu SELECT wechseln
                 wireStartHole = null;
                 pinHeaderStartHole = null;
+                setActiveTool(ActiveTool.SELECT);
+                if (onToolChanged != null) {
+                    onToolChanged.accept(ActiveTool.SELECT);
+                }
                 render();
             }
         });
@@ -1612,6 +1617,10 @@ public class PerfBoardCanvas extends Canvas {
             }
         }
         return false;
+    }
+
+    public void setOnToolChanged(Consumer<ActiveTool> callback) {
+        this.onToolChanged = callback;
     }
 
     public void setOnProjectModified(Runnable callback) {

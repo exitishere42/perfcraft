@@ -12,6 +12,7 @@ import de.exit.perfcraft.service.ResistorColorCode;
 import de.exit.perfcraft.ui.canvas.PerfBoardCanvas;
 import de.exit.perfcraft.ui.dialogs.NewBoardDialog;
 import de.exit.perfcraft.ui.dialogs.SettingsDialog;
+import de.exit.perfcraft.ui.icon.LucideIcon;
 import javafx.application.Application;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
@@ -109,6 +110,7 @@ public class PerfCraftApp extends Application {
         });
 
         canvas.setOnComponentSelected(this::updateInspector);
+        canvas.setOnToolChanged(this::activateTool);
         canvas.setOnProjectModified(() -> {
             if (canvas.getSelectedComponent() != null) {
                 updateInspector(canvas.getSelectedComponent());
@@ -261,7 +263,10 @@ public class PerfCraftApp extends Application {
             canvas.render();
         });
 
-        btnSettings = createIconButton("⚙ " + I18n.get("menu.settings"));
+        btnSettings = createIconButton(I18n.get("menu.settings"));
+        btnSettings.setGraphic(new LucideIcon("settings", 14, Color.web("#B0BEC5")));
+        btnSettings.setContentDisplay(ContentDisplay.LEFT);
+        btnSettings.setGraphicTextGap(6);
         btnSettings.setOnAction(e -> SettingsDialog.show(primaryStage, this::applyLocalization));
 
         header.getChildren().addAll(logoView, logoLabel, s1, btnNew, btnOpen, btnSave, btnExport, s2, layerBox, spacer, btnZoomOut, btnZoomIn, btnSettings);
@@ -275,9 +280,9 @@ public class PerfCraftApp extends Application {
         bar.setStyle("-fx-background-color: #1A1A1A; -fx-border-color: #2C2C2C; -fx-border-width: 0 1 0 0;");
         bar.setPrefWidth(68);
 
-        btnToolSelect = createBigToolButton("↖", I18n.get("tool.select"), true);
-        btnToolWire = createBigToolButton("〰", I18n.get("tool.wire"), false);
-        btnToolComp = createBigToolButton("⌖", I18n.get("tool.component"), false);
+        btnToolSelect = createBigToolButton("pointer", I18n.get("tool.select"), true);
+        btnToolWire = createBigToolButton("wire", I18n.get("tool.wire"), false);
+        btnToolComp = createBigToolButton("cpu", I18n.get("tool.component"), false);
 
         btnToolSelect.setOnAction(e -> activateTool(PerfBoardCanvas.ActiveTool.SELECT));
         btnToolWire.setOnAction(e -> activateTool(PerfBoardCanvas.ActiveTool.WIRE));
@@ -286,14 +291,18 @@ public class PerfCraftApp extends Application {
         Separator s = new Separator(javafx.geometry.Orientation.HORIZONTAL);
         s.setPadding(new Insets(6, 0, 6, 0));
 
-        Button btnRotate = new Button("↻");
+        Button btnRotate = new Button();
+        btnRotate.setGraphic(new LucideIcon("rotate-cw", 16, Color.web("#B0BEC5")));
         btnRotate.setTooltip(new Tooltip("Rotate 90° (R)"));
-        btnRotate.setStyle("-fx-background-color: #242424; -fx-text-fill: #B0BEC5; -fx-font-size: 14px; -fx-cursor: hand;");
+        btnRotate.setPrefSize(42, 32);
+        btnRotate.setStyle("-fx-background-color: #242424; -fx-border-color: #2C2C2C; -fx-border-radius: 4px; -fx-cursor: hand;");
         btnRotate.setOnAction(e -> canvas.rotateSelected());
 
-        Button btnDelete = new Button("✕");
+        Button btnDelete = new Button();
+        btnDelete.setGraphic(new LucideIcon("trash-2", 16, Color.web("#E53935")));
         btnDelete.setTooltip(new Tooltip("Delete (Del)"));
-        btnDelete.setStyle("-fx-background-color: #242424; -fx-text-fill: #E53935; -fx-font-size: 12px; -fx-cursor: hand;");
+        btnDelete.setPrefSize(42, 32);
+        btnDelete.setStyle("-fx-background-color: #242424; -fx-border-color: #2C2C2C; -fx-border-radius: 4px; -fx-cursor: hand;");
         btnDelete.setOnAction(e -> canvas.deleteSelected());
 
         bar.getChildren().addAll(btnToolSelect, btnToolWire, btnToolComp, s, btnRotate, btnDelete);
@@ -305,6 +314,16 @@ public class PerfCraftApp extends Application {
         btnToolSelect.setStyle(tool == PerfBoardCanvas.ActiveTool.SELECT ? getActiveToolStyle() : getInactiveToolStyle());
         btnToolWire.setStyle(tool == PerfBoardCanvas.ActiveTool.WIRE ? getActiveToolStyle() : getInactiveToolStyle());
         btnToolComp.setStyle(tool == PerfBoardCanvas.ActiveTool.COMPONENT ? getActiveToolStyle() : getInactiveToolStyle());
+
+        if (btnToolSelect.getGraphic() instanceof LucideIcon li) {
+            li.setColor(tool == PerfBoardCanvas.ActiveTool.SELECT ? Color.web("#00E676") : Color.web("#B0BEC5"));
+        }
+        if (btnToolWire.getGraphic() instanceof LucideIcon li) {
+            li.setColor(tool == PerfBoardCanvas.ActiveTool.WIRE ? Color.web("#00E676") : Color.web("#B0BEC5"));
+        }
+        if (btnToolComp.getGraphic() instanceof LucideIcon li) {
+            li.setColor(tool == PerfBoardCanvas.ActiveTool.COMPONENT ? Color.web("#00E676") : Color.web("#B0BEC5"));
+        }
     }
 
     private VBox createRightSidebar() {
@@ -320,15 +339,15 @@ public class PerfCraftApp extends Application {
         compGrid.setHgap(6);
         compGrid.setVgap(6);
 
-        Button btnSwitch = createCompSelectButton(I18n.get("comp.switch"), "⊡");
-        Button btnResistor = createCompSelectButton(I18n.get("comp.resistor"), "〰");
-        Button btnCap = createCompSelectButton(I18n.get("comp.capacitor"), "||");
-        Button btnLed = createCompSelectButton(I18n.get("comp.led"), "▷|↗");
-        Button btnDiode = createCompSelectButton(I18n.get("comp.diode"), "▷|");
-        Button btnIc = createCompSelectButton(I18n.get("comp.ic"), "⚏");
-        Button btnEsp32 = createCompSelectButton(I18n.get("comp.esp32"), "🖳");
-        Button btnTp4056 = createCompSelectButton(I18n.get("comp.tp4056"), "🔋");
-        Button btnPinHeader = createCompSelectButton(I18n.get("comp.pinheader"), "⑉");
+        Button btnSwitch = createCompSelectButton(I18n.get("comp.switch"), "switch");
+        Button btnResistor = createCompSelectButton(I18n.get("comp.resistor"), "resistor");
+        Button btnCap = createCompSelectButton(I18n.get("comp.capacitor"), "capacitor");
+        Button btnLed = createCompSelectButton(I18n.get("comp.led"), "led");
+        Button btnDiode = createCompSelectButton(I18n.get("comp.diode"), "diode");
+        Button btnIc = createCompSelectButton(I18n.get("comp.ic"), "ic");
+        Button btnEsp32 = createCompSelectButton(I18n.get("comp.esp32"), "esp32");
+        Button btnTp4056 = createCompSelectButton(I18n.get("comp.tp4056"), "tp4056");
+        Button btnPinHeader = createCompSelectButton(I18n.get("comp.pinheader"), "pin_header");
 
         btnSwitch.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.TACTILE_SWITCH); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
         btnResistor.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.RESISTOR_AXIAL); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
@@ -544,15 +563,15 @@ public class PerfCraftApp extends Application {
         btnOpen.setText(I18n.get("menu.open"));
         btnSave.setText(I18n.get("menu.save"));
         btnExport.setText(I18n.get("menu.export"));
-        btnSettings.setText("⚙ " + I18n.get("menu.settings"));
+        btnSettings.setText(I18n.get("menu.settings"));
 
         btnLayerTop.setText(I18n.get("layer.top"));
         btnLayerBottom.setText(I18n.get("layer.bottom"));
         btnLayerBoth.setText(I18n.get("layer.both"));
 
-        btnToolSelect.setText("↖\n" + I18n.get("tool.select"));
-        btnToolWire.setText("〰\n" + I18n.get("tool.wire"));
-        btnToolComp.setText("⌖\n" + I18n.get("tool.component"));
+        btnToolSelect.setText(I18n.get("tool.select"));
+        btnToolWire.setText(I18n.get("tool.wire"));
+        btnToolComp.setText(I18n.get("tool.component"));
 
         btnWireCable.setText(I18n.get("wire.cable"));
         btnWireSilver.setText(I18n.get("wire.silver"));
@@ -660,9 +679,13 @@ public class PerfCraftApp extends Application {
         b3.setStyle("-fx-background-color: transparent; -fx-text-fill: #B0BEC5; -fx-font-size: 11px; -fx-cursor: hand;");
     }
 
-    private Button createBigToolButton(String icon, String label, boolean active) {
-        Button b = new Button(icon + "\n" + label);
-        b.setPrefSize(56, 48);
+    private Button createBigToolButton(String iconName, String label, boolean active) {
+        Button b = new Button(label);
+        LucideIcon icon = new LucideIcon(iconName, 20, active ? Color.web("#00E676") : Color.web("#B0BEC5"));
+        b.setGraphic(icon);
+        b.setContentDisplay(ContentDisplay.TOP);
+        b.setGraphicTextGap(4);
+        b.setPrefSize(56, 52);
         b.setStyle(active ? getActiveToolStyle() : getInactiveToolStyle());
         return b;
     }
@@ -675,8 +698,12 @@ public class PerfCraftApp extends Application {
         return "-fx-background-color: #242424; -fx-text-fill: #B0BEC5; -fx-border-color: #2C2C2C; -fx-border-radius: 6px; -fx-background-radius: 6px; -fx-font-size: 10px; -fx-alignment: center; -fx-cursor: hand;";
     }
 
-    private Button createCompSelectButton(String name, String icon) {
-        Button b = new Button(icon + " " + name);
+    private Button createCompSelectButton(String name, String iconName) {
+        Button b = new Button(name);
+        LucideIcon icon = new LucideIcon(iconName, 16, Color.web("#00E676"));
+        b.setGraphic(icon);
+        b.setContentDisplay(ContentDisplay.LEFT);
+        b.setGraphicTextGap(8);
         b.setPrefWidth(114);
         b.setStyle("-fx-background-color: #242424; -fx-text-fill: #E0E0E0; -fx-border-color: #2C2C2C; -fx-border-radius: 4px; -fx-font-size: 11px; -fx-alignment: center-left; -fx-cursor: hand;");
         return b;

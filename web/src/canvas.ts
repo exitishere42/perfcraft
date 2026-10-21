@@ -42,6 +42,7 @@ export class PerfBoardCanvas {
   // Callbacks
   public onHoverCoordinate?: (gx: number, gy: number) => void;
   public onComponentSelected?: (comp: PlacedComponent | null) => void;
+  public onToolChanged?: (tool: ActiveTool) => void;
   public onProjectModified?: () => void;
 
   constructor(canvas: HTMLCanvasElement, project: PerfProject) {
@@ -84,7 +85,14 @@ export class PerfBoardCanvas {
     this.canvas.addEventListener('pointermove', (e) => this.handlePointerMove(e));
     this.canvas.addEventListener('pointerup', (e) => this.handlePointerUp(e));
     this.canvas.addEventListener('pointercancel', (e) => this.handlePointerUp(e));
-    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.wireStartHole = null;
+      this.pinHeaderStartHole = null;
+      this.setActiveTool('SELECT');
+      if (this.onToolChanged) this.onToolChanged('SELECT');
+      this.render();
+    });
 
     this.canvas.addEventListener(
       'wheel',
@@ -113,10 +121,12 @@ export class PerfBoardCanvas {
     this.activePointers.set(e.pointerId, pt);
 
     if (e.button !== 0) {
-      // Nur primärer Klick (Linksklick) darf Aktionen ausführen, Rechts-/Mittelklick brechen nur ab
+      // Nur primärer Klick (Linksklick) darf Aktionen ausführen, Rechts-/Mittelklick brechen ab und wechseln zu SELECT
       if (e.button === 2) {
         this.wireStartHole = null;
         this.pinHeaderStartHole = null;
+        this.setActiveTool('SELECT');
+        if (this.onToolChanged) this.onToolChanged('SELECT');
         this.render();
       }
       return;
