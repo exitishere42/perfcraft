@@ -77,8 +77,18 @@ public class PerfCraftApp extends Application {
         canvasHolder.setStyle("-fx-background-color: #0E0E0E;");
         canvas.widthProperty().bind(canvasHolder.widthProperty());
         canvas.heightProperty().bind(canvasHolder.heightProperty());
-        canvasHolder.widthProperty().addListener((obs, oldV, newV) -> canvas.render());
-        canvasHolder.heightProperty().addListener((obs, oldV, newV) -> canvas.render());
+        canvasHolder.widthProperty().addListener((obs, oldV, newV) -> {
+            if (!canvas.isInitialFitDone()) {
+                canvas.zoomToFit();
+            }
+            canvas.render();
+        });
+        canvasHolder.heightProperty().addListener((obs, oldV, newV) -> {
+            if (!canvas.isInitialFitDone()) {
+                canvas.zoomToFit();
+            }
+            canvas.render();
+        });
         root.setCenter(canvasHolder);
 
         // 3. LEFT TOOLBAR

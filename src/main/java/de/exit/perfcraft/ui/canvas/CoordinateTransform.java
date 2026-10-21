@@ -60,11 +60,13 @@ public class CoordinateTransform {
     }
 
     public void resetView(double canvasWidth, double canvasHeight, int boardCols, int boardRows) {
-        double boardWidthPx = boardCols * PITCH_MM * pixelsPerMm;
-        double boardHeightPx = boardRows * PITCH_MM * pixelsPerMm;
-        double scaleX = (canvasWidth - 80) / boardWidthPx;
-        double scaleY = (canvasHeight - 80) / boardHeightPx;
-        this.scale = Math.clamp(Math.min(scaleX, scaleY), 0.3, 3.0);
+        double boardWidthPx = (boardCols - 1) * PITCH_MM * pixelsPerMm;
+        double boardHeightPx = (boardRows - 1) * PITCH_MM * pixelsPerMm;
+        // Zoom completely to fill canvas while leaving a minimal neat margin (30px)
+        double margin = 32.0;
+        double scaleX = (canvasWidth - margin * 2) / Math.max(1.0, boardWidthPx);
+        double scaleY = (canvasHeight - margin * 2) / Math.max(1.0, boardHeightPx);
+        this.scale = Math.clamp(Math.min(scaleX, scaleY), 0.2, 8.0);
         this.translateX = (canvasWidth - (boardWidthPx * scale)) / 2.0;
         this.translateY = (canvasHeight - (boardHeightPx * scale)) / 2.0;
     }

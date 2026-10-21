@@ -45,6 +45,8 @@ public class PerfBoardCanvas extends Canvas {
     private Consumer<PlacedComponent> onComponentSelected;
     private Runnable onProjectModified;
 
+    private boolean initialFitDone = false;
+
     public PerfBoardCanvas(double width, double height) {
         super(width, height);
         initInteraction();
@@ -235,6 +237,14 @@ public class PerfBoardCanvas extends Canvas {
     }
 
     public void render() {
+        if (getWidth() <= 10 || getHeight() <= 10) return;
+
+        // Auto zoom-to-fit on initial startup so the perfboard fills the view completely
+        if (!initialFitDone && getWidth() > 50 && getHeight() > 50) {
+            zoomToFit();
+            initialFitDone = true;
+        }
+
         GraphicsContext gc = getGraphicsContext2D();
         gc.setFill(Color.web("#0E0E0E"));
         gc.fillRect(0, 0, getWidth(), getHeight());
@@ -672,13 +682,21 @@ public class PerfBoardCanvas extends Canvas {
         }
     }
 
+    public void zoomToFit() {
+        if (getWidth() > 50 && getHeight() > 50) {
+            transform.resetView(getWidth(), getHeight(), project.getBoard().getColumns(), project.getBoard().getRows());
+        }
+    }
+
     public void setProject(PerfProject project) {
         this.project = project;
         this.selectedComponent = project.getComponents().isEmpty() ? null : project.getComponents().getFirst();
+        zoomToFit();
         render();
     }
 
     public CoordinateTransform getTransform() { return transform; }
+    public boolean isInitialFitDone() { return initialFitDone; }
     public PerfProject getProject() { return project; }
     public PlacedComponent getSelectedComponent() { return selectedComponent; }
 
