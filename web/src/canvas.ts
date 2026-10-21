@@ -543,39 +543,83 @@ export class PerfBoardCanvas {
 
       const midX = (x1 + x2) / 2;
       const midY = (y1 + y2) / 2;
-      const bw = hs * 2.2;
-      const bh = hs * 0.55;
+      const bw = hs * 2.5;
+      const bh = hs * 0.58;
 
-      this.ctx.fillStyle = '#D7CCC8';
+      const capW = bw * 0.22;
+      const capH = bh * 1.18;
+      const waistW = bw * 0.56;
+      const waistH = bh * 0.82;
+
+      const leftCapX = midX - bw / 2;
+      const rightCapX = midX + bw / 2 - capW;
+      const waistX = leftCapX + capW;
+
+      // 1. Mittlerer zylindrischer Taillenkörper (warmes Keramik-Beige)
+      this.ctx.fillStyle = '#E8D8B8';
+      this.ctx.fillRect(waistX, midY - waistH / 2, waistW, waistH);
+
+      // 2. Linke & rechte bauchige Endkappen (Wulst)
       this.ctx.beginPath();
-      this.ctx.roundRect(midX - bw / 2, midY - bh / 2, bw, bh, 5);
+      this.ctx.roundRect(leftCapX, midY - capH / 2, capW + 2, capH, 5);
       this.ctx.fill();
-      this.ctx.strokeStyle = '#A1887F';
+
+      this.ctx.beginPath();
+      this.ctx.roundRect(rightCapX - 2, midY - capH / 2, capW + 2, capH, 5);
+      this.ctx.fill();
+
+      // Subtile Konturierung / Schatten für CAD-Plastizität
+      this.ctx.strokeStyle = '#BCAAA4';
       this.ctx.lineWidth = 1;
+      this.ctx.beginPath();
+      this.ctx.roundRect(leftCapX, midY - capH / 2, capW, capH, 5);
+      this.ctx.stroke();
+
+      this.ctx.beginPath();
+      this.ctx.roundRect(rightCapX, midY - capH / 2, capW, capH, 5);
+      this.ctx.stroke();
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(waistX, midY - waistH / 2);
+      this.ctx.lineTo(waistX + waistW, midY - waistH / 2);
+      this.ctx.moveTo(waistX, midY + waistH / 2);
+      this.ctx.lineTo(waistX + waistW, midY + waistH / 2);
+      this.ctx.stroke();
+
+      // Dezentes oberes Glanzlicht
+      this.ctx.strokeStyle = '#FFF8E1';
+      this.ctx.lineWidth = 1.2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(waistX + 2, midY - waistH / 2 + 1.5);
+      this.ctx.lineTo(waistX + waistW - 2, midY - waistH / 2 + 1.5);
       this.ctx.stroke();
 
       // Color bands
       const bands = parseResistorColorCode(comp.value);
       if (bands) {
-        const bandW = Math.max(2, bw * 0.08);
-        const spacing = bw * 0.18;
-        const startOffset = midX - bw / 2 + bw * 0.18;
+        const bandW = Math.max(2.2, bw * 0.08);
 
-        const drawBand = (bx: number, color: string) => {
+        const drawBand = (bx: number, by: number, h: number, color: string) => {
           this.ctx.fillStyle = color;
-          this.ctx.fillRect(bx, midY - bh / 2, bandW, bh);
+          this.ctx.fillRect(bx, by, bandW, h);
         };
 
-        drawBand(startOffset + 0 * spacing, bands.band1);
-        drawBand(startOffset + 1 * spacing, bands.band2);
-        drawBand(startOffset + 2 * spacing, bands.multiplier);
-        drawBand(startOffset + 3.2 * spacing, bands.tolerance);
+        // Ring 1 (Erste Ziffer auf linker Ausbuchtung)
+        drawBand(leftCapX + capW * 0.45, midY - capH / 2, capH, bands.band1);
+        // Ring 2 (Zweite Ziffer auf Taillenteil)
+        drawBand(waistX + waistW * 0.22, midY - waistH / 2, waistH, bands.band2);
+        // Ring 3 (Multiplikator auf Taillenteil)
+        drawBand(waistX + waistW * 0.62, midY - waistH / 2, waistH, bands.multiplier);
+        // Ring 4 (Toleranz auf rechter Ausbuchtung)
+        drawBand(rightCapX + capW * 0.35, midY - capH / 2, capH, bands.tolerance);
       }
 
       if (isSelected) {
         this.ctx.strokeStyle = '#00C853';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(midX - bw / 2 - 2, midY - bh / 2 - 2, bw + 4, bh + 4);
+        this.ctx.beginPath();
+        this.ctx.roundRect(leftCapX - 3, midY - capH / 2 - 3, bw + 6, capH + 6, 6);
+        this.ctx.stroke();
       }
     } else if (comp.type === 'LED') {
       const px = this.transform.gridToScreenX(comp.start.x);

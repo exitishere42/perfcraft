@@ -536,44 +536,73 @@ public class PerfBoardCanvas extends Canvas {
         double y2 = transform.gridToScreenY(comp.getEnd().y());
         double hs = transform.getHoleSpacingPx();
 
-        // Anschlussdrähte
+        // Anschlussdrähte (Axial Leads)
         gc.setStroke(Color.web("#B0BEC5"));
         gc.setLineWidth(2.5 * transform.getScale());
         gc.strokeLine(x1, y1, x2, y2);
 
-        // Zylinderkörper
+        // Geometrie des Widerstandskörpers (Knochen-/Hantel-Form)
         double midX = (x1 + x2) / 2.0;
         double midY = (y1 + y2) / 2.0;
-        double bw = hs * 2.4;
-        double bh = hs * 0.55;
+        double bw = hs * 2.5;
+        double bh = hs * 0.58;
 
-        gc.setFill(Color.web("#D7CCC8")); // Beige
-        gc.fillRoundRect(midX - bw/2, midY - bh/2, bw, bh, 5, 5);
-        gc.setStroke(Color.web("#A1887F"));
+        double capW = bw * 0.22;
+        double capH = bh * 1.18;
+        double waistW = bw * 0.56;
+        double waistH = bh * 0.82;
+
+        double leftCapX = midX - bw / 2.0;
+        double rightCapX = midX + bw / 2.0 - capW;
+        double waistX = leftCapX + capW;
+
+        // 1. Mittlerer zylindrischer Taillenkörper (warmes Keramik-Beige)
+        gc.setFill(Color.web("#E8D8B8"));
+        gc.fillRect(waistX, midY - waistH / 2.0, waistW, waistH);
+
+        // 2. Linke & rechte bauchige Endkappen (Wulst)
+        gc.fillRoundRect(leftCapX, midY - capH / 2.0, capW + 2, capH, 5, 5);
+        gc.fillRoundRect(rightCapX - 2, midY - capH / 2.0, capW + 2, capH, 5, 5);
+
+        // Subtile Konturierung / Schatten für CAD-Plastizität
+        gc.setStroke(Color.web("#BCAAA4"));
         gc.setLineWidth(1.0);
-        gc.strokeRoundRect(midX - bw/2, midY - bh/2, bw, bh, 5, 5);
+        gc.strokeRoundRect(leftCapX, midY - capH / 2.0, capW, capH, 5, 5);
+        gc.strokeRoundRect(rightCapX, midY - capH / 2.0, capW, capH, 5, 5);
+        gc.strokeLine(waistX, midY - waistH / 2.0, waistX + waistW, midY - waistH / 2.0);
+        gc.strokeLine(waistX, midY + waistH / 2.0, waistX + waistW, midY + waistH / 2.0);
 
-        // Echte Farbringe
+        // Dezentes oberes Glanzlicht
+        gc.setStroke(Color.web("#FFF8E1"));
+        gc.setLineWidth(1.2);
+        gc.strokeLine(waistX + 2, midY - waistH / 2.0 + 1.5, waistX + waistW - 2, midY - waistH / 2.0 + 1.5);
+
+        // Echte Farbringe (Band 1 auf linker Kappe, 2 & Multiplikator in der Taille, Toleranz auf rechter Kappe)
         var bands = ResistorColorCode.parseAndCalculate(comp.getValue());
         if (bands != null) {
-            double bandW = Math.max(2.0, bw * 0.08);
-            double spacing = bw * 0.18;
-            double startOffset = midX - bw/2 + bw * 0.18;
+            double bandW = Math.max(2.2, bw * 0.08);
 
-            drawBand(gc, startOffset + 0 * spacing, midY - bh/2, bandW, bh, bands.band1().getHexColor());
-            drawBand(gc, startOffset + 1 * spacing, midY - bh/2, bandW, bh, bands.band2().getHexColor());
-            drawBand(gc, startOffset + 2 * spacing, midY - bh/2, bandW, bh, bands.multiplier().getHexColor());
-            drawBand(gc, startOffset + 3.2 * spacing, midY - bh/2, bandW, bh, bands.tolerance().getHexColor());
+            // Ring 1 (Erste Ziffer auf linker Ausbuchtung)
+            drawBand(gc, leftCapX + capW * 0.45, midY - capH / 2.0, bandW, capH, bands.band1().getHexColor());
+
+            // Ring 2 (Zweite Ziffer auf Taillenteil)
+            drawBand(gc, waistX + waistW * 0.22, midY - waistH / 2.0, bandW, waistH, bands.band2().getHexColor());
+
+            // Ring 3 (Multiplikator auf Taillenteil)
+            drawBand(gc, waistX + waistW * 0.62, midY - waistH / 2.0, bandW, waistH, bands.multiplier().getHexColor());
+
+            // Ring 4 (Toleranz z. B. Gold/Silber auf rechter Ausbuchtung)
+            drawBand(gc, rightCapX + capW * 0.35, midY - capH / 2.0, bandW, capH, bands.tolerance().getHexColor());
         }
 
         if (isSelected) {
             gc.setStroke(Color.web("#00C853"));
             gc.setLineWidth(2.0);
-            gc.strokeRoundRect(midX - bw/2 - 2, midY - bh/2 - 2, bw + 4, bh + 4, 7, 7);
+            gc.strokeRoundRect(leftCapX - 3, midY - capH / 2.0 - 3, bw + 6, capH + 6, 6, 6);
         }
 
-        gc.setFill(Color.web("#E0E0E0"));
-        gc.fillText(comp.getDesignator() + " (" + comp.getValue() + "Ω)", midX - 20, midY - bh/2 - 4);
+        gc.setFill(Color.web("#ECEFF1"));
+        gc.fillText(comp.getDesignator() + " (" + comp.getValue() + "Ω)", midX - 20, midY - capH / 2.0 - 4);
     }
 
     private void renderLED(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
