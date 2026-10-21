@@ -127,6 +127,22 @@ public class PerfCraftApp extends Application {
 
         I18n.addListener(lang -> applyLocalization());
 
+        // Check if a project file was passed as argument (e.g. from file association double-click)
+        var parameters = getParameters();
+        if (parameters != null && !parameters.getRaw().isEmpty()) {
+            String initialFile = parameters.getRaw().get(0);
+            File f = new File(initialFile);
+            if (f.exists() && f.getName().toLowerCase().endsWith(".perf")) {
+                try {
+                    var proj = storageService.load(f);
+                    canvas.setProject(proj);
+                    primaryStage.setTitle("PerfCraft - " + proj.getName());
+                } catch (Exception ex) {
+                    System.err.println("Failed to load initial file: " + ex.getMessage());
+                }
+            }
+        }
+
         primaryStage.setScene(scene);
         primaryStage.show();
     }

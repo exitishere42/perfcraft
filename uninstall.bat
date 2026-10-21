@@ -22,7 +22,13 @@ for /f "usebackq tokens=*" %%d in (`powershell -NoProfile -Command "[Environment
     )
 )
 
-:: 2. Programmordner %USERPROFILE%\perfcraft loeschen
+:: 2. Registry Dateizuordnung .perf loeschen
+echo [*] Entferne .perf Dateityp-Registrierung...
+powershell -NoProfile -Command ^
+    "Remove-Item -Path 'HKCU:\Software\Classes\.perf' -Recurse -ErrorAction SilentlyContinue; " ^
+    "Remove-Item -Path 'HKCU:\Software\Classes\PerfCraft.Project' -Recurse -ErrorAction SilentlyContinue; "
+
+:: 3. Programmordner %USERPROFILE%\perfcraft loeschen
 if exist "%INSTALL_DIR%" (
     echo [*] Loesche Programmordner: %INSTALL_DIR%
     cd /d "%TEMP%"

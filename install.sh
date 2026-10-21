@@ -10,7 +10,7 @@ set -e
 REPO="exitishere42/perfcraft"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/perfcraft}"
 APP_NAME="perfcraft"
-JAR_NAME="perfcraft-1.0.0-all.jar"
+JAR_NAME="perfcraft-1.0.1-all.jar"
 DETECTED_JAR=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null | grep -o '"name": *"perfcraft-[^"]*-all\.jar"' | head -n 1 | cut -d '"' -f 4 || true)
 if [ -n "$DETECTED_JAR" ]; then
     JAR_NAME="$DETECTED_JAR"
@@ -87,11 +87,13 @@ download_file() {
     fi
 }
 
-echo "[*] Lade Programmdateien und Logo herunter..."
+echo "[*] Lade Programmdateien und Logos herunter..."
 download_file "$RELEASE_BASE_URL/$JAR_NAME" "$INSTALL_DIR/$JAR_NAME"
 download_file "$RELEASE_BASE_URL/$APPIMAGE_NAME" "$INSTALL_DIR/$APPIMAGE_NAME" || true
 download_file "$RAW_BASE_URL/perfcraft.png" "$INSTALL_DIR/perfcraft.png"
 download_file "$RAW_BASE_URL/perfcraft.svg" "$INSTALL_DIR/perfcraft.svg"
+download_file "$RAW_BASE_URL/perf-doc.png" "$INSTALL_DIR/perf-doc.png"
+download_file "$RAW_BASE_URL/perf-doc.svg" "$INSTALL_DIR/perf-doc.svg"
 download_file "$RAW_BASE_URL/uninstall.sh" "$INSTALL_DIR/uninstall.sh" || true
 chmod +x "$INSTALL_DIR/uninstall.sh" 2>/dev/null || true
 
@@ -109,7 +111,28 @@ EOF
 chmod +x "$INSTALL_DIR/run.sh"
 
 # ------------------------------------------------------------------------------
-# 3. Desktop-Entry & Icon fuer das App-Dash / Anwendungsmenue einrichten
+# 3. MIME-Type fuer .perf Dateien und eigenes Dokumenten-Icon registrieren
+# ------------------------------------------------------------------------------
+echo "[*] Registriere .perf MIME-Type und Dokumenten-Icon..."
+MIME_DIR="$HOME/.local/share/mime/packages"
+MIME_ICON_DIR="$HOME/.local/share/icons/hicolor/scalable/mimetypes"
+mkdir -p "$MIME_DIR" "$MIME_ICON_DIR"
+
+cat > "$MIME_DIR/perfcraft.xml" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-perfcraft-project">
+    <comment>PerfCraft CAD Project</comment>
+    <glob pattern="*.perf"/>
+    <icon name="application-x-perfcraft-project"/>
+  </mime-type>
+</mime-info>
+EOF
+
+cp "$INSTALL_DIR/perf-doc.svg" "$MIME_ICON_DIR/application-x-perfcraft-project.svg" 2>/dev/null || true
+
+# ------------------------------------------------------------------------------
+# 4. Desktop-Entry & Icon fuer das App-Dash / Anwendungsmenue einrichten
 # ------------------------------------------------------------------------------
 echo "[*] Richte Desktop-Entry und App-Logo fuer das Dash ein..."
 ICON_DIR_PNG="$HOME/.local/share/icons/hicolor/256x256/apps"
@@ -128,17 +151,21 @@ Version=1.0
 Type=Application
 Name=PerfCraft
 Comment=Perfboard & Stripboard CAD Designer
-Exec=$INSTALL_DIR/run.sh
+Exec=$INSTALL_DIR/run.sh %f
 Icon=$INSTALL_DIR/perfcraft.png
 Path=$INSTALL_DIR
 Terminal=false
 Categories=Development;Engineering;Electronics;
 StartupNotify=true
 StartupWMClass=de.exit.perfcraft.Main
+MimeType=application/x-perfcraft-project;
 EOF
 chmod +x "$DESKTOP_FILE"
 cp "$DESKTOP_FILE" "$INSTALL_DIR/perfcraft.desktop"
 
+if command -v update-mime-database &> /dev/null; then
+    update-mime-database "$HOME/.local/share/mime" &> /dev/null || true
+fi
 if command -v update-desktop-database &> /dev/null; then
     update-desktop-database "$APPS_DIR" &> /dev/null || true
 fi
@@ -150,6 +177,6 @@ echo "=================================================================="
 echo "  [OK] Installation abgeschlossen!"
 echo "  Ordner:        $INSTALL_DIR"
 echo "  Startbefehl:   $INSTALL_DIR/run.sh"
-echo "  AppImage:      $INSTALL_DIR/$APPIMAGE_NAME"
+echo "  Dateityp:      .perf Projekte oeffnen sich automatisch mit PerfCraft!"
 echo "  Dash-Eintrag:  PerfCraft ist jetzt direkt im App-Menue verfuegbar."
 echo "=================================================================="

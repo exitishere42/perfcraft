@@ -10,6 +10,8 @@ INSTALL_DIR="${INSTALL_DIR:-$HOME/perfcraft}"
 DESKTOP_FILE="$HOME/.local/share/applications/perfcraft.desktop"
 ICON_PNG="$HOME/.local/share/icons/hicolor/256x256/apps/perfcraft.png"
 ICON_SVG="$HOME/.local/share/icons/hicolor/scalable/apps/perfcraft.svg"
+MIME_FILE="$HOME/.local/share/mime/packages/perfcraft.xml"
+MIME_ICON="$HOME/.local/share/icons/hicolor/scalable/mimetypes/application-x-perfcraft-project.svg"
 
 echo "=================================================================="
 echo "  perfcraft - Linux Uninstaller"
@@ -22,7 +24,7 @@ if pgrep -f "perfcraft.*\.jar|perfcraft.*\.AppImage" &> /dev/null; then
     sleep 1
 fi
 
-# 2. Desktop-Entry und Icons entfernen
+# 2. Desktop-Entry, MIME-Type und Icons entfernen
 if [ -f "$DESKTOP_FILE" ]; then
     echo "[*] Entferne Desktop-Entry: $DESKTOP_FILE"
     rm -f "$DESKTOP_FILE"
@@ -35,6 +37,14 @@ if [ -f "$ICON_PNG" ] || [ -f "$ICON_SVG" ]; then
     rm -f "$ICON_PNG" "$ICON_SVG"
 fi
 
+if [ -f "$MIME_FILE" ]; then
+    echo "[*] Entferne .perf MIME-Type..."
+    rm -f "$MIME_FILE" "$MIME_ICON" 2>/dev/null || true
+fi
+
+if command -v update-mime-database &> /dev/null; then
+    update-mime-database "$HOME/.local/share/mime" &> /dev/null || true
+fi
 if command -v update-desktop-database &> /dev/null; then
     update-desktop-database "$HOME/.local/share/applications" &> /dev/null || true
 fi
