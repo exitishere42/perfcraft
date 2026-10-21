@@ -28,10 +28,10 @@ class ContinuityServiceTest {
     @Test
     void testTactileSwitchInternalBridge() {
         PerfProject project = new PerfProject();
-        // Add switch at (5, 5) -> 1a=(5,5), 1b=(7,5), 2a=(5,6), 2b=(7,6)
+        // Add switch at (5, 5) -> 1a=(5,5), 1b=(7,5), 2a=(5,8), 2b=(7,8) (3x4 pins grid)
         project.getComponents().add(new PlacedComponent(
                 "sw1", ComponentType.TACTILE_SWITCH, "SW1", "6x6",
-                new HoleCoord(5, 5), new HoleCoord(7, 6), 0, BoardLayer.TOP
+                new HoleCoord(5, 5), new HoleCoord(7, 8), 0, BoardLayer.TOP
         ));
 
         // Wire connected to pin 1a
@@ -42,6 +42,6 @@ class ContinuityServiceTest {
         assertTrue(net.contains(new HoleCoord(1, 1)));
         assertTrue(net.contains(new HoleCoord(5, 5)));
         assertTrue(net.contains(new HoleCoord(7, 5))); // Traversed internal switch bridge!
-        assertFalse(net.contains(new HoleCoord(5, 6))); // Separate terminal pair
+        assertFalse(net.contains(new HoleCoord(5, 8))); // Separate terminal pair
     }
 }

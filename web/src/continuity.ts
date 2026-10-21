@@ -36,7 +36,7 @@ export function findConnectedNet(project: PerfProject, startHole: HoleCoord): Se
       if (comp.type === 'TACTILE_SWITCH') {
         const s = comp.start;
         // Pin 1a: (s.x, s.y) connects internally to 1b: (s.x + 2, s.y)
-        // Pin 2a: (s.x, s.y + 1) connects internally to 2b: (s.x + 2, s.y + 1)
+        // Pin 2a: (s.x, s.y + 3) connects internally to 2b: (s.x + 2, s.y + 3)
         const checkPair = (h1: HoleCoord, h2: HoleCoord) => {
           if (current.x === h1.x && current.y === h1.y) {
             const k = `${h2.x},${h2.y}`;
@@ -54,7 +54,7 @@ export function findConnectedNet(project: PerfProject, startHole: HoleCoord): Se
         };
 
         checkPair({ x: s.x, y: s.y }, { x: s.x + 2, y: s.y });
-        checkPair({ x: s.x, y: s.y + 1 }, { x: s.x + 2, y: s.y + 1 });
+        checkPair({ x: s.x, y: s.y + 3 }, { x: s.x + 2, y: s.y + 3 });
       }
     }
   }

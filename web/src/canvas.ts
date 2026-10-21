@@ -108,8 +108,17 @@ export class PerfBoardCanvas {
     const pt = this.getCanvasPoint(e);
     this.activePointers.set(e.pointerId, pt);
 
+    if (e.button !== 0) {
+      // Nur primärer Klick (Linksklick) darf Aktionen ausführen, Rechts-/Mittelklick brechen nur ab
+      if (e.button === 2) {
+        this.wireStartHole = null;
+        this.render();
+      }
+      return;
+    }
+
     if (this.activePointers.size === 1) {
-      // 1-Finger / Primary Mouse
+      // 1-Finger / Linksklick
       const grid = this.transform.screenToGrid(pt.x, pt.y);
 
       if (e.ctrlKey || e.metaKey) {
@@ -256,14 +265,17 @@ export class PerfBoardCanvas {
     switch (this.activeComponentType) {
       case 'TACTILE_SWITCH':
         des = 'SW' + count;
-        comp = { id, type: this.activeComponentType, designator: des, value: '6x6 mm', start, end: { x: start.x + 2, y: start.y + 1 }, rotation: 0, layer: 'TOP' };
+        // 3x4 Pins Raster (3 breit, 4 hoch -> dx=2, dy=3)
+        comp = { id, type: this.activeComponentType, designator: des, value: '6x6 mm', start, end: { x: start.x + 2, y: start.y + 3 }, rotation: 0, layer: 'TOP' };
         break;
       case 'RESISTOR_AXIAL':
         des = 'R' + count;
-        comp = { id, type: this.activeComponentType, designator: des, value: '10k', start, end: { x: start.x + 4, y: start.y }, rotation: 0, layer: 'TOP' };
+        // 4 Pins verbrauchen -> 4x1 (start bis start.x + 3)
+        comp = { id, type: this.activeComponentType, designator: des, value: '10k', start, end: { x: start.x + 3, y: start.y }, rotation: 0, layer: 'TOP' };
         break;
       case 'LED':
         des = 'LED' + count;
+        // 2x1 Raster (Breite 2, Höhe 1 -> Anode bei start, Kathode bei start.x + 1)
         comp = { id, type: this.activeComponentType, designator: des, value: 'Red', start, end: { x: start.x + 1, y: start.y }, rotation: 0, layer: 'TOP' };
         break;
       case 'CAPACITOR_CERAMIC':
@@ -389,13 +401,26 @@ export class PerfBoardCanvas {
     if (this.activeTool === 'COMPONENT' && this.currentHoverGrid) {
       this.ctx.save();
       this.ctx.globalAlpha = 0.60;
+      let dummyEnd: HoleCoord = { x: this.currentHoverGrid.x + 4, y: this.currentHoverGrid.y };
+      if (this.activeComponentType === 'TACTILE_SWITCH') {
+        dummyEnd = { x: this.currentHoverGrid.x + 2, y: this.currentHoverGrid.y + 3 };
+      } else if (this.activeComponentType === 'RESISTOR_AXIAL') {
+        dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
+      } else if (this.activeComponentType === 'LED' || this.activeComponentType === 'CAPACITOR_CERAMIC') {
+        dummyEnd = { x: this.currentHoverGrid.x + 1, y: this.currentHoverGrid.y };
+      } else if (this.activeComponentType === 'DIODE') {
+        dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
+      } else if (this.activeComponentType === 'IC_DIP') {
+        dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y + 3 };
+      }
+
       const dummy: PlacedComponent = {
         id: 'ghost',
         type: this.activeComponentType,
         designator: 'GHOST',
         value: '10k',
         start: this.currentHoverGrid,
-        end: { x: this.currentHoverGrid.x + 4, y: this.currentHoverGrid.y },
+        end: dummyEnd,
         rotation: 0,
         layer: 'TOP',
       };
@@ -437,14 +462,18 @@ export class PerfBoardCanvas {
       const x0 = this.transform.gridToScreenX(comp.start.x);
       const y0 = this.transform.gridToScreenY(comp.start.y);
       const x1 = this.transform.gridToScreenX(comp.start.x + 2);
-      const y1 = this.transform.gridToScreenY(comp.start.y + 1);
+      const y1 = this.transform.gridToScreenY(comp.start.y + 3);
 
       const cx = (x0 + x1) / 2;
       const cy = (y0 + y1) / 2;
 
-      // 1. 4 Metall-Pins geschwungen
-      const bodyHalfW = hs * 0.95;
-      const bodyHalfH = hs * 0.75;
+      // Quadratischer Switch-Körper
+      const bodySize = hs * 2.4;
+      const bw = bodySize;
+      const bh = bodySize;
+      const bodyHalf = bodySize / 2;
+
+      // 1. 4 Metall-Pins geschwungen zu den 4 Löchern (3x4 Raster)
       this.ctx.strokeStyle = '#CFD8DC';
       this.ctx.lineWidth = Math.max(2.0, hs * 0.16);
       this.ctx.lineCap = 'round';
@@ -452,11 +481,11 @@ export class PerfBoardCanvas {
 
       this.ctx.beginPath();
       // Oben links / rechts
-      this.ctx.moveTo(x0, y0); this.ctx.lineTo(cx - bodyHalfW + hs * 0.1, cy - bodyHalfH);
-      this.ctx.moveTo(x1, y0); this.ctx.lineTo(cx + bodyHalfW - hs * 0.1, cy - bodyHalfH);
+      this.ctx.moveTo(x0, y0); this.ctx.lineTo(cx - bodyHalf + hs * 0.15, cy - bodyHalf);
+      this.ctx.moveTo(x1, y0); this.ctx.lineTo(cx + bodyHalf - hs * 0.15, cy - bodyHalf);
       // Unten links / rechts
-      this.ctx.moveTo(x0, y1); this.ctx.lineTo(cx - bodyHalfW + hs * 0.1, cy + bodyHalfH);
-      this.ctx.moveTo(x1, y1); this.ctx.lineTo(cx + bodyHalfW - hs * 0.1, cy + bodyHalfH);
+      this.ctx.moveTo(x0, y1); this.ctx.lineTo(cx - bodyHalf + hs * 0.15, cy + bodyHalf);
+      this.ctx.moveTo(x1, y1); this.ctx.lineTo(cx + bodyHalf - hs * 0.15, cy + bodyHalf);
       this.ctx.stroke();
 
       // Pin Lötkontaktpunkte
@@ -468,23 +497,21 @@ export class PerfBoardCanvas {
         this.ctx.fill();
       }
 
-      // 2. Schwarzes Kunststoffgehäuse
-      const bw = bodyHalfW * 2;
-      const bh = bodyHalfH * 2;
+      // 2. Schwarzes Kunststoffgehäuse (quadratisch)
       this.ctx.fillStyle = '#1E1E1E';
       this.ctx.beginPath();
-      this.ctx.roundRect(cx - bw / 2, cy - bh / 2, bw, bh, 4);
+      this.ctx.roundRect(cx - bw / 2, cy - bh / 2, bw, bh, 5);
       this.ctx.fill();
       this.ctx.strokeStyle = '#121212';
       this.ctx.lineWidth = 1;
       this.ctx.stroke();
 
-      // 3. Silberne Metallplatte
-      const mw = bw * 0.85;
-      const mh = bh * 0.85;
+      // 3. Silberne quadratische Metallplatte
+      const mw = bw * 0.86;
+      const mh = bh * 0.86;
       this.ctx.fillStyle = '#B0BEC5';
       this.ctx.beginPath();
-      this.ctx.roundRect(cx - mw / 2, cy - mh / 2, mw, mh, 3);
+      this.ctx.roundRect(cx - mw / 2, cy - mh / 2, mw, mh, 4);
       this.ctx.fill();
       this.ctx.strokeStyle = '#78909C';
       this.ctx.lineWidth = 1;
@@ -501,8 +528,8 @@ export class PerfBoardCanvas {
         this.ctx.fill();
       }
 
-      // 4. Schwarzer runder Knopf mit Rand & Glanzlicht
-      const btnR = Math.min(mw, mh) * 0.38;
+      // 4. Zentraler runder schwarzer Betätigungs-Knopf
+      const btnR = mw * 0.38;
       this.ctx.fillStyle = '#263238';
       this.ctx.beginPath();
       this.ctx.arc(cx, cy, btnR, 0, Math.PI * 2);
@@ -521,7 +548,9 @@ export class PerfBoardCanvas {
       if (isSelected) {
         this.ctx.strokeStyle = '#00C853';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(cx - bw / 2 - 3, cy - bh / 2 - 3, bw + 6, bh + 6);
+        this.ctx.beginPath();
+        this.ctx.roundRect(cx - bw / 2 - 3, cy - bh / 2 - 3, bw + 6, bh + 6, 6);
+        this.ctx.stroke();
       }
 
       this.ctx.fillStyle = '#ECEFF1';
@@ -622,24 +651,57 @@ export class PerfBoardCanvas {
         this.ctx.stroke();
       }
     } else if (comp.type === 'LED') {
-      const px = this.transform.gridToScreenX(comp.start.x);
-      const py = this.transform.gridToScreenY(comp.start.y);
-      const r = hs * 0.42;
+      const x1 = this.transform.gridToScreenX(comp.start.x);
+      const y1 = this.transform.gridToScreenY(comp.start.y);
+      const x2 = this.transform.gridToScreenX(comp.end ? comp.end.x : comp.start.x + 1);
+      const y2 = this.transform.gridToScreenY(comp.end ? comp.end.y : comp.start.y);
+
+      // 1. Anschlussdrähte / Beinchen
+      this.ctx.strokeStyle = '#B0BEC5';
+      this.ctx.lineWidth = 2.2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x1, y1);
+      this.ctx.lineTo(x2, y2);
+      this.ctx.stroke();
+
+      // Pin Löt-Punkte
+      const pinR = Math.max(2.2, hs * 0.13);
+      this.ctx.fillStyle = '#ECEFF1';
+      for (const [px, py] of [[x1, y1], [x2, y2]]) {
+        this.ctx.beginPath();
+        this.ctx.arc(px, py, pinR, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+
+      // 2. LED-Körper zentriert zwischen den 2 Anschlusspads
+      const cx = (x1 + x2) / 2;
+      const cy = (y1 + y2) / 2;
+      const r = hs * 0.44;
 
       this.ctx.fillStyle = '#E53935';
       this.ctx.beginPath();
-      this.ctx.arc(px, py, r, 0, Math.PI * 2);
+      this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
       this.ctx.fill();
 
       // Kathode
       this.ctx.fillStyle = '#B71C1C';
-      this.ctx.fillRect(px + r * 0.7, py - r, r * 0.3, r * 2);
+      this.ctx.fillRect(cx + r * 0.65, cy - r, r * 0.35, r * 2);
+
+      // Glanzpunkt
+      this.ctx.fillStyle = '#FF8A80';
+      this.ctx.beginPath();
+      this.ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.25, 0, Math.PI * 2);
+      this.ctx.fill();
 
       if (isSelected) {
         this.ctx.strokeStyle = '#00C853';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(px - r - 3, py - r - 3, (r + 3) * 2, (r + 3) * 2);
+        this.ctx.strokeRect(Math.min(x1, x2) - pinR - 3, cy - r - 3, Math.abs(x2 - x1) + (pinR + 3) * 2, (r + 3) * 2);
       }
+
+      this.ctx.fillStyle = '#ECEFF1';
+      this.ctx.font = '11px sans-serif';
+      this.ctx.fillText(comp.designator, cx - 12, cy - r - 4);
     }
   }
 
@@ -649,8 +711,8 @@ export class PerfBoardCanvas {
         const s = c.start;
         if (grid.x === s.x && grid.y === s.y) return c.designator + ': Pin 1a';
         if (grid.x === s.x + 2 && grid.y === s.y) return c.designator + ': Pin 1b';
-        if (grid.x === s.x && grid.y === s.y + 1) return c.designator + ': Pin 2a';
-        if (grid.x === s.x + 2 && grid.y === s.y + 1) return c.designator + ': Pin 2b';
+        if (grid.x === s.x && grid.y === s.y + 3) return c.designator + ': Pin 2a';
+        if (grid.x === s.x + 2 && grid.y === s.y + 3) return c.designator + ': Pin 2b';
       } else if (c.type === 'RESISTOR_AXIAL') {
         if (grid.x === c.start.x && grid.y === c.start.y) return c.designator + ': Terminal 1';
         if (c.end && grid.x === c.end.x && grid.y === c.end.y) return c.designator + ': Terminal 2';

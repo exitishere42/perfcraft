@@ -42,11 +42,11 @@ public class ContinuityService {
             for (PlacedComponent comp : project.getComponents()) {
                 if (comp.getType() == ComponentType.TACTILE_SWITCH) {
                     // Pins: (start.x, start.y) is 1a, (start.x + 2, start.y) is 1b -> internally bridged!
-                    // (start.x, start.y + 1) is 2a, (start.x + 2, start.y + 1) is 2b -> internally bridged!
+                    // (start.x, start.y + 3) is 2a, (start.x + 2, start.y + 3) is 2b -> internally bridged! (3x4 pins grid: span dx=2, dy=3)
                     HoleCoord p1a = comp.getStart();
                     HoleCoord p1b = new HoleCoord(comp.getStart().x() + 2, comp.getStart().y());
-                    HoleCoord p2a = new HoleCoord(comp.getStart().x(), comp.getStart().y() + 1);
-                    HoleCoord p2b = new HoleCoord(comp.getStart().x() + 2, comp.getStart().y() + 1);
+                    HoleCoord p2a = new HoleCoord(comp.getStart().x(), comp.getStart().y() + 3);
+                    HoleCoord p2b = new HoleCoord(comp.getStart().x() + 2, comp.getStart().y() + 3);
 
                     if (current.equals(p1a) && visited.add(p1b)) queue.add(p1b);
                     if (current.equals(p1b) && visited.add(p1a)) queue.add(p1a);

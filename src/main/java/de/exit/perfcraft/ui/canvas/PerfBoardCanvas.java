@@ -57,17 +57,17 @@ public class PerfBoardCanvas extends Canvas {
     private void initDemoData() {
         project.getComponents().add(new PlacedComponent(
                 "c1", ComponentType.TACTILE_SWITCH, "SW1", "6x6 mm",
-                new HoleCoord(5, 4), new HoleCoord(7, 5), 0, BoardLayer.TOP
+                new HoleCoord(5, 4), new HoleCoord(7, 7), 0, BoardLayer.TOP
         ));
 
         project.getComponents().add(new PlacedComponent(
                 "c2", ComponentType.RESISTOR_AXIAL, "R1", "10k",
-                new HoleCoord(10, 4), new HoleCoord(14, 4), 0, BoardLayer.TOP
+                new HoleCoord(10, 4), new HoleCoord(13, 4), 0, BoardLayer.TOP
         ));
 
         project.getComponents().add(new PlacedComponent(
                 "c3", ComponentType.LED, "LED1", "Red",
-                new HoleCoord(16, 4), new HoleCoord(17, 4), 0, BoardLayer.TOP
+                new HoleCoord(15, 4), new HoleCoord(16, 4), 0, BoardLayer.TOP
         ));
 
         project.getWires().add(new WireTrace(
@@ -77,7 +77,7 @@ public class PerfBoardCanvas extends Canvas {
 
         project.getWires().add(new WireTrace(
                 "w2", WireKind.SILVER_WIRE, BoardLayer.BOTTOM, "#CFD8DC",
-                java.util.List.of(new HoleCoord(14, 4), new HoleCoord(16, 4))
+                java.util.List.of(new HoleCoord(13, 4), new HoleCoord(15, 4))
         ));
 
         selectedComponent = project.getComponents().getFirst();
@@ -215,10 +215,13 @@ public class PerfBoardCanvas extends Canvas {
 
         PlacedComponent comp;
         if (activeComponentType == ComponentType.TACTILE_SWITCH) {
-            comp = new PlacedComponent(id, activeComponentType, des, "6x6 mm", start, new HoleCoord(start.x() + 2, start.y() + 1), 0, BoardLayer.TOP);
+            // 3x4 Pins Raster (3 breit, 4 hoch -> dx=2, dy=3)
+            comp = new PlacedComponent(id, activeComponentType, des, "6x6 mm", start, new HoleCoord(start.x() + 2, start.y() + 3), 0, BoardLayer.TOP);
         } else if (activeComponentType == ComponentType.RESISTOR_AXIAL) {
-            comp = new PlacedComponent(id, activeComponentType, des, "10k", start, new HoleCoord(start.x() + 4, start.y()), 0, BoardLayer.TOP);
+            // 4 Pins verbrauchen -> 4x1 (start bis start.x + 3 -> 4 Pins total: x, x+1, x+2, x+3)
+            comp = new PlacedComponent(id, activeComponentType, des, "10k", start, new HoleCoord(start.x() + 3, start.y()), 0, BoardLayer.TOP);
         } else if (activeComponentType == ComponentType.LED) {
+            // LED 2x1 (Breite 2, Höhe 1 -> Anode bei start, Kathode bei start.x + 1)
             comp = new PlacedComponent(id, activeComponentType, des, "Red", start, new HoleCoord(start.x() + 1, start.y()), 0, BoardLayer.TOP);
         } else if (activeComponentType == ComponentType.CAPACITOR_CERAMIC) {
             comp = new PlacedComponent(id, activeComponentType, des, "100n", start, new HoleCoord(start.x() + 1, start.y()), 0, BoardLayer.TOP);
@@ -399,9 +402,9 @@ public class PerfBoardCanvas extends Canvas {
 
     private PlacedComponent createDummyComponent(ComponentType type, HoleCoord start) {
         if (type == ComponentType.TACTILE_SWITCH) {
-            return new PlacedComponent("ghost", type, "SW", "6x6 mm", start, new HoleCoord(start.x() + 2, start.y() + 1), 0, BoardLayer.TOP);
+            return new PlacedComponent("ghost", type, "SW", "6x6 mm", start, new HoleCoord(start.x() + 2, start.y() + 3), 0, BoardLayer.TOP);
         } else if (type == ComponentType.RESISTOR_AXIAL) {
-            return new PlacedComponent("ghost", type, "R", "10k", start, new HoleCoord(start.x() + 4, start.y()), 0, BoardLayer.TOP);
+            return new PlacedComponent("ghost", type, "R", "10k", start, new HoleCoord(start.x() + 3, start.y()), 0, BoardLayer.TOP);
         } else if (type == ComponentType.LED) {
             return new PlacedComponent("ghost", type, "D", "Red", start, new HoleCoord(start.x() + 1, start.y()), 0, BoardLayer.TOP);
         } else if (type == ComponentType.CAPACITOR_CERAMIC) {
@@ -423,8 +426,8 @@ public class PerfBoardCanvas extends Canvas {
             if (c.getType() == ComponentType.TACTILE_SWITCH) {
                 if (grid.equals(s)) return c.getDesignator() + ": Terminal 1a";
                 if (grid.equals(new HoleCoord(s.x() + 2, s.y()))) return c.getDesignator() + ": Terminal 1b";
-                if (grid.equals(new HoleCoord(s.x(), s.y() + 1))) return c.getDesignator() + ": Terminal 2a";
-                if (grid.equals(new HoleCoord(s.x() + 2, s.y() + 1))) return c.getDesignator() + ": Terminal 2b";
+                if (grid.equals(new HoleCoord(s.x(), s.y() + 3))) return c.getDesignator() + ": Terminal 2a";
+                if (grid.equals(new HoleCoord(s.x() + 2, s.y() + 3))) return c.getDesignator() + ": Terminal 2b";
             } else if (c.getType() == ComponentType.RESISTOR_AXIAL) {
                 if (grid.equals(s)) return c.getDesignator() + ": Terminal 1";
                 if (grid.equals(e)) return c.getDesignator() + ": Terminal 2";
@@ -444,31 +447,36 @@ public class PerfBoardCanvas extends Canvas {
         int gy = comp.getStart().y();
         double hs = transform.getHoleSpacingPx();
 
+        // 3x4 Pins Raster: Pin 1a=(gx, gy), 1b=(gx+2, gy), Pin 2a=(gx, gy+3), 2b=(gx+2, gy+3)
         double x0 = transform.gridToScreenX(gx);
         double y0 = transform.gridToScreenY(gy);
         double x1 = transform.gridToScreenX(gx + 2);
-        double y1 = transform.gridToScreenY(gy + 1);
+        double y1 = transform.gridToScreenY(gy + 3);
 
         double cx = (x0 + x1) / 2.0;
         double cy = (y0 + y1) / 2.0;
 
-        // 1. Die 4 geschwungenen Metall-Pins (Gull-Wing / Through-Hole Leads)
+        // Quadratischer Switch-Körper (ca. 2.4 * hs breit und hoch)
+        double bodySize = hs * 2.4;
+        double bw = bodySize;
+        double bh = bodySize;
+
+        // 1. Die 4 geschwungenen Metall-Pins (Gull-Wing Leads zu den 4 Pads)
         gc.setStroke(Color.web("#CFD8DC"));
         gc.setLineWidth(Math.max(2.0, hs * 0.16));
         gc.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
         gc.setLineJoin(javafx.scene.shape.StrokeLineJoin.ROUND);
 
-        double bodyHalfW = hs * 0.95;
-        double bodyHalfH = hs * 0.75;
+        double bodyHalf = bodySize / 2.0;
 
         // Oben-links (Pin 1a)
-        gc.strokeLine(x0, y0, cx - bodyHalfW + hs * 0.1, cy - bodyHalfH);
+        gc.strokeLine(x0, y0, cx - bodyHalf + hs * 0.15, cy - bodyHalf);
         // Oben-rechts (Pin 1b)
-        gc.strokeLine(x1, y0, cx + bodyHalfW - hs * 0.1, cy - bodyHalfH);
+        gc.strokeLine(x1, y0, cx + bodyHalf - hs * 0.15, cy - bodyHalf);
         // Unten-links (Pin 2a)
-        gc.strokeLine(x0, y1, cx - bodyHalfW + hs * 0.1, cy + bodyHalfH);
+        gc.strokeLine(x0, y1, cx - bodyHalf + hs * 0.15, cy + bodyHalf);
         // Unten-rechts (Pin 2b)
-        gc.strokeLine(x1, y1, cx + bodyHalfW - hs * 0.1, cy + bodyHalfH);
+        gc.strokeLine(x1, y1, cx + bodyHalf - hs * 0.15, cy + bodyHalf);
 
         // Kleine glänzende Löt-Pads an den Pins
         gc.setFill(Color.web("#ECEFF1"));
@@ -478,23 +486,21 @@ public class PerfBoardCanvas extends Canvas {
         gc.fillOval(x0 - pinDotR, y1 - pinDotR, pinDotR * 2, pinDotR * 2);
         gc.fillOval(x1 - pinDotR, y1 - pinDotR, pinDotR * 2, pinDotR * 2);
 
-        // 2. Schwarzer Kunststoff-Körper (6x6 mm Sockel)
-        double bw = bodyHalfW * 2.0;
-        double bh = bodyHalfH * 2.0;
+        // 2. Schwarzer Kunststoff-Körper (quadratisch)
         gc.setFill(Color.web("#1E1E1E")); // Tiefschwarzer Thermoplast
-        gc.fillRoundRect(cx - bw/2, cy - bh/2, bw, bh, 4, 4);
+        gc.fillRoundRect(cx - bw/2, cy - bh/2, bw, bh, 5, 5);
         gc.setStroke(Color.web("#121212"));
         gc.setLineWidth(1.0);
-        gc.strokeRoundRect(cx - bw/2, cy - bh/2, bw, bh, 4, 4);
+        gc.strokeRoundRect(cx - bw/2, cy - bh/2, bw, bh, 5, 5);
 
-        // 3. Silberne Metall-Deckplatte mit den 4 Präge-Punkten an den Ecken
-        double mw = bw * 0.85;
-        double mh = bh * 0.85;
+        // 3. Silberne quadratische Metall-Deckplatte mit 4 Eck-Nieten
+        double mw = bw * 0.86;
+        double mh = bh * 0.86;
         gc.setFill(Color.web("#B0BEC5")); // Mattes Silber-Blech
-        gc.fillRoundRect(cx - mw/2, cy - mh/2, mw, mh, 3, 3);
+        gc.fillRoundRect(cx - mw/2, cy - mh/2, mw, mh, 4, 4);
         gc.setStroke(Color.web("#78909C"));
         gc.setLineWidth(1.0);
-        gc.strokeRoundRect(cx - mw/2, cy - mh/2, mw, mh, 3, 3);
+        gc.strokeRoundRect(cx - mw/2, cy - mh/2, mw, mh, 4, 4);
 
         // 4 Eck-Nieten / Befestigungspunkte
         gc.setFill(Color.web("#37474F"));
@@ -507,7 +513,7 @@ public class PerfBoardCanvas extends Canvas {
         gc.fillOval(cx + rxOffset - rivetR, cy + ryOffset - rivetR, rivetR * 2, rivetR * 2);
 
         // 4. Zentraler runder schwarzer Betätigungs-Knopf
-        double btnR = Math.min(mw, mh) * 0.38;
+        double btnR = mw * 0.38;
         // Äußerer Schatten/Sockel
         gc.setFill(Color.web("#263238"));
         gc.fillOval(cx - btnR, cy - btnR, btnR * 2, btnR * 2);
@@ -606,25 +612,48 @@ public class PerfBoardCanvas extends Canvas {
     }
 
     private void renderLED(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
-        double px = transform.gridToScreenX(comp.getStart().x());
-        double py = transform.gridToScreenY(comp.getStart().y());
-        double r = transform.getHoleSpacingPx() * 0.42;
+        double x1 = transform.gridToScreenX(comp.getStart().x());
+        double y1 = transform.gridToScreenY(comp.getStart().y());
+        double x2 = transform.gridToScreenX(comp.getEnd() != null ? comp.getEnd().x() : comp.getStart().x() + 1);
+        double y2 = transform.gridToScreenY(comp.getEnd() != null ? comp.getEnd().y() : comp.getStart().y());
+        double hs = transform.getHoleSpacingPx();
 
+        // 1. Anschlussdrähte / Beinchen von den 2 Löt-Pads (Anode & Kathode)
+        gc.setStroke(Color.web("#B0BEC5"));
+        gc.setLineWidth(2.2 * transform.getScale());
+        gc.strokeLine(x1, y1, x2, y2);
+
+        // Kleine glänzende Löt-Punkte an den Anschlüssen
+        gc.setFill(Color.web("#ECEFF1"));
+        double pinR = Math.max(2.2, hs * 0.13);
+        gc.fillOval(x1 - pinR, y1 - pinR, pinR * 2, pinR * 2);
+        gc.fillOval(x2 - pinR, y2 - pinR, pinR * 2, pinR * 2);
+
+        // 2. LED-Körper zentriert zwischen den 2 Anschlusspads (2x1 Spanne)
+        double cx = (x1 + x2) / 2.0;
+        double cy = (y1 + y2) / 2.0;
+        double r = hs * 0.44;
+
+        // Farbige Linse / Kuppel
         gc.setFill(Color.web("#E53935"));
-        gc.fillOval(px - r, py - r, r * 2, r * 2);
+        gc.fillOval(cx - r, cy - r, r * 2, r * 2);
 
-        // Kathoden-Abflachung
+        // Kathoden-Abflachung (flache Kante auf Kathodenseite / rechts)
         gc.setFill(Color.web("#B71C1C"));
-        gc.fillRect(px + r * 0.7, py - r, r * 0.3, r * 2);
+        gc.fillRect(cx + r * 0.65, cy - r, r * 0.35, r * 2);
+
+        // Innenreflektor / Glanzpunkt (plastische Linse)
+        gc.setFill(Color.web("#FF8A80"));
+        gc.fillOval(cx - r * 0.45, cy - r * 0.45, r * 0.4, r * 0.4);
 
         if (isSelected) {
             gc.setStroke(Color.web("#00C853"));
             gc.setLineWidth(2.0);
-            gc.strokeRect(px - r - 3, py - r - 3, (r + 3) * 2, (r + 3) * 2);
+            gc.strokeRect(Math.min(x1, x2) - pinR - 3, cy - r - 3, Math.abs(x2 - x1) + (pinR + 3) * 2, (r + 3) * 2);
         }
 
         gc.setFill(Color.web("#ECEFF1"));
-        gc.fillText(comp.getDesignator(), px - 12, py - r - 4);
+        gc.fillText(comp.getDesignator(), cx - 12, cy - r - 4);
     }
 
     private void renderCapacitor(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
