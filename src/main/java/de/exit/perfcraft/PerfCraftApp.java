@@ -137,6 +137,7 @@ public class PerfCraftApp extends Application {
 
         I18n.addListener(lang -> applyLocalization());
 
+        boolean openedFromArgs = false;
         // Check if a project file was passed as argument (e.g. from file association double-click)
         var parameters = getParameters();
         if (parameters != null && !parameters.getRaw().isEmpty()) {
@@ -147,6 +148,7 @@ public class PerfCraftApp extends Application {
                     var proj = storageService.load(f);
                     canvas.setProject(proj);
                     primaryStage.setTitle("PerfCraft - " + proj.getName());
+                    openedFromArgs = true;
                 } catch (Exception ex) {
                     System.err.println("Failed to load initial file: " + ex.getMessage());
                 }
@@ -155,6 +157,16 @@ public class PerfCraftApp extends Application {
 
         primaryStage.setScene(scene);
         primaryStage.show();
+
+        // Nutzer-Vorgabe: Am Anfang Hauptmenü / Dialog zur Board-Erstellung anzeigen
+        if (!openedFromArgs) {
+            javafx.application.Platform.runLater(() -> {
+                de.exit.perfcraft.ui.dialogs.WelcomeDialog.show(primaryStage, project -> {
+                    canvas.setProject(project);
+                    primaryStage.setTitle("PerfCraft - " + project.getName());
+                }, this::openProject);
+            });
+        }
     }
 
     private HBox createHeaderBar() {

@@ -376,6 +376,124 @@
         color: #00C853;
         font-weight: bold;
       }
+
+      /* 6. MODAL OVERLAY & CARD */
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      .modal-backdrop.active {
+        display: flex;
+      }
+      .modal-card {
+        background: #1E1E1E;
+        border: 1px solid #2C2C2C;
+        border-radius: 8px;
+        padding: 24px;
+        width: 440px;
+        max-width: 90vw;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+      }
+      .modal-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border-bottom: 1px solid #2C2C2C;
+        padding-bottom: 14px;
+      }
+      .form-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .form-row {
+        display: flex;
+        gap: 12px;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .form-label {
+        font-size: 11px;
+        color: #B0BEC5;
+      }
+      .form-input {
+        background: #242424;
+        border: 1px solid #2C2C2C;
+        border-radius: 4px;
+        color: white;
+        padding: 8px 10px;
+        font-size: 13px;
+        outline: none;
+      }
+      .form-input:focus {
+        border-color: #00C853;
+      }
+      .preset-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+      }
+      .preset-btn {
+        flex: 1;
+        background: #242424;
+        border: 1px solid #2C2C2C;
+        border-radius: 4px;
+        color: #B0BEC5;
+        padding: 6px;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .preset-btn:hover {
+        background: #2C2C2C;
+        color: white;
+      }
+      .preset-btn.active {
+        border-color: #00C853;
+        color: #00C853;
+        background: #1B2E22;
+      }
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 22px;
+      }
+      .modal-btn-secondary {
+        background: #242424;
+        border: 1px solid #2C2C2C;
+        border-radius: 4px;
+        color: #B0BEC5;
+        padding: 8px 16px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .modal-btn-secondary:hover {
+        background: #2C2C2C;
+        color: white;
+      }
+      .modal-btn-primary {
+        background: #00C853;
+        border: none;
+        border-radius: 4px;
+        color: black;
+        font-weight: bold;
+        padding: 8px 18px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .modal-btn-primary:hover {
+        background: #00E676;
+      }
     </style>
   </head>
   <body>
@@ -514,6 +632,52 @@
       <span style="color: #424242;">|</span>
       <span>Grid: 2.54 mm (100 mil)</span>
     </footer>
+
+    <!-- 4. HAUPTMENÜ / WELCOME MODAL -->
+    <div id="welcomeOverlay" class="modal-backdrop active">
+      <div class="modal-card">
+        <div class="modal-header">
+          <img src="/perfcraft.svg" alt="PerfCraft" style="width: 38px; height: 38px;" />
+          <div>
+            <div style="font-size: 20px; font-weight: bold; color: white;">PerfCraft</div>
+            <div style="font-size: 13px; color: #9E9E9E;">Lochraster Design & Perfboard Studio</div>
+          </div>
+        </div>
+
+        <div style="margin: 16px 0 10px 0; color: #E0E0E0; font-size: 13px; line-height: 1.5;">
+          Wähle eine Vorlage oder gib deine individuelle Lochraster-Platinengröße an (Spalten & Zeilen), um direkt zu starten:
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Projektname</label>
+            <input type="text" id="dlgProjName" class="form-input" value="Mein-Perfboard" />
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Spalten (Löcher X)</label>
+              <input type="number" id="dlgCols" class="form-input" value="24" min="5" max="200" />
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Zeilen (Löcher Y)</label>
+              <input type="number" id="dlgRows" class="form-input" value="18" min="5" max="200" />
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; font-size: 11px; color: #9E9E9E; text-transform: uppercase; letter-spacing: 0.5px;">Schnellstart-Vorlagen</div>
+        <div class="preset-row">
+          <button type="button" class="preset-btn" data-cols="16" data-rows="12">Klein (16×12)</button>
+          <button type="button" class="preset-btn active" data-cols="24" data-rows="18">Standard (24×18)</button>
+          <button type="button" class="preset-btn" data-cols="36" data-rows="24">Groß (36×24)</button>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="modal-btn-secondary" id="btnWelcomeOpen">Datei öffnen (.perf)</button>
+          <button type="button" class="modal-btn-primary" id="btnWelcomeCreate">Projekt starten</button>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -6,12 +6,59 @@ let currentProject: PerfProject = createDefaultProject();
 const canvasEl = document.getElementById('perfCanvas') as HTMLCanvasElement;
 const canvas = new PerfBoardCanvas(canvasEl, currentProject);
 
-// 1. HEADER CONTROLS
+// 1. HAUPTMENÜ & NEUES PROJEKT MODAL
+const welcomeOverlay = document.getElementById('welcomeOverlay') as HTMLDivElement;
+const dlgProjName = document.getElementById('dlgProjName') as HTMLInputElement;
+const dlgCols = document.getElementById('dlgCols') as HTMLInputElement;
+const dlgRows = document.getElementById('dlgRows') as HTMLInputElement;
+const btnWelcomeCreate = document.getElementById('btnWelcomeCreate') as HTMLButtonElement;
+const btnWelcomeOpen = document.getElementById('btnWelcomeOpen') as HTMLButtonElement;
+
+// Preset buttons
+document.querySelectorAll('.preset-btn').forEach((btn) => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.preset-btn').forEach((b) => b.classList.remove('active'));
+    const target = e.currentTarget as HTMLButtonElement;
+    target.classList.add('active');
+    const cols = target.getAttribute('data-cols');
+    const rows = target.getAttribute('data-rows');
+    if (cols) dlgCols.value = cols;
+    if (rows) dlgRows.value = rows;
+  });
+});
+
+const startNewProject = (name: string, cols: number, rows: number) => {
+  currentProject = {
+    name: name || 'Unbenanntes-Projekt',
+    board: {
+      columns: Math.max(5, Math.min(200, cols)),
+      rows: Math.max(5, Math.min(200, rows)),
+      pitchMm: 2.54,
+      padDiameterMm: 2.1,
+      drillDiameterMm: 1.0,
+    },
+    components: [],
+    wires: [],
+  };
+  canvas.setProject(currentProject);
+  document.title = `PerfCraft - ${currentProject.name}`;
+  welcomeOverlay.classList.remove('active');
+};
+
+btnWelcomeCreate?.addEventListener('click', () => {
+  const name = dlgProjName.value.trim() || 'Mein-Perfboard';
+  const cols = parseInt(dlgCols.value, 10) || 24;
+  const rows = parseInt(dlgRows.value, 10) || 18;
+  startNewProject(name, cols, rows);
+});
+
+btnWelcomeOpen?.addEventListener('click', () => {
+  fileInput.click();
+});
+
+// 2. HEADER CONTROLS
 document.getElementById('btnNew')?.addEventListener('click', () => {
-  if (confirm('Create new project? Unsaved changes will be lost.')) {
-    currentProject = createDefaultProject();
-    canvas.setProject(currentProject);
-  }
+  welcomeOverlay.classList.add('active');
 });
 
 const fileInput = document.getElementById('fileInput') as HTMLInputElement;
@@ -30,6 +77,7 @@ fileInput.addEventListener('change', (e) => {
           currentProject = json as PerfProject;
           canvas.setProject(currentProject);
           document.title = `PerfCraft - ${currentProject.name}`;
+          welcomeOverlay.classList.remove('active');
         } else {
           alert('Invalid .perf project format.');
         }

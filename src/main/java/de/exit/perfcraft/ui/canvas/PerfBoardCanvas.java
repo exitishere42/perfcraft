@@ -50,7 +50,6 @@ public class PerfBoardCanvas extends Canvas {
     public PerfBoardCanvas(double width, double height) {
         super(width, height);
         initInteraction();
-        initDemoData();
         render();
     }
 

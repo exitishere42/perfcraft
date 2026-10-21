@@ -124,6 +124,24 @@ public class I18n {
         EN_MAP.put("dialog.cancel", "Cancel");
         DE_MAP.put("dialog.cancel", "Abbrechen");
 
+        // Welcome Screen / Hauptmenü
+        EN_MAP.put("welcome.title", "Welcome to PerfCraft");
+        DE_MAP.put("welcome.title", "Willkommen bei PerfCraft");
+        EN_MAP.put("welcome.subtitle", "Design circuits on perfboards with authentic leads, components, and continuity.");
+        DE_MAP.put("welcome.subtitle", "Entwirf Schaltungen auf Lochrasterplatinen mit echten Drähten, Bauteilen und Durchgangsprüfung.");
+        EN_MAP.put("welcome.new", "New Project");
+        DE_MAP.put("welcome.new", "Neues Projekt");
+        EN_MAP.put("welcome.open", "Open Existing (.perf)");
+        DE_MAP.put("welcome.open", "Projekt öffnen (.perf)");
+        EN_MAP.put("welcome.recent", "Quick Start Presets:");
+        DE_MAP.put("welcome.recent", "Schnellstart-Vorlagen:");
+        EN_MAP.put("welcome.preset.small", "Small (16 x 12 holes)");
+        DE_MAP.put("welcome.preset.small", "Klein (16 x 12 Löcher)");
+        EN_MAP.put("welcome.preset.standard", "Standard (24 x 18 holes)");
+        DE_MAP.put("welcome.preset.standard", "Standard (24 x 18 Löcher)");
+        EN_MAP.put("welcome.preset.large", "Large (36 x 24 holes)");
+        DE_MAP.put("welcome.preset.large", "Groß (36 x 24 Löcher)");
+
         // Settings
         EN_MAP.put("dialog.settings.title", "Settings");
         DE_MAP.put("dialog.settings.title", "Einstellungen");
