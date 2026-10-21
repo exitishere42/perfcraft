@@ -1,84 +1,134 @@
-# PerfCraft
+<div align="center">
 
-[![Release](https://img.shields.io/github/v/release/exitishere42/perfcraft?style=flat-square&color=03DAC6)](https://github.com/exitishere42/perfcraft/releases/latest)
+<img src="perfcraft.png" alt="PerfCraft Logo" width="128" height="128" />
+
+```text
+  ____            __  ____            __ _   
+ |  _ \ ___ _ __ / _|/ ___|_ __ __ _ / _| |_ 
+ | |_) / _ \ '__| |_| |   | '__/ _` | |_| __|
+ |  __/  __/ |  |  _| |___| | | (_| |  _| |_ 
+ |_|   \___|_|  |_|  \____|_|  \__,_|_|  \__|
+                                              
+```
+
+**Intuitive, clutter-free Perfboard & Stripboard CAD Designer built with Java 21 LTS and JavaFX 21**
+
+[![Release](https://img.shields.io/github/v/release/exitishere42/perfcraft?style=flat-square&color=00C853)](https://github.com/exitishere42/perfcraft/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Java 21 LTS](https://img.shields.io/badge/Java-21%20LTS-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://adoptium.net)
 [![JavaFX 21](https://img.shields.io/badge/JavaFX-21-orange?style=flat-square)](https://openjfx.io)
 
-An intuitive, fast, and modern Perfboard & Stripboard CAD designer built with Java 21 LTS and JavaFX, featuring Material Design 2 Dark theme.
-
-Inspired by LochMaster, Fritzing, and KiCad, PerfCraft focuses on speed, clarity, and instant usability without visual clutter.
+</div>
 
 ---
 
-## Features
+## Overview
 
-- **3-Tool Workflow**:
-  - `V` **Select Tool**: Click or box-select components and wire segments; drag to reposition or press `Delete` to remove.
-  - `W` **Wire / Jumper Tool**: Click pad-to-pad to route tinned copper wires or colored insulated jumper wires with live preview.
-  - `C` **Component Placer Tool**: Quick component placement with automatic IEC 60062 resistor color code bands, tactile switch 4-pin footprints, capacitors, diodes, LEDs, and DIP ICs.
-- **Realistic Vector Perfboard Canvas**:
-  - High-visibility silver pads (`#CFD8DC`) with clear drill holes.
-  - Standard 2.54 mm (100 mil) pitch grid with alphanumeric coordinates (`A-Z`, `1-99`).
-  - Smooth pan (`Middle Click` or `Right Click Drag`) and zoom (`Mouse Wheel`, 50% to 300%).
-- **Interactive Electronic Components**:
-  - **Resistors**: Automatic 4-band / 5-band color rendering based on ohmic value (e.g. 10 kΩ, 220 Ω, 4.7 kΩ).
-  - **Tactile Switches**: 6x6 mm 4-pin momentary push buttons with internal pin pairings.
-  - **LEDs & Diodes**: Directional polarity markings (anode/cathode) and selectable LED lens colors.
-  - **Capacitors**: Ceramic disc & polarized electrolytic packages.
-  - **ICs (DIP)**: Configurable DIP packages (DIP-8, DIP-14, DIP-16, DIP-28, etc.) with pin 1 index notch.
-- **KiCad-Style Connectivity & DRC**:
-  - **Net Highlighting**: Click any pad or wire to highlight all connected copper traces, jumpers, and component pins using real-time graph traversal (BFS).
-  - **Design Rule Check (DRC)**: Instant validation against off-board pins and component overlaps.
-- **Project Storage & Production Export**:
-  - Clean human-readable JSON project format (`.perf`).
-  - **Bill of Materials (BOM)**: One-click export to CSV sorted by component type, designator, and value.
-  - **High-Resolution PNG Render**: Export finished perfboard layouts at 1x, 2x, or 4x scale.
-- **Cross-Platform & Bilingual**:
-  - Built-in English (default) and German (`DE`) localization with live switching.
-  - Native performance on Windows and Linux (Ubuntu/Debian, Fedora, Arch).
+**PerfCraft** is an intuitive, fast, and modern CAD tool for designing, prototyping, and verifying through-hole electronics circuits on perfboards and stripboards.
+
+Inspired by LochMaster, Fritzing, and KiCad, PerfCraft avoids visual clutter and complex menus, providing a clean 2D vector canvas with high-visibility silver solder pads, automatic IEC resistor color codes, tactile switch footprints, real-time copper net highlighting, and one-click production exports.
+
+<div align="center">
+  <img src="screenshot.png" alt="PerfCraft Interface Preview" width="100%" />
+</div>
+
+---
+
+## How It Works & Core Workflow
+
+PerfCraft revolves around an efficient 3-tool workflow accessible via instant hotkeys:
+
+```text
++-------------------+      +-------------------------+      +--------------------------+
+|  1. SELECT TOOL   |      |   2. WIRE / JUMPER      |      |   3. COMPONENT PLACER    |
+|       [ V ]       |      |          [ W ]          |      |          [ C ]           |
+|                   |      |                         |      |                          |
+|  * Move & Rotate  | ===> |  * Tinned Silver Wire   | ===> |  * IEC Resistors (Bands) |
+|  * Inspect Nodes  |      |  * Insulated Jumpers    |      |  * Tactile Switches      |
+|  * Delete & Group |      |  * Real-Time BFS Net    |      |  * LEDs, Caps, Diodes, IC|
++-------------------+      +-------------------------+      +--------------------------+
+```
+
+1. **Select Tool (`V`)**:
+   - Click any component or wire to select it.
+   - Press `R` to rotate components in 90° increments.
+   - Press `Delete` or `Backspace` to remove elements.
+   - Real-time inspector in the right panel updates instantly.
+
+2. **Wire / Jumper Tool (`W`)**:
+   - Click on any start hole and drag or click to the destination hole.
+   - Choose between **Insulated Jumpers** (colored wiring) or **Tinned Copper/Silver Wire** (bare bridging).
+   - Click any pad or trace to trigger KiCad-style net continuity highlighting across all connected pins.
+
+3. **Component Placer (`C`)**:
+   - Select a component type from the left toolbar.
+   - Move the cursor across the canvas with live ghost placement and pad snap.
+   - Click to place.
+
+---
+
+## Component Library
+
+- **Axial Resistors**: Automatically renders real IEC 60062 4-band or 5-band color rings on the canvas based on the entered ohmic value (e.g. `220`, `4.7k`, `10k`, `1M`).
+- **Tactile Switches**: Standard 6x6 mm 4-pin momentary push buttons with correct pin-pair routing.
+- **LEDs & Diodes**: Polarity indication with anode/cathode orientation markings and customizable lens colors.
+- **Capacitors**: Disc ceramic packages and polarized electrolytic cans with negative stripe.
+- **DIP Integrated Circuits**: Configurable pin counts (DIP-8, DIP-14, DIP-16, DIP-28, etc.) with pin 1 index notch.
+
+---
+
+## Design Rule Check (DRC) & Continuity Highlighting
+
+- **Net Highlighting**: Click any pad or wire to trace all connected solder pads, jumper segments, and component pins using breadth-first graph traversal (BFS).
+- **DRC Engine**: Automatically checks for:
+  - Components or leads positioned off-board.
+  - Pin collisions and overlapping component terminals.
+  - Solder bridge short circuits.
 
 ---
 
 ## Keyboard Shortcuts
 
-| Key | Action |
-| --- | --- |
+| Shortcut | Description |
+| :--- | :--- |
 | `V` | Select Tool |
 | `W` | Wire / Jumper Tool |
 | `C` | Component Placer Tool |
-| `R` | Rotate active component (0°, 90°, 180°, 270°) |
-| `Delete` / `Backspace` | Delete selected elements |
-| `Ctrl + N` | New Project |
-| `Ctrl + O` | Open Project (`.perf`) |
-| `Ctrl + S` | Save Project (`.perf`) |
-| `Ctrl + E` | Export high-res PNG image |
-| `Ctrl + B` | Export Bill of Materials (CSV) |
-| `Ctrl + +` / `Ctrl + -` | Zoom in / Zoom out |
-| `Ctrl + 0` | Reset Zoom (100%) |
-| `Middle Click` / `Right Drag` | Pan canvas |
+| `R` | Rotate selected component (0°, 90°, 180°, 270°) |
+| `Delete` / `Backspace` | Delete selected element |
+| `Ctrl + N` | Create a new board (custom grid width & height) |
+| `Ctrl + O` | Open saved project (`.perf`) |
+| `Ctrl + S` | Save current project (`.perf`) |
+| `Ctrl + E` | Export high-resolution PNG image (1x, 2x, 4x) |
+| `Ctrl + B` | Export Bill of Materials (BOM) as CSV |
+| `Ctrl + +` / `Ctrl + -` | Zoom in / Zoom out (50% to 300%) |
+| `Ctrl + 0` | Reset zoom to 100% |
+| `Middle Click Drag` / `Right Drag` | Pan canvas |
 
 ---
 
-## Quick Installation
+## Installation & Setup
 
 ### Windows
 
-Download and run `install.bat`:
+Install with one PowerShell command:
 
 ```powershell
 powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/exitishere42/perfcraft/main/install.bat' -OutFile 'install.bat'; .\install.bat"
 ```
 
-Or download the pre-packaged `perfcraft-1.0.0-all.jar` from the [Latest Release](https://github.com/exitishere42/perfcraft/releases/latest) and launch with:
+Or download the executable `perfcraft-1.0.1-all.jar` directly from [Releases](https://github.com/exitishere42/perfcraft/releases/latest) and run:
 
 ```cmd
-javaw -jar perfcraft-1.0.0-all.jar
+javaw -jar perfcraft-1.0.1-all.jar
 ```
 
-### Linux (Debian, Ubuntu, Fedora, Arch)
+- Automatic `.perf` file type registration and custom document icon in Windows Explorer.
+- Desktop and Start Menu shortcuts created automatically.
 
-Run the one-line installer:
+### Linux (Ubuntu, Debian, Fedora, Arch)
+
+Install via the automated setup script:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/exitishere42/perfcraft/main/install.sh | bash
@@ -87,32 +137,26 @@ curl -fsSL https://raw.githubusercontent.com/exitishere42/perfcraft/main/install
 Or run directly with Java 21+:
 
 ```bash
-java -jar perfcraft-1.0.0-all.jar
+java -jar perfcraft-1.0.1-all.jar
 ```
 
 ---
 
 ## Building from Source
 
-Requirements: Java Development Kit (JDK) 21 LTS and Apache Maven 3.8+.
+Requirements: OpenJDK 21 LTS and Apache Maven.
 
 ```bash
 git clone https://github.com/exitishere42/perfcraft.git
 cd perfcraft
 mvn clean test
-mvn clean package
+mvn package -DskipTests
 ```
 
-Run directly via Maven:
+Run directly:
 
 ```bash
-mvn exec:java
-```
-
-Or run the built Fat-JAR:
-
-```bash
-java -jar target/perfcraft-1.0.0-all.jar
+java -jar target/perfcraft-1.0.1-all.jar
 ```
 
 ---
