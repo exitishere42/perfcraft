@@ -1,4 +1,4 @@
-import { createDefaultProject, PerfProject, PlacedComponent } from './models.ts';
+import { createDefaultProject, PerfProject, PlacedComponent, ComponentType } from './models.ts';
 import { PerfBoardCanvas } from './canvas.ts';
 import { parseResistorColorCode } from './resistor.ts';
 
@@ -6,15 +6,14 @@ let currentProject: PerfProject = createDefaultProject();
 const canvasEl = document.getElementById('perfCanvas') as HTMLCanvasElement;
 const canvas = new PerfBoardCanvas(canvasEl, currentProject);
 
-// Header buttons
+// 1. HEADER CONTROLS
 document.getElementById('btnNew')?.addEventListener('click', () => {
-  if (confirm('Neues Projekt anlegen? Nicht gespeicherte Änderungen gehen verloren.')) {
+  if (confirm('Create new project? Unsaved changes will be lost.')) {
     currentProject = createDefaultProject();
     canvas.setProject(currentProject);
   }
 });
 
-// File Open (.perf)
 const fileInput = document.getElementById('fileInput') as HTMLInputElement;
 document.getElementById('btnOpen')?.addEventListener('click', () => {
   fileInput.click();
@@ -30,19 +29,19 @@ fileInput.addEventListener('change', (e) => {
         if (json.board && json.components && json.wires) {
           currentProject = json as PerfProject;
           canvas.setProject(currentProject);
-          document.title = `PerfCraft Web - ${currentProject.name}`;
+          document.title = `PerfCraft - ${currentProject.name}`;
         } else {
-          alert('Ungültige .perf-Datei: Erforderliche Felder fehlen.');
+          alert('Invalid .perf project format.');
         }
       } catch (err) {
-        alert('Fehler beim Parsen der Datei: ' + err);
+        alert('Failed to parse file: ' + err);
       }
     };
     reader.readAsText(file);
   }
 });
 
-// Drag & Drop .perf file directly onto window/canvas
+// Drag & drop .perf files
 window.addEventListener('dragover', (e) => e.preventDefault());
 window.addEventListener('drop', (e) => {
   e.preventDefault();
@@ -53,16 +52,15 @@ window.addEventListener('drop', (e) => {
       try {
         currentProject = JSON.parse(ev.target?.result as string);
         canvas.setProject(currentProject);
-        document.title = `PerfCraft Web - ${currentProject.name}`;
+        document.title = `PerfCraft - ${currentProject.name}`;
       } catch (err) {
-        alert('Fehler beim Laden: ' + err);
+        alert('Failed to load: ' + err);
       }
     };
     reader.readAsText(file);
   }
 });
 
-// Save Project (.perf)
 document.getElementById('btnSave')?.addEventListener('click', () => {
   const jsonStr = JSON.stringify(currentProject, null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -74,68 +72,136 @@ document.getElementById('btnSave')?.addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
-// Tool selection
-const btnSelect = document.getElementById('toolSelect')!;
-const btnWire = document.getElementById('toolWire')!;
-const btnComp = document.getElementById('toolComp')!;
+// Export high-res PNG
+document.getElementById('btnExport')?.addEventListener('click', () => {
+  const dataUrl = canvasEl.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = `${currentProject.name || 'perfcraft'}-render.png`;
+  a.click();
+});
 
-function setToolActive(activeBtn: HTMLElement, tool: 'SELECT' | 'WIRE' | 'COMPONENT') {
-  [btnSelect, btnWire, btnComp].forEach((b) => b.classList.remove('active'));
-  activeBtn.classList.add('active');
+// Layer buttons
+const btnLayerTop = document.getElementById('btnLayerTop')!;
+const btnLayerBottom = document.getElementById('btnLayerBottom')!;
+const btnLayerBoth = document.getElementById('btnLayerBoth')!;
+const statLayerVal = document.getElementById('statLayerVal')!;
+
+function setLayer(btn: HTMLElement, layer: 'TOP' | 'BOTTOM' | 'BOTH', label: string) {
+  [btnLayerTop, btnLayerBottom, btnLayerBoth].forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+  canvas.setLayer(layer);
+  statLayerVal.textContent = label;
+}
+
+btnLayerTop.addEventListener('click', () => setLayer(btnLayerTop, 'TOP', 'Top (F)'));
+btnLayerBottom.addEventListener('click', () => setLayer(btnLayerBottom, 'BOTTOM', 'Bottom (B)'));
+btnLayerBoth.addEventListener('click', () => setLayer(btnLayerBoth, 'BOTH', 'Both'));
+
+// Zoom in / out
+document.getElementById('btnZoomIn')?.addEventListener('click', () => {
+  canvas.applyZoom(1.15);
+});
+document.getElementById('btnZoomOut')?.addEventListener('click', () => {
+  canvas.applyZoom(0.85);
+});
+
+// 2. LEFT TOOLBAR
+const toolSelect = document.getElementById('toolSelect')!;
+const toolWire = document.getElementById('toolWire')!;
+const toolComp = document.getElementById('toolComp')!;
+
+function setToolActive(btn: HTMLElement, tool: 'SELECT' | 'WIRE' | 'COMPONENT') {
+  [toolSelect, toolWire, toolComp].forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
   canvas.setActiveTool(tool);
 }
 
-btnSelect.addEventListener('click', () => setToolActive(btnSelect, 'SELECT'));
-btnWire.addEventListener('click', () => setToolActive(btnWire, 'WIRE'));
-btnComp.addEventListener('click', () => setToolActive(btnComp, 'COMPONENT'));
+toolSelect.addEventListener('click', () => setToolActive(toolSelect, 'SELECT'));
+toolWire.addEventListener('click', () => setToolActive(toolWire, 'WIRE'));
+toolComp.addEventListener('click', () => setToolActive(toolComp, 'COMPONENT'));
 
-// Component chips
-document.querySelectorAll('.comp-chip').forEach((el) => {
-  el.addEventListener('click', () => {
-    document.querySelectorAll('.comp-chip').forEach((c) => c.classList.remove('selected'));
-    el.classList.add('selected');
-    const type = el.getAttribute('data-type') as any;
-    setToolActive(btnComp, 'COMPONENT');
+document.getElementById('actionRotate')?.addEventListener('click', () => canvas.rotateSelected());
+document.getElementById('actionDelete')?.addEventListener('click', () => canvas.deleteSelected());
+
+// 3. RIGHT SIDEBAR COMPONENTS
+const compButtons = document.querySelectorAll('.comp-grid-btn');
+compButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    compButtons.forEach((b) => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const type = btn.getAttribute('data-type') as ComponentType;
+    setToolActive(toolComp, 'COMPONENT');
     canvas.setActiveComponentType(type);
   });
 });
 
-// Layers
-document.getElementById('btnLayerTop')?.addEventListener('click', () => canvas.setLayer('TOP'));
-document.getElementById('btnLayerBottom')?.addEventListener('click', () => canvas.setLayer('BOTTOM'));
-document.getElementById('btnLayerBoth')?.addEventListener('click', () => canvas.setLayer('BOTH'));
+// Wire Mode (Cable / Silver Wire)
+const btnWireCable = document.getElementById('btnWireCable')!;
+const btnWireSilver = document.getElementById('btnWireSilver')!;
+const cableColorsBox = document.getElementById('cableColorsBox')!;
 
-// Inspector elements
+btnWireCable.addEventListener('click', () => {
+  btnWireCable.classList.add('active');
+  btnWireSilver.classList.remove('active');
+  cableColorsBox.style.display = 'flex';
+  canvas.setActiveWireKind('CABLE');
+  setToolActive(toolWire, 'WIRE');
+});
+
+btnWireSilver.addEventListener('click', () => {
+  btnWireSilver.classList.add('active');
+  btnWireCable.classList.remove('active');
+  cableColorsBox.style.display = 'none';
+  canvas.setActiveWireKind('SILVER_WIRE');
+  setToolActive(toolWire, 'WIRE');
+});
+
+document.querySelectorAll('.color-dot').forEach((dot) => {
+  dot.addEventListener('click', () => {
+    document.querySelectorAll('.color-dot').forEach((d) => d.classList.remove('active'));
+    dot.classList.add('active');
+    const col = dot.getAttribute('data-color') || '#E53935';
+    canvas.setActiveWireColor(col);
+  });
+});
+
+// 4. INSPECTOR PROPERTIES
 const propDes = document.getElementById('propDesignator') as HTMLInputElement;
 const propVal = document.getElementById('propValue') as HTMLInputElement;
-const bandsPreview = document.getElementById('bandsPreview')!;
+const resistorPreviewBox = document.getElementById('resistorPreviewBox')!;
+const resistorColorStrip = document.getElementById('resistorColorStrip')!;
+const resistorOhmLabel = document.getElementById('resistorOhmLabel')!;
 
 function updateInspector(comp: PlacedComponent | null) {
   if (!comp) {
     propDes.value = '';
     propVal.value = '';
-    bandsPreview.innerHTML = '<div style="color: #666; font-size: 11px; text-align: center;">Keine Auswahl</div>';
+    resistorPreviewBox.style.display = 'none';
     return;
   }
+
   propDes.value = comp.designator;
   propVal.value = comp.value;
 
   if (comp.type === 'RESISTOR_AXIAL') {
+    resistorPreviewBox.style.display = 'flex';
     const bands = parseResistorColorCode(comp.value);
     if (bands) {
-      bandsPreview.innerHTML = `
-        <div style="display: flex; gap: 6px; align-items: center; justify-content: center; height: 100%;">
-          <div style="width: 8px; height: 26px; background: ${bands.band1}; border-radius: 2px;"></div>
-          <div style="width: 8px; height: 26px; background: ${bands.band2}; border-radius: 2px;"></div>
-          <div style="width: 8px; height: 26px; background: ${bands.multiplier}; border-radius: 2px;"></div>
-          <div style="width: 8px; height: 26px; background: ${bands.tolerance}; border-radius: 2px;"></div>
-        </div>
+      resistorColorStrip.innerHTML = `
+        <div class="resistor-band" style="background: ${bands.band1};"></div>
+        <div class="resistor-band" style="background: ${bands.band2};"></div>
+        <div class="resistor-band" style="background: ${bands.multiplier};"></div>
+        <div style="width: 8px;"></div>
+        <div class="resistor-band" style="background: ${bands.tolerance};"></div>
       `;
+      resistorOhmLabel.textContent = `${comp.value}Ω ±5%`;
     } else {
-      bandsPreview.innerHTML = '<div style="color: #666; font-size: 11px;">Ungültiger Wert</div>';
+      resistorColorStrip.innerHTML = '';
+      resistorOhmLabel.textContent = 'Invalid value';
     }
   } else {
-    bandsPreview.innerHTML = `<div style="color: #888; font-size: 11px; text-align: center;">${comp.type}</div>`;
+    resistorPreviewBox.style.display = 'none';
   }
 }
 
@@ -158,17 +224,22 @@ propVal.addEventListener('input', () => {
   }
 });
 
-// Floating touch action bar
-document.getElementById('actionRotate')?.addEventListener('click', () => canvas.rotateSelected());
-document.getElementById('actionDelete')?.addEventListener('click', () => canvas.deleteSelected());
+// 5. STATUS BAR
+const statHole = document.getElementById('statHoleLabel')!;
+const statMm = document.getElementById('statMmLabel')!;
 
-// Keyboard shortcuts
+canvas.onHoverCoordinate = (gx, gy) => {
+  statHole.textContent = `Hole: X: ${gx + 1}, Y: ${gy + 1}`;
+  statMm.textContent = `Pos: ${(gx * 2.54).toFixed(2)} mm x ${(gy * 2.54).toFixed(2)} mm`;
+};
+
+// Keyboard Shortcuts identical to desktop
 window.addEventListener('keydown', (e) => {
   if (document.activeElement?.tagName === 'INPUT') return;
   switch (e.key.toLowerCase()) {
-    case 'v': setToolActive(btnSelect, 'SELECT'); break;
-    case 'w': setToolActive(btnWire, 'WIRE'); break;
-    case 'c': setToolActive(btnComp, 'COMPONENT'); break;
+    case 'v': setToolActive(toolSelect, 'SELECT'); break;
+    case 'w': setToolActive(toolWire, 'WIRE'); break;
+    case 'c': setToolActive(toolComp, 'COMPONENT'); break;
     case 'r': canvas.rotateSelected(); break;
     case 'delete':
     case 'backspace': canvas.deleteSelected(); break;

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>PerfCraft Web - Perfboard & Stripboard CAD</title>
+    <title>PerfCraft - Perfboard Designer</title>
     <link rel="icon" type="image/svg+xml" href="/perfcraft.svg" />
     <style>
       * {
@@ -14,68 +14,113 @@
         -webkit-user-select: none;
       }
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background-color: #121212;
         color: #E0E0E0;
         height: 100vh;
+        width: 100vw;
         display: flex;
         flex-direction: column;
         overflow: hidden;
       }
-      /* Header */
+
+      /* 1. TOP HEADER BAR */
       header {
         height: 48px;
         background: #1E1E1E;
         border-bottom: 1px solid #2C2C2C;
         display: flex;
         align-items: center;
-        padding: 0 16px;
-        gap: 12px;
+        padding: 0 14px;
+        gap: 10px;
         z-index: 10;
+        flex-shrink: 0;
       }
-      .logo {
+      .logo-box {
         display: flex;
         align-items: center;
         gap: 8px;
+        color: white;
         font-weight: bold;
         font-size: 16px;
-        color: #FFF;
       }
-      .logo img {
-        width: 24px;
-        height: 24px;
+      .logo-box img {
+        width: 28px;
+        height: 28px;
       }
-      .btn {
-        background: #2E2E2E;
-        color: #EEE;
-        border: 1px solid #3A3A3A;
+      .v-sep {
+        width: 1px;
+        height: 22px;
+        background: #2C2C2C;
+        margin: 0 4px;
+      }
+      .hdr-btn {
+        background: #242424;
+        color: #B0BEC5;
+        border: 1px solid #2C2C2C;
         border-radius: 4px;
         padding: 6px 12px;
         font-size: 12px;
-        font-weight: 500;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        touch-action: manipulation;
+        font-weight: 500;
+        transition: background 0.15s;
       }
-      .btn:hover {
-        background: #383838;
+      .hdr-btn:hover {
+        background: #333333;
+        color: #FFF;
       }
-      .btn.primary {
-        background: #00C853;
-        color: #121212;
-        border-color: #00C853;
+      .hdr-btn.save-btn {
+        color: #00C853;
         font-weight: bold;
       }
-      .divider {
-        width: 1px;
-        height: 20px;
-        background: #3A3A3A;
-        margin: 0 4px;
+      .layer-group {
+        display: flex;
+        background: #121212;
+        border: 1px solid #2C2C2C;
+        border-radius: 4px;
+        padding: 2px;
+        gap: 2px;
+      }
+      .layer-btn {
+        background: transparent;
+        border: none;
+        border-radius: 3px;
+        color: #B0BEC5;
+        font-size: 11px;
+        padding: 4px 10px;
+        cursor: pointer;
+      }
+      .layer-btn.active {
+        background: #00C853;
+        color: #121212;
+        font-weight: bold;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .zoom-btn {
+        background: #242424;
+        color: #B0BEC5;
+        border: 1px solid #2C2C2C;
+        border-radius: 4px;
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .zoom-btn:hover {
+        background: #333;
+        color: #FFF;
       }
 
-      /* Main container */
+      /* WORKBENCH BODY */
       .workbench {
         flex: 1;
         display: flex;
@@ -83,67 +128,80 @@
         overflow: hidden;
       }
 
-      /* Left Sidebar / Tools */
-      .sidebar-left {
-        width: 200px;
-        background: #1E1E1E;
+      /* 2. LEFT TOOLBAR (68px wide) */
+      .left-toolbar {
+        width: 68px;
+        background: #1A1A1A;
         border-right: 1px solid #2C2C2C;
         display: flex;
         flex-direction: column;
-        padding: 12px;
-        gap: 12px;
-        z-index: 5;
-      }
-      .section-title {
-        font-size: 11px;
-        font-weight: bold;
-        letter-spacing: 1px;
-        color: #00C853;
-        margin-top: 4px;
-      }
-      .tool-btn {
-        background: #2A2A2A;
-        border: 1px solid #333;
-        border-radius: 4px;
-        padding: 8px 10px;
-        color: #DDD;
-        font-size: 13px;
-        text-align: left;
-        cursor: pointer;
-        display: flex;
         align-items: center;
-        justify-content: space-between;
+        padding: 12px 6px;
+        gap: 10px;
+        z-index: 5;
+        flex-shrink: 0;
       }
-      .tool-btn.active {
+      .big-tool-btn {
+        width: 54px;
+        height: 52px;
+        background: #242424;
+        color: #B0BEC5;
+        border: 1px solid #2C2C2C;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 9px;
+        gap: 2px;
+        transition: all 0.15s;
+      }
+      .big-tool-btn .icon {
+        font-size: 16px;
+      }
+      .big-tool-btn:hover {
+        background: #303030;
+      }
+      .big-tool-btn.active {
         background: #00C853;
         color: #121212;
         font-weight: bold;
         border-color: #00C853;
       }
-      .comp-list {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
+      .h-sep {
+        width: 44px;
+        height: 1px;
+        background: #2C2C2C;
+        margin: 4px 0;
       }
-      .comp-chip {
+      .small-tool-btn {
+        width: 38px;
+        height: 32px;
         background: #242424;
-        border: 1px solid #333;
+        color: #B0BEC5;
+        border: 1px solid #2C2C2C;
         border-radius: 4px;
-        padding: 6px 10px;
-        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         cursor: pointer;
+        font-size: 14px;
       }
-      .comp-chip.selected {
-        border-color: #00C853;
-        background: #1C3325;
+      .small-tool-btn:hover {
+        background: #333;
+      }
+      .small-tool-btn.del-btn {
+        color: #E53935;
+        font-size: 12px;
       }
 
-      /* Center Canvas */
+      /* 3. CENTER CANVAS */
       .canvas-container {
         flex: 1;
         position: relative;
         background: #0E0E0E;
-        touch-action: none; /* Crucial for multi-touch gestures */
+        touch-action: none;
       }
       canvas {
         display: block;
@@ -151,162 +209,311 @@
         height: 100%;
       }
 
-      /* Right Sidebar / Inspector */
-      .sidebar-right {
-        width: 240px;
-        background: #1E1E1E;
+      /* 4. RIGHT SIDEBAR (270px wide) */
+      .right-sidebar {
+        width: 270px;
+        background: #1A1A1A;
         border-left: 1px solid #2C2C2C;
         display: flex;
         flex-direction: column;
         padding: 14px;
         gap: 12px;
         z-index: 5;
+        flex-shrink: 0;
+        overflow-y: auto;
       }
-      .field-label {
+      .section-heading {
+        color: #9E9E9E;
         font-size: 11px;
-        color: #888;
-        margin-bottom: 4px;
+        font-weight: bold;
+        letter-spacing: 0.5px;
       }
-      input[type="text"] {
-        background: #181818;
-        border: 1px solid #333;
+      .comp-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .comp-grid-btn {
+        background: #242424;
+        color: #ECEFF1;
+        border: 1px solid #2C2C2C;
         border-radius: 4px;
-        color: #FFF;
-        padding: 8px 10px;
-        font-size: 13px;
-        outline: none;
-      }
-      input[type="text"]:focus {
-        border-color: #00C853;
-      }
-      .bands-box {
-        background: #252525;
-        border: 1px solid #383838;
-        border-radius: 4px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      /* Floating Action Bar for Touch */
-      .floating-touch-bar {
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(30, 30, 30, 0.92);
-        backdrop-filter: blur(8px);
-        border: 1px solid #3A3A3A;
-        border-radius: 28px;
-        padding: 6px 14px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-        z-index: 20;
-      }
-      .touch-action-btn {
-        background: transparent;
-        border: none;
-        color: #FFF;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        padding: 6px 12px;
-        border-radius: 16px;
+        padding: 8px 6px;
+        font-size: 11px;
         display: flex;
         align-items: center;
         gap: 6px;
+        cursor: pointer;
       }
-      .touch-action-btn:active {
-        background: rgba(255, 255, 255, 0.15);
+      .comp-grid-btn .icon {
+        font-size: 13px;
+        color: #00C853;
+      }
+      .comp-grid-btn:hover {
+        background: #303030;
+      }
+      .comp-grid-btn.selected {
+        background: #1B3524;
+        border-color: #00C853;
+        color: #00E676;
       }
 
-      /* Responsive rules for Tablet & Mobile */
-      @media (max-width: 900px) {
-        .sidebar-left, .sidebar-right {
-          display: none;
-        }
+      /* Wire Mode Box */
+      .wire-mode-box {
+        padding-top: 8px;
+        border-top: 1px solid #2C2C2C;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .wire-btn-row {
+        display: flex;
+        gap: 6px;
+      }
+      .wire-mode-btn {
+        flex: 1;
+        background: #242424;
+        color: #B0BEC5;
+        border: 1px solid #2C2C2C;
+        border-radius: 4px;
+        padding: 6px;
+        font-size: 11px;
+        cursor: pointer;
+      }
+      .wire-mode-btn.active {
+        background: #00C853;
+        color: #121212;
+        font-weight: bold;
+        border-color: #00C853;
+      }
+      .cable-colors {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-top: 2px;
+      }
+      .color-dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 1px solid #555;
+        cursor: pointer;
+      }
+      .color-dot.active {
+        border: 2px solid #FFF;
+        transform: scale(1.15);
+      }
+
+      /* Properties */
+      .prop-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .prop-label {
+        color: #9E9E9E;
+        font-size: 11px;
+      }
+      .prop-input {
+        background: #242424;
+        border: 1px solid #2C2C2C;
+        border-radius: 4px;
+        color: #FFF;
+        padding: 6px 8px;
+        font-size: 12px;
+        outline: none;
+      }
+      .prop-input:focus {
+        border-color: #00C853;
+      }
+
+      /* Resistor color bands box */
+      .resistor-preview-box {
+        background: #121212;
+        border: 1px solid #2C2C2C;
+        border-radius: 4px;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .resistor-strip {
+        background: #D7CCC8;
+        border: 1px solid #A1887F;
+        border-radius: 3px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+      .resistor-band {
+        width: 6px;
+        height: 18px;
+      }
+      .resistor-ohm-label {
+        color: #B0BEC5;
+        font-size: 10px;
+        font-family: monospace;
+        text-align: center;
+      }
+
+      /* 5. BOTTOM STATUSBAR */
+      footer {
+        height: 26px;
+        background: #181818;
+        border-top: 1px solid #2C2C2C;
+        display: flex;
+        align-items: center;
+        padding: 0 14px;
+        gap: 16px;
+        font-size: 11px;
+        color: #9E9E9E;
+        font-family: monospace;
+        flex-shrink: 0;
+      }
+      .status-layer-val {
+        color: #00C853;
+        font-weight: bold;
       }
     </style>
   </head>
   <body>
-    <!-- Header -->
+    <!-- 1. Header Bar -->
     <header>
-      <div class="logo">
-        <img src="/perfcraft.svg" alt="PerfCraft Logo" />
-        PerfCraft Web
+      <div class="logo-box">
+        <img src="/perfcraft.png" alt="PerfCraft Logo" />
+        <span>PerfCraft</span>
       </div>
-      <div class="divider"></div>
-      <button class="btn" id="btnNew">Neu</button>
-      <button class="btn" id="btnOpen">Öffnen (.perf)</button>
+      <div class="v-sep"></div>
+      <button class="hdr-btn" id="btnNew">New</button>
+      <button class="hdr-btn" id="btnOpen">Open</button>
       <input type="file" id="fileInput" accept=".perf,application/json" style="display: none;" />
-      <button class="btn" id="btnSave">Speichern</button>
-      <div class="divider"></div>
-      <button class="btn" id="btnLayerTop">Oben</button>
-      <button class="btn" id="btnLayerBottom">Unten</button>
-      <button class="btn" id="btnLayerBoth">Beide</button>
+      <button class="hdr-btn save-btn" id="btnSave">Save</button>
+      <button class="hdr-btn" id="btnExport">Export</button>
+
+      <div class="v-sep"></div>
+
+      <!-- Layer Toggle Box -->
+      <div class="layer-group">
+        <button class="layer-btn active" id="btnLayerTop">Top (F)</button>
+        <button class="layer-btn" id="btnLayerBottom">Bottom (B)</button>
+        <button class="layer-btn" id="btnLayerBoth">Both</button>
+      </div>
+
+      <div class="spacer"></div>
+
+      <!-- Zoom Buttons -->
+      <button class="zoom-btn" id="btnZoomOut">-</button>
+      <button class="zoom-btn" id="btnZoomIn">+</button>
+      <button class="hdr-btn" id="btnSettings">⚙ Settings</button>
     </header>
 
-    <!-- Workbench -->
+    <!-- 2. Workbench -->
     <div class="workbench">
-      <!-- Left Toolbar -->
-      <div class="sidebar-left">
-        <div class="section-title">WERKZEUGE</div>
-        <button class="tool-btn active" id="toolSelect">
-          <span>Auswahl</span>
-          <kbd>V</kbd>
+      <!-- Left Toolbar (3 Tools + Rotate + Delete) -->
+      <div class="left-toolbar">
+        <button class="big-tool-btn active" id="toolSelect">
+          <span class="icon">↖</span>
+          <span>Select</span>
         </button>
-        <button class="tool-btn" id="toolWire">
-          <span>Draht / Jumper</span>
-          <kbd>W</kbd>
+        <button class="big-tool-btn" id="toolWire">
+          <span class="icon">〰</span>
+          <span>Wire</span>
         </button>
-        <button class="tool-btn" id="toolComp">
-          <span>Bauteil</span>
-          <kbd>C</kbd>
+        <button class="big-tool-btn" id="toolComp">
+          <span class="icon">⌖</span>
+          <span>Comp</span>
         </button>
 
-        <div class="section-title">BAUTEILE</div>
-        <div class="comp-list">
-          <div class="comp-chip selected" data-type="RESISTOR_AXIAL">Widerstand (Axial)</div>
-          <div class="comp-chip" data-type="TACTILE_SWITCH">Taster (6x6 mm)</div>
-          <div class="comp-chip" data-type="LED">LED</div>
-          <div class="comp-chip" data-type="CAPACITOR_CERAMIC">Kondensator</div>
-          <div class="comp-chip" data-type="DIODE">Diode</div>
-          <div class="comp-chip" data-type="IC_DIP">IC (DIP)</div>
-        </div>
+        <div class="h-sep"></div>
+
+        <button class="small-tool-btn" id="actionRotate" title="Rotate 90° (R)">↻</button>
+        <button class="small-tool-btn del-btn" id="actionDelete" title="Delete (Del)">✕</button>
       </div>
 
-      <!-- Center Canvas Container -->
+      <!-- Center Canvas -->
       <div class="canvas-container">
         <canvas id="perfCanvas"></canvas>
-
-        <!-- Floating Touch Action Bar -->
-        <div class="floating-touch-bar">
-          <button class="touch-action-btn" id="actionRotate">🔄 Drehen (R)</button>
-          <div style="width: 1px; height: 16px; background: #444;"></div>
-          <button class="touch-action-btn" id="actionDelete" style="color: #FF5252;">🗑 Löschen</button>
-        </div>
       </div>
 
-      <!-- Right Sidebar (Inspector) -->
-      <div class="sidebar-right">
-        <div class="section-title">EIGENSCHAFTEN</div>
-        <div>
-          <div class="field-label">Bezeichnung</div>
-          <input type="text" id="propDesignator" placeholder="z. B. R1" />
+      <!-- Right Sidebar (Components + Wire Mode + Properties + Resistor Bands) -->
+      <div class="right-sidebar">
+        <div class="section-heading">COMPONENTS</div>
+        <div class="comp-grid">
+          <button class="comp-grid-btn" data-type="TACTILE_SWITCH">
+            <span class="icon">⊡</span>
+            <span>Switch</span>
+          </button>
+          <button class="comp-grid-btn selected" data-type="RESISTOR_AXIAL">
+            <span class="icon">〰</span>
+            <span>Resistor</span>
+          </button>
+          <button class="comp-grid-btn" data-type="CAPACITOR_CERAMIC">
+            <span class="icon">||</span>
+            <span>Capacitor</span>
+          </button>
+          <button class="comp-grid-btn" data-type="LED">
+            <span class="icon">💡</span>
+            <span>LED</span>
+          </button>
+          <button class="comp-grid-btn" data-type="DIODE">
+            <span class="icon">▷|</span>
+            <span>Diode</span>
+          </button>
+          <button class="comp-grid-btn" data-type="IC_DIP">
+            <span class="icon">⚏</span>
+            <span>IC DIP</span>
+          </button>
         </div>
-        <div>
-          <div class="field-label">Wert / Modell</div>
-          <input type="text" id="propValue" placeholder="z. B. 10k" />
+
+        <!-- Wire Mode Selection -->
+        <div class="wire-mode-box">
+          <div style="color: #B0BEC5; font-size: 11px; font-weight: bold;">Wire Mode:</div>
+          <div class="wire-btn-row">
+            <button class="wire-mode-btn active" id="btnWireCable">Cable</button>
+            <button class="wire-mode-btn" id="btnWireSilver">Silver Wire</button>
+          </div>
+          <div class="cable-colors" id="cableColorsBox">
+            <div class="color-dot active" style="background: #E53935;" data-color="#E53935"></div>
+            <div class="color-dot" style="background: #212121;" data-color="#212121"></div>
+            <div class="color-dot" style="background: #1E88E5;" data-color="#1E88E5"></div>
+            <div class="color-dot" style="background: #FDD835;" data-color="#FDD835"></div>
+            <div class="color-dot" style="background: #43A047;" data-color="#43A047"></div>
+          </div>
         </div>
-        <div>
-          <div class="field-label">IEC-Farbringe</div>
-          <div class="bands-box" id="bandsPreview"></div>
+
+        <div class="h-sep" style="width: 100%;"></div>
+
+        <!-- Component Properties -->
+        <div class="section-heading">PROPERTIES</div>
+        <div class="prop-row">
+          <div class="prop-label">Designator</div>
+          <input type="text" class="prop-input" id="propDesignator" value="SW1" />
+        </div>
+        <div class="prop-row">
+          <div class="prop-label">Value / Model</div>
+          <input type="text" class="prop-input" id="propValue" value="10k" />
+        </div>
+
+        <!-- Resistor Color Bands Box -->
+        <div class="resistor-preview-box" id="resistorPreviewBox">
+          <div style="color: #9E9E9E; font-size: 10px;">IEC 60062 Color Bands</div>
+          <div class="resistor-strip" id="resistorColorStrip"></div>
+          <div class="resistor-ohm-label" id="resistorOhmLabel">10 kΩ ±5%</div>
         </div>
       </div>
     </div>
+
+    <!-- 3. Bottom Status Bar -->
+    <footer>
+      <span id="statHoleLabel">Hole: X: 1, Y: 1</span>
+      <span id="statMmLabel">Pos: 0.00 mm x 0.00 mm</span>
+      <div class="spacer"></div>
+      <span>Layer: <span class="status-layer-val" id="statLayerVal">Top (F)</span></span>
+      <span style="color: #424242;">|</span>
+      <span>Grid: 2.54 mm (100 mil)</span>
+    </footer>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

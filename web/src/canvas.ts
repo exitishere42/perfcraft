@@ -561,6 +561,12 @@ export class PerfBoardCanvas {
     return null;
   }
 
+  public applyZoom(factor: number): void {
+    const rect = this.canvas.getBoundingClientRect();
+    this.transform.applyZoom(factor, rect.width / 2, rect.height / 2);
+    this.render();
+  }
+
   public setActiveTool(tool: ActiveTool): void {
     this.activeTool = tool;
     this.wireStartHole = null;
@@ -575,6 +581,10 @@ export class PerfBoardCanvas {
 
   public setActiveWireKind(kind: WireKind): void {
     this.activeWireKind = kind;
+  }
+
+  public setActiveWireColor(col: string): void {
+    this.activeWireColor = col;
   }
 
   public setLayer(layer: BoardLayer): void {
