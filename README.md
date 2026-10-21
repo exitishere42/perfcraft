@@ -17,10 +17,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Java 21 LTS](https://img.shields.io/badge/Java-21%20LTS-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://adoptium.net)
 [![JavaFX 21](https://img.shields.io/badge/JavaFX-21-orange?style=flat-square)](https://openjfx.io)
+[![Web & Docker](https://img.shields.io/badge/Web%20Edition-Active%20Focus-00E676?style=flat-square&logo=docker&logoColor=white)](#perfcraft-web--docker-deployment)
 
 </div>
 
 ---
+
+> [!IMPORTANT]
+> **Project Notice: Transition to Web-First Development**
+> The desktop Java application (`PerfCraft JavaFX`) is stable and is transitioning into maintenance mode with minimal future updates (critical fixes only). Active development, new features, and ongoing innovation are now fully focused on the **[PerfCraft Web Edition](#perfcraft-web--docker-deployment)** (`web/`), featuring 60 FPS hardware-accelerated canvas, native tablet touch gestures (pinch-to-zoom & two-finger pan), undo/redo history, and zero-install Docker Compose deployment.
 
 ## Overview
 
