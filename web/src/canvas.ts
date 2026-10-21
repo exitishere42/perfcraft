@@ -290,6 +290,11 @@ export class PerfBoardCanvas {
         des = 'U' + count;
         comp = { id, type: this.activeComponentType, designator: des, value: 'DIP-8', start, end: { x: start.x + 3, y: start.y + 3 }, rotation: 0, layer: 'TOP' };
         break;
+      case 'ESP32_S3_ZERO':
+        des = 'U' + count;
+        // ESP32-S3-Zero: 7 Spalten x 9 Zeilen (dx=6, dy=8)
+        comp = { id, type: this.activeComponentType, designator: des, value: 'ESP32-S3-Zero', start, end: { x: start.x + 6, y: start.y + 8 }, rotation: 0, layer: 'TOP' };
+        break;
     }
 
     this.project.components.push(comp);
@@ -412,6 +417,8 @@ export class PerfBoardCanvas {
         dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
       } else if (this.activeComponentType === 'IC_DIP') {
         dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y + 3 };
+      } else if (this.activeComponentType === 'ESP32_S3_ZERO') {
+        dummyEnd = { x: this.currentHoverGrid.x + 6, y: this.currentHoverGrid.y + 8 };
       }
 
       const dummy: PlacedComponent = {
@@ -702,6 +709,127 @@ export class PerfBoardCanvas {
       this.ctx.fillStyle = '#ECEFF1';
       this.ctx.font = '11px sans-serif';
       this.ctx.fillText(comp.designator, cx - 12, cy - r - 4);
+    } else if (comp.type === 'ESP32_S3_ZERO') {
+      const gx = comp.start.x;
+      const gy = comp.start.y;
+
+      const xLeft = this.transform.gridToScreenX(gx);
+      const xRight = this.transform.gridToScreenX(gx + 6);
+      const yTop = this.transform.gridToScreenY(gy);
+      const yBottom = this.transform.gridToScreenY(gy + 8);
+
+      const width = xRight - xLeft + hs * 0.8;
+      const height = yBottom - yTop + hs * 0.8;
+      const boardLeft = xLeft - hs * 0.4;
+      const boardTop = yTop - hs * 0.4;
+
+      // 1. PCB Grundkörper (Waveshare Classic Blue)
+      this.ctx.fillStyle = '#0D47A1';
+      this.ctx.beginPath();
+      this.ctx.roundRect(boardLeft, boardTop, width, height, 6);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#1565C0';
+      this.ctx.lineWidth = 1.5;
+      this.ctx.stroke();
+
+      // 2. USB-C Port oben mittig
+      const usbW = hs * 2.6;
+      const usbH = hs * 1.5;
+      const usbX = (xLeft + xRight) / 2 - usbW / 2;
+      const usbY = boardTop - hs * 0.6;
+      this.ctx.fillStyle = '#B0BEC5';
+      this.ctx.beginPath();
+      this.ctx.roundRect(usbX, usbY, usbW, usbH, 4);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#78909C';
+      this.ctx.lineWidth = 1;
+      this.ctx.stroke();
+      this.ctx.fillStyle = '#263238';
+      this.ctx.beginPath();
+      this.ctx.roundRect(usbX + usbW * 0.15, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2);
+      this.ctx.fill();
+
+      // 3. Taster Boot & Reset
+      const btnSize = hs * 0.7;
+      this.ctx.fillStyle = '#ECEFF1';
+      this.ctx.fillRect(usbX - btnSize - hs * 0.2, yTop + hs * 0.8, btnSize, btnSize);
+      this.ctx.fillRect(usbX + usbW + hs * 0.2, yTop + hs * 0.8, btnSize, btnSize);
+      this.ctx.fillStyle = '#212121';
+      this.ctx.beginPath();
+      this.ctx.arc(usbX - btnSize - hs * 0.2 + btnSize / 2, yTop + hs * 0.8 + btnSize / 2, btnSize * 0.3, 0, Math.PI * 2);
+      this.ctx.arc(usbX + usbW + hs * 0.2 + btnSize / 2, yTop + hs * 0.8 + btnSize / 2, btnSize * 0.3, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // 4. Zentraler ESP32-S3 Chip (45 Grad gedreht)
+      const chipMidX = (xLeft + xRight) / 2;
+      const chipMidY = (yTop + yBottom) / 2 + hs * 0.5;
+      const chipR = hs * 1.25;
+
+      this.ctx.save();
+      this.ctx.translate(chipMidX, chipMidY);
+      this.ctx.rotate(Math.PI / 4);
+      this.ctx.fillStyle = '#212121';
+      this.ctx.fillRect(-chipR, -chipR, chipR * 2, chipR * 2);
+      this.ctx.strokeStyle = '#424242';
+      this.ctx.lineWidth = 1;
+      this.ctx.strokeRect(-chipR, -chipR, chipR * 2, chipR * 2);
+      this.ctx.fillStyle = '#9E9E9E';
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, chipR * 0.4, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+
+      // 5. Keramik-Antenne unten ("C3")
+      const antW = hs * 3.2;
+      const antH = hs * 0.9;
+      const antX = chipMidX - antW / 2;
+      const antY = yBottom - antH + hs * 0.2;
+      this.ctx.fillStyle = '#FAFAFA';
+      this.ctx.fillRect(antX, antY, antW, antH);
+      this.ctx.strokeStyle = '#BDBDBD';
+      this.ctx.lineWidth = 1;
+      this.ctx.strokeRect(antX, antY, antW, antH);
+      this.ctx.fillStyle = '#D32F2F';
+      this.ctx.fillRect(antX + antW * 0.35, antY + 2, antW * 0.3, antH - 4);
+
+      // 6. Goldene Castellated Lötaugen & Pins (je 9 Pins)
+      const padR = Math.max(2.8, hs * 0.32);
+      for (let i = 0; i < 9; i++) {
+        const py = this.transform.gridToScreenY(gy + i);
+        // Links
+        this.ctx.fillStyle = '#FFD54F';
+        this.ctx.beginPath();
+        this.ctx.arc(xLeft, py, padR, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.fillStyle = '#121212';
+        this.ctx.beginPath();
+        this.ctx.arc(xLeft, py, padR * 0.5, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Rechts
+        this.ctx.fillStyle = '#FFD54F';
+        this.ctx.beginPath();
+        this.ctx.arc(xRight, py, padR, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.fillStyle = '#121212';
+        this.ctx.beginPath();
+        this.ctx.arc(xRight, py, padR * 0.5, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+
+      this.ctx.fillStyle = '#FFFFFF';
+      this.ctx.font = '11px sans-serif';
+      this.ctx.fillText(comp.designator, boardLeft + 8, boardTop + 14);
+      this.ctx.fillStyle = '#90CAF9';
+      this.ctx.fillText('ESP32-S3-Zero', chipMidX - 32, boardTop + height - 4);
+
+      if (isSelected) {
+        this.ctx.strokeStyle = '#00C853';
+        this.ctx.lineWidth = 2.5;
+        this.ctx.beginPath();
+        this.ctx.roundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8);
+        this.ctx.stroke();
+      }
     }
   }
 
@@ -719,6 +847,20 @@ export class PerfBoardCanvas {
       } else if (c.type === 'LED') {
         if (grid.x === c.start.x && grid.y === c.start.y) return c.designator + ': Anode (+)';
         if (c.end && grid.x === c.end.x && grid.y === c.end.y) return c.designator + ': Cathode (-)';
+      } else if (c.type === 'ESP32_S3_ZERO') {
+        const s = c.start;
+        // Links
+        if (grid.x === s.x) {
+          const dy = grid.y - s.y;
+          const leftLabels = ['5V', 'GND', '3V3', 'GP1', 'GP2', 'GP3', 'GP4', 'GP5', 'GP6'];
+          if (dy >= 0 && dy < leftLabels.length) return `${c.designator} (ESP32): ${leftLabels[dy]}`;
+        }
+        // Rechts
+        if (grid.x === s.x + 6) {
+          const dy = grid.y - s.y;
+          const rightLabels = ['TX (GP43)', 'RX (GP44)', 'GP13', 'GP12', 'GP11', 'GP10', 'GP9', 'GP8', 'GP7'];
+          if (dy >= 0 && dy < rightLabels.length) return `${c.designator} (ESP32): ${rightLabels[dy]}`;
+        }
       }
     }
     return null;

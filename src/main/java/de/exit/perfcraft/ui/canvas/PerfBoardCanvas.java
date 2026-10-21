@@ -228,6 +228,9 @@ public class PerfBoardCanvas extends Canvas {
             comp = new PlacedComponent(id, activeComponentType, des, "1N4148", start, new HoleCoord(start.x() + 3, start.y()), 0, BoardLayer.TOP);
         } else if (activeComponentType == ComponentType.IC_DIP) {
             comp = new PlacedComponent(id, activeComponentType, des, "DIP-8", start, new HoleCoord(start.x() + 3, start.y() + 3), 0, BoardLayer.TOP);
+        } else if (activeComponentType == ComponentType.ESP32_S3_ZERO) {
+            // ESP32-S3-Zero: 7 Spalten x 9 Zeilen (dx=6, dy=8)
+            comp = new PlacedComponent(id, activeComponentType, des, "ESP32-S3-Zero", start, new HoleCoord(start.x() + 6, start.y() + 8), 0, BoardLayer.TOP);
         } else {
             comp = new PlacedComponent(id, activeComponentType, des, "10k", start, new HoleCoord(start.x() + 2, start.y()), 0, BoardLayer.TOP);
         }
@@ -396,6 +399,8 @@ public class PerfBoardCanvas extends Canvas {
             renderDiode(gc, comp, isSel);
         } else if (comp.getType() == ComponentType.IC_DIP) {
             renderIC(gc, comp, isSel);
+        } else if (comp.getType() == ComponentType.ESP32_S3_ZERO) {
+            renderESP32S3Zero(gc, comp, isSel);
         }
     }
 
@@ -412,6 +417,8 @@ public class PerfBoardCanvas extends Canvas {
             return new PlacedComponent("ghost", type, "D", "1N4148", start, new HoleCoord(start.x() + 3, start.y()), 0, BoardLayer.TOP);
         } else if (type == ComponentType.IC_DIP) {
             return new PlacedComponent("ghost", type, "U", "DIP-8", start, new HoleCoord(start.x() + 3, start.y() + 3), 0, BoardLayer.TOP);
+        } else if (type == ComponentType.ESP32_S3_ZERO) {
+            return new PlacedComponent("ghost", type, "U", "ESP32-S3-Zero", start, new HoleCoord(start.x() + 6, start.y() + 8), 0, BoardLayer.TOP);
         }
         return new PlacedComponent("ghost", type, "COMP", "10k", start, new HoleCoord(start.x() + 2, start.y()), 0, BoardLayer.TOP);
     }
@@ -436,6 +443,37 @@ public class PerfBoardCanvas extends Canvas {
             } else if (c.getType() == ComponentType.DIODE) {
                 if (grid.equals(s)) return c.getDesignator() + ": Anode";
                 if (grid.equals(e)) return c.getDesignator() + ": Cathode";
+            } else if (c.getType() == ComponentType.ESP32_S3_ZERO) {
+                // Linke Pinleiste (x = s.x)
+                if (grid.x() == s.x()) {
+                    int dy = grid.y() - s.y();
+                    switch (dy) {
+                        case 0 -> { return c.getDesignator() + " (ESP32): 5V"; }
+                        case 1 -> { return c.getDesignator() + " (ESP32): GND"; }
+                        case 2 -> { return c.getDesignator() + " (ESP32): 3V3"; }
+                        case 3 -> { return c.getDesignator() + " (ESP32): GP1"; }
+                        case 4 -> { return c.getDesignator() + " (ESP32): GP2"; }
+                        case 5 -> { return c.getDesignator() + " (ESP32): GP3"; }
+                        case 6 -> { return c.getDesignator() + " (ESP32): GP4"; }
+                        case 7 -> { return c.getDesignator() + " (ESP32): GP5"; }
+                        case 8 -> { return c.getDesignator() + " (ESP32): GP6"; }
+                    }
+                }
+                // Rechte Pinleiste (x = s.x + 6)
+                if (grid.x() == s.x() + 6) {
+                    int dy = grid.y() - s.y();
+                    switch (dy) {
+                        case 0 -> { return c.getDesignator() + " (ESP32): TX (GP43)"; }
+                        case 1 -> { return c.getDesignator() + " (ESP32): RX (GP44)"; }
+                        case 2 -> { return c.getDesignator() + " (ESP32): GP13"; }
+                        case 3 -> { return c.getDesignator() + " (ESP32): GP12"; }
+                        case 4 -> { return c.getDesignator() + " (ESP32): GP11"; }
+                        case 5 -> { return c.getDesignator() + " (ESP32): GP10"; }
+                        case 6 -> { return c.getDesignator() + " (ESP32): GP9"; }
+                        case 7 -> { return c.getDesignator() + " (ESP32): GP8"; }
+                        case 8 -> { return c.getDesignator() + " (ESP32): GP7"; }
+                    }
+                }
             }
         }
         return null;
@@ -726,6 +764,118 @@ public class PerfBoardCanvas extends Canvas {
 
         gc.setFill(Color.web("#ECEFF1"));
         gc.fillText(comp.getDesignator() + " (DIP)", x1 + 4, y1 + h/2);
+    }
+
+    private void renderESP32S3Zero(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        int gx = comp.getStart().x();
+        int gy = comp.getStart().y();
+        double hs = transform.getHoleSpacingPx();
+
+        double xLeft = transform.gridToScreenX(gx);
+        double xRight = transform.gridToScreenX(gx + 6);
+        double yTop = transform.gridToScreenY(gy);
+        double yBottom = transform.gridToScreenY(gy + 8);
+
+        double width = xRight - xLeft + hs * 0.8;
+        double height = yBottom - yTop + hs * 0.8;
+        double boardLeft = xLeft - hs * 0.4;
+        double boardTop = yTop - hs * 0.4;
+
+        // 1. PCB Grundkörper (Waveshare Classic Blue #0D47A1)
+        gc.setFill(Color.web("#0D47A1"));
+        gc.fillRoundRect(boardLeft, boardTop, width, height, 6, 6);
+        gc.setStroke(Color.web("#1565C0"));
+        gc.setLineWidth(1.5);
+        gc.strokeRoundRect(boardLeft, boardTop, width, height, 6, 6);
+
+        // 2. USB-C Port oben mittig (Metall-Gehäuse überstehend)
+        double usbW = hs * 2.6;
+        double usbH = hs * 1.5;
+        double usbX = (xLeft + xRight) / 2.0 - usbW / 2.0;
+        double usbY = boardTop - hs * 0.6;
+        gc.setFill(Color.web("#B0BEC5"));
+        gc.fillRoundRect(usbX, usbY, usbW, usbH, 4, 4);
+        gc.setStroke(Color.web("#78909C"));
+        gc.setLineWidth(1.0);
+        gc.strokeRoundRect(usbX, usbY, usbW, usbH, 4, 4);
+        // USB-C Schlitz innen
+        gc.setFill(Color.web("#263238"));
+        gc.fillRoundRect(usbX + usbW * 0.15, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2, 2);
+
+        // 3. Taster Boot (B) und Reset (R)
+        double btnSize = hs * 0.7;
+        // Boot Button (links neben USB)
+        gc.setFill(Color.web("#ECEFF1"));
+        gc.fillRect(usbX - btnSize - hs * 0.2, yTop + hs * 0.8, btnSize, btnSize);
+        gc.setFill(Color.web("#212121"));
+        gc.fillOval(usbX - btnSize - hs * 0.2 + btnSize * 0.2, yTop + hs * 0.8 + btnSize * 0.2, btnSize * 0.6, btnSize * 0.6);
+
+        // Reset Button (rechts neben USB)
+        gc.setFill(Color.web("#ECEFF1"));
+        gc.fillRect(usbX + usbW + hs * 0.2, yTop + hs * 0.8, btnSize, btnSize);
+        gc.setFill(Color.web("#212121"));
+        gc.fillOval(usbX + usbW + hs * 0.2 + btnSize * 0.2, yTop + hs * 0.8 + btnSize * 0.2, btnSize * 0.6, btnSize * 0.6);
+
+        // 4. Zentraler ESP32-S3 QFN-Chip (schwarz, diagonal rotiert wie im Original!)
+        double chipMidX = (xLeft + xRight) / 2.0;
+        double chipMidY = (yTop + yBottom) / 2.0 + hs * 0.5;
+        double chipR = hs * 1.25;
+
+        gc.save();
+        gc.translate(chipMidX, chipMidY);
+        gc.rotate(45);
+        gc.setFill(Color.web("#212121"));
+        gc.fillRect(-chipR, -chipR, chipR * 2, chipR * 2);
+        gc.setStroke(Color.web("#424242"));
+        gc.setLineWidth(1.0);
+        gc.strokeRect(-chipR, -chipR, chipR * 2, chipR * 2);
+        // Chip Silkscreen Logo (Espressif Symbol)
+        gc.setFill(Color.web("#9E9E9E"));
+        gc.fillOval(-chipR * 0.4, -chipR * 0.4, chipR * 0.8, chipR * 0.8);
+        gc.restore();
+
+        // 5. Keramik-Antenne unten (weißes Rechteck mit roten Streifen "C3")
+        double antW = hs * 3.2;
+        double antH = hs * 0.9;
+        double antX = chipMidX - antW / 2.0;
+        double antY = yBottom - antH + hs * 0.2;
+        gc.setFill(Color.web("#FAFAFA"));
+        gc.fillRect(antX, antY, antW, antH);
+        gc.setStroke(Color.web("#BDBDBD"));
+        gc.setLineWidth(1.0);
+        gc.strokeRect(antX, antY, antW, antH);
+        gc.setFill(Color.web("#D32F2F"));
+        gc.fillRect(antX + antW * 0.35, antY + 2, antW * 0.3, antH - 4);
+
+        // 6. Goldene Castellated Pads & Pin-Lötkontakte links & rechts (je 9 Pins)
+        double padR = Math.max(2.8, hs * 0.32);
+        for (int i = 0; i < 9; i++) {
+            double py = transform.gridToScreenY(gy + i);
+
+            // Links (Pin 1 bis 9)
+            gc.setFill(Color.web("#FFD54F")); // Goldene Lötaugen
+            gc.fillOval(xLeft - padR, py - padR, padR * 2, padR * 2);
+            gc.setFill(Color.web("#121212")); // Lochbohrung
+            gc.fillOval(xLeft - padR * 0.5, py - padR * 0.5, padR, padR);
+
+            // Rechts (Pin 10 bis 18)
+            gc.setFill(Color.web("#FFD54F"));
+            gc.fillOval(xRight - padR, py - padR, padR * 2, padR * 2);
+            gc.setFill(Color.web("#121212"));
+            gc.fillOval(xRight - padR * 0.5, py - padR * 0.5, padR, padR);
+        }
+
+        // Beschriftung & Silkscreen
+        gc.setFill(Color.web("#FFFFFF"));
+        gc.fillText(comp.getDesignator(), boardLeft + 8, boardTop + 14);
+        gc.setFill(Color.web("#90CAF9"));
+        gc.fillText("ESP32-S3-Zero", chipMidX - 32, boardTop + height - 4);
+
+        if (isSelected) {
+            gc.setStroke(Color.web("#00C853"));
+            gc.setLineWidth(2.5);
+            gc.strokeRoundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8, 8);
+        }
     }
 
     private void drawBand(GraphicsContext gc, double x, double y, double w, double h, String hexColor) {

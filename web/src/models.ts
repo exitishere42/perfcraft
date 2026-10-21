@@ -8,7 +8,8 @@ export type ComponentType =
   | 'LED'
   | 'CAPACITOR_CERAMIC'
   | 'DIODE'
-  | 'IC_DIP';
+  | 'IC_DIP'
+  | 'ESP32_S3_ZERO';
 
 export interface HoleCoord {
   x: number;

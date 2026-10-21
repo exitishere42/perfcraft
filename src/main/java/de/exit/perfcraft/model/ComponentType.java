@@ -12,6 +12,7 @@ public enum ComponentType {
     LED("LED", "LED"),
     TRANSISTOR_TO92("Transistor", "Q"),
     IC_DIP("IC", "IC"),
+    ESP32_S3_ZERO("ESP32-S3-Zero", "U"),
     PIN_HEADER("Stiftleiste", "J"),
     TERMINAL_BLOCK("Schraubklemme", "TB");
 
