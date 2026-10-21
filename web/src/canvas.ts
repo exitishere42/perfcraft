@@ -554,9 +554,9 @@ export class PerfBoardCanvas {
     const minGridY = this.transform.gridToScreenY(0);
     const maxGridY = this.transform.gridToScreenY(rows - 1);
 
-    // Erweitertes FR4-Platinensubstrat mit Platz für Edge-Pads, Montagelöcher und Beschriftung
-    const marginX = hs * 1.5;
-    const marginY = hs * 1.8;
+    // Erweitertes FR4-Platinensubstrat mit viel Platz für Edge-Pads, Silkscreen & Montagelöcher
+    const marginX = hs * 1.6;
+    const marginY = hs * 2.4;
     const boardX = minGridX - marginX;
     const boardY = minGridY - marginY;
     const boardW = (cols - 1) * hs + marginX * 2;
@@ -565,23 +565,23 @@ export class PerfBoardCanvas {
     // 1. Platinen-Substrat (Sattes FR4-PCB-Grün)
     this.ctx.fillStyle = '#1B4D2E';
     this.ctx.beginPath();
-    this.ctx.roundRect(boardX, boardY, boardW, boardH, 14);
+    this.ctx.roundRect(boardX, boardY, boardW, boardH, 16);
     this.ctx.fill();
     this.ctx.strokeStyle = '#143922';
     this.ctx.lineWidth = 3;
     this.ctx.stroke();
 
-    // 1b. 4 Eck-Montagelöcher (M3 Screw Holes mit Silber-Ring und dunkler Bohrung)
-    const holeOffsetX = marginX * 0.55;
-    const holeOffsetY = marginY * 0.50;
+    // 1b. 4 Eck-Montagelöcher (M3 Screw Holes in den Ecken)
+    const holeOffsetX = marginX * 0.52;
+    const holeOffsetY = marginY * 0.40;
     const mountHoles = [
       { x: boardX + holeOffsetX, y: boardY + holeOffsetY },
       { x: boardX + boardW - holeOffsetX, y: boardY + holeOffsetY },
       { x: boardX + holeOffsetX, y: boardY + boardH - holeOffsetY },
       { x: boardX + boardW - holeOffsetX, y: boardY + boardH - holeOffsetY }
     ];
-    const mountRingR = Math.max(4.5, hs * 0.52);
-    const mountDrillR = Math.max(2.5, hs * 0.32);
+    const mountRingR = Math.max(5.0, hs * 0.54);
+    const mountDrillR = Math.max(2.6, hs * 0.32);
 
     for (const mh of mountHoles) {
       // Silber-Ring
@@ -600,49 +600,55 @@ export class PerfBoardCanvas {
       this.ctx.fill();
     }
 
-    // 1c. Ovale Rand-Pads (Silber Lötfinger oben und unten entlang jeder Spalte)
-    const padW = Math.max(3.0, hs * 0.46);
-    const padH = Math.max(6.5, hs * 0.86);
+    // 1c. Ovale Rand-Pads (Lötfinger oben und unten – KEINE Überlappung mit Montagelöchern!)
+    const padW = Math.max(3.0, hs * 0.48);
+    const padH = Math.max(7.0, hs * 0.90);
     const padR = padW / 2;
+    const topPadY = minGridY - hs * 2.10;
+    const bottomPadY = maxGridY + hs * 1.20;
 
     for (let c = 0; c < cols; c++) {
       const px = this.transform.gridToScreenX(c);
 
-      // Oberes ovales Pad
-      const topPadY = minGridY - hs * 1.62;
-      this.ctx.fillStyle = '#CFD8DC';
-      this.ctx.beginPath();
-      this.ctx.roundRect(px - padW / 2, topPadY, padW, padH, padR);
-      this.ctx.fill();
-      this.ctx.strokeStyle = '#90A4AE';
-      this.ctx.lineWidth = 1;
-      this.ctx.stroke();
+      // Prüfen, ob oberes Pad mit einem der oberen Montagelöcher kollidieren würde
+      const collidesTop = mountHoles.slice(0, 2).some(mh => Math.hypot(px - mh.x, (topPadY + padH / 2) - mh.y) < mountRingR + padW * 0.8);
+      if (!collidesTop) {
+        this.ctx.fillStyle = '#CFD8DC';
+        this.ctx.beginPath();
+        this.ctx.roundRect(px - padW / 2, topPadY, padW, padH, padR);
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#90A4AE';
+        this.ctx.lineWidth = 1;
+        this.ctx.stroke();
+      }
 
-      // Unteres ovales Pad
-      const bottomPadY = maxGridY + hs * 0.76;
-      this.ctx.fillStyle = '#CFD8DC';
-      this.ctx.beginPath();
-      this.ctx.roundRect(px - padW / 2, bottomPadY, padW, padH, padR);
-      this.ctx.fill();
-      this.ctx.strokeStyle = '#90A4AE';
-      this.ctx.lineWidth = 1;
-      this.ctx.stroke();
+      // Prüfen, ob unteres Pad mit einem der unteren Montagelöcher kollidieren würde
+      const collidesBottom = mountHoles.slice(2, 4).some(mh => Math.hypot(px - mh.x, (bottomPadY + padH / 2) - mh.y) < mountRingR + padW * 0.8);
+      if (!collidesBottom) {
+        this.ctx.fillStyle = '#CFD8DC';
+        this.ctx.beginPath();
+        this.ctx.roundRect(px - padW / 2, bottomPadY, padW, padH, padR);
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#90A4AE';
+        this.ctx.lineWidth = 1;
+        this.ctx.stroke();
+      }
     }
 
-    // 1d. Weißer Silkscreen (Trennlinien, Spalten A, B, C... und Zeilen 1, 5, 10...)
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.40)';
+    // 1d. Weißer Silkscreen (Trennlinien & Beschriftungen mit perfektem Abstand)
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
     this.ctx.lineWidth = 1;
     this.ctx.beginPath();
-    // Obere Silkscreen-Linie
-    this.ctx.moveTo(minGridX - hs * 0.3, minGridY - hs * 0.65);
-    this.ctx.lineTo(maxGridX + hs * 0.3, minGridY - hs * 0.65);
-    // Untere Silkscreen-Linie
-    this.ctx.moveTo(minGridX - hs * 0.3, maxGridY + hs * 0.65);
-    this.ctx.lineTo(maxGridX + hs * 0.3, maxGridY + hs * 0.65);
+    // Obere Silkscreen-Trennlinie zwischen Oval-Pads und Lochmatrix
+    this.ctx.moveTo(minGridX - hs * 0.4, minGridY - hs * 0.95);
+    this.ctx.lineTo(maxGridX + hs * 0.4, minGridY - hs * 0.95);
+    // Untere Silkscreen-Trennlinie
+    this.ctx.moveTo(minGridX - hs * 0.4, maxGridY + hs * 0.95);
+    this.ctx.lineTo(maxGridX + hs * 0.4, maxGridY + hs * 0.95);
     this.ctx.stroke();
 
-    // Spalten-Buchstaben
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    // Spalten-Buchstaben (oben und unten mittig zwischen Trennlinie und erstem Loch-Pad)
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.80)';
     this.ctx.font = `600 ${Math.max(8, Math.round(hs * 0.36))}px monospace`;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
@@ -655,29 +661,29 @@ export class PerfBoardCanvas {
         letter = String.fromCharCode(65 + (n % 26)) + letter;
         n = Math.floor(n / 26) - 1;
       }
-      this.ctx.fillText(letter, px, minGridY - hs * 0.32);
-      this.ctx.fillText(letter, px, maxGridY + hs * 0.32);
+      this.ctx.fillText(letter, px, minGridY - hs * 0.62);
+      this.ctx.fillText(letter, px, maxGridY + hs * 0.62);
     }
 
-    // Zeilen-Zahlen (links und rechts)
+    // Zeilen-Zahlen (links und rechts mit deutlichem Abstand zu den Loch-Pads)
     this.ctx.font = `500 ${Math.max(7, Math.round(hs * 0.32))}px monospace`;
     for (let r = 0; r < rows; r++) {
       if (r === 0 || (r + 1) % 5 === 0 || r === rows - 1) {
         const py = this.transform.gridToScreenY(r);
         const label = String(r + 1);
         this.ctx.textAlign = 'right';
-        this.ctx.fillText(label, minGridX - hs * 0.48, py);
+        this.ctx.fillText(label, minGridX - hs * 0.62, py);
         this.ctx.textAlign = 'left';
-        this.ctx.fillText(label, maxGridX + hs * 0.48, py);
+        this.ctx.fillText(label, maxGridX + hs * 0.62, py);
       }
     }
 
-    // Subtiler FR-4 Typenaufdruck
-    this.ctx.font = `700 ${Math.max(8, Math.round(hs * 0.36))}px sans-serif`;
-    this.ctx.textAlign = 'center';
+    // Subtiler FR-4 Typenaufdruck in der freien Ecke (oberhalb oder seitlich der Montagelöcher, niemals über Pads!)
+    this.ctx.font = `600 ${Math.max(7, Math.round(hs * 0.32))}px sans-serif`;
+    this.ctx.textAlign = 'left';
     this.ctx.fillStyle = 'rgba(255, 255, 255, 0.50)';
-    const boardLabel = (cols === 24 && rows === 18) || (cols === 18 && rows === 24) ? '5x7CM FR-4' : `${cols}x${rows} FR-4`;
-    this.ctx.fillText(boardLabel, boardX + boardW / 2, boardY + marginY * 0.22);
+    const boardLabel = ((cols === 24 && rows === 18) || (cols === 18 && rows === 24)) ? '5x7CM FR-4' : `${cols}x${rows} FR-4`;
+    this.ctx.fillText(boardLabel, boardX + marginX * 1.1, boardY + marginY * 0.22);
 
     // 2. Silber-Pads (Silber #CFD8DC statt Gold!)
     const holePadR = Math.max(3.0, hs * 0.38);

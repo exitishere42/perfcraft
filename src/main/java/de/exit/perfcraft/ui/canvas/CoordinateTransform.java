@@ -83,8 +83,8 @@ public class CoordinateTransform {
         double pitchPx = PITCH_MM * pixelsPerMm;
         double boardWidthPx = (boardCols - 1) * pitchPx;
         double boardHeightPx = (boardRows - 1) * pitchPx;
-        double totalW = boardWidthPx + pitchPx * 3.0;
-        double totalH = boardHeightPx + pitchPx * 3.8;
+        double totalW = boardWidthPx + pitchPx * 3.4;
+        double totalH = boardHeightPx + pitchPx * 5.0;
         double scaleX = (canvasWidth - 40.0) / Math.max(1.0, totalW);
         double scaleY = (canvasHeight - 40.0) / Math.max(1.0, totalH);
         this.scale = Math.clamp(Math.min(scaleX, scaleY), 0.2, 8.0);

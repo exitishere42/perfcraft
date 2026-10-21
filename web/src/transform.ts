@@ -65,8 +65,8 @@ export class CoordinateTransform {
     const pitchPx = CoordinateTransform.PITCH_MM * this.pixelsPerMm;
     const boardWidthPx = (cols - 1) * pitchPx;
     const boardHeightPx = (rows - 1) * pitchPx;
-    const totalW = boardWidthPx + pitchPx * 3.0;
-    const totalH = boardHeightPx + pitchPx * 3.8;
+    const totalW = boardWidthPx + pitchPx * 3.4;
+    const totalH = boardHeightPx + pitchPx * 5.0;
     const scaleX = (canvasWidth - 40.0) / Math.max(1, totalW);
     const scaleY = (canvasHeight - 40.0) / Math.max(1, totalH);
     this.scale = Math.min(Math.max(Math.min(scaleX, scaleY), 0.2), 8.0);
