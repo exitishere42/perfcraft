@@ -244,9 +244,8 @@ public class PerfBoardCanvas extends Canvas {
     }
 
     private PlacedComponent findComponentAt(HoleCoord grid) {
+        // Auf der Unterseite: Vorrangig Stiftleisten / Pins prüfen
         for (PlacedComponent c : project.getComponents()) {
-            if (!c.isVisible()) continue;
-
             if (c.getType() == ComponentType.PIN_HEADER) {
                 HoleCoord s = c.getStart();
                 HoleCoord e = c.getEnd() != null ? c.getEnd() : s;
@@ -260,8 +259,12 @@ public class PerfBoardCanvas extends Canvas {
                         return c;
                     }
                 }
-                continue;
             }
+        }
+
+        for (PlacedComponent c : project.getComponents()) {
+            if (!c.isVisible() && currentLayer != BoardLayer.BOTTOM) continue;
+            if (c.getType() == ComponentType.PIN_HEADER) continue; // Bereits oben geprüft
 
             int minX = Math.min(c.getStart().x(), c.getEnd() != null ? c.getEnd().x() : c.getStart().x());
             int maxX = Math.max(c.getStart().x(), c.getEnd() != null ? c.getEnd().x() : c.getStart().x());
@@ -401,8 +404,8 @@ public class PerfBoardCanvas extends Canvas {
             }
         }
 
-        // 3. Leitungen (Kabel und Silberdraht - beide liegen oben auf den Pads)
-        // Silberdraht ist dünner (1.8px) als normales Kabel (3.5px) und in glänzendem Silber (#E0E0E0)
+        // 3. Leitungen (Kabel und Silberdraht)
+        // Silberdraht (1.8px) liegt auf der Unterseite (Lötseite); Kabel (3.5px) primär auf der Oberseite
         for (WireTrace w : project.getWires()) {
             if (w.getPoints().size() >= 2) {
                 var p1 = w.getPoints().get(0);
@@ -413,6 +416,24 @@ public class PerfBoardCanvas extends Canvas {
                 double sx2 = transform.gridToScreenX(p2.x());
                 double sy2 = transform.gridToScreenY(p2.y());
 
+                boolean isSilver = (w.getKind() == WireKind.SILVER_WIRE);
+                // Layer-spezifische Sichtbarkeit
+                if (currentLayer == BoardLayer.BOTTOM) {
+                    if (!isSilver && w.getLayer() == BoardLayer.TOP) {
+                        gc.setGlobalAlpha(0.25); // Gedimmtes Durchscheinen der Oberseiten-Kabel
+                    } else {
+                        gc.setGlobalAlpha(1.0);
+                    }
+                } else if (currentLayer == BoardLayer.TOP) {
+                    if (isSilver || w.getLayer() == BoardLayer.BOTTOM) {
+                        gc.setGlobalAlpha(0.60); // Silberdraht auf Unterseite schimmert durch
+                    } else {
+                        gc.setGlobalAlpha(1.0);
+                    }
+                } else {
+                    gc.setGlobalAlpha(1.0);
+                }
+
                 // Selektions-Aura / Highlight wenn Leitung ausgewählt ist
                 if (w.equals(selectedWire)) {
                     gc.setStroke(Color.web("#00E676"));
@@ -421,15 +442,16 @@ public class PerfBoardCanvas extends Canvas {
                     gc.strokeLine(sx1, sy1, sx2, sy2);
                 }
 
-                if (w.getKind() == WireKind.SILVER_WIRE) {
+                if (isSilver) {
                     gc.setStroke(Color.web("#E0E0E0"));
-                    gc.setLineWidth(1.8 * transform.getScale());
+                    gc.setLineWidth(2.2 * transform.getScale());
                 } else {
                     gc.setStroke(Color.web(w.getColor()));
                     gc.setLineWidth(3.5 * transform.getScale());
                 }
                 gc.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
                 gc.strokeLine(sx1, sy1, sx2, sy2);
+                gc.setGlobalAlpha(1.0);
             }
         }
 
@@ -446,17 +468,37 @@ public class PerfBoardCanvas extends Canvas {
             gc.setLineDashes(null);
         }
 
-        // 5. Komponenten
-        if (currentLayer == BoardLayer.TOP || currentLayer == BoardLayer.BOTH) {
-            double alpha = (currentLayer == BoardLayer.BOTH) ? 0.65 : 1.0;
-            gc.setGlobalAlpha(alpha);
-
+        // 5. Komponenten & Durchsteck-Pins je nach gewählter Ebene
+        if (currentLayer == BoardLayer.BOTTOM) {
+            // Auf der Unterseite: Durchgesteckte Metall-Pins und Lötstellen aller Bauteile (z.B. Pin Header zum Verbinden mit Silberdraht)
             for (PlacedComponent comp : project.getComponents()) {
-                if (!comp.isVisible()) continue; // Unsichtbar geschaltet (z.B. abgehobenes Overlay)
+                boolean isSel = (comp == selectedComponent);
+                renderComponentBottomPins(gc, comp, isSel);
+            }
+        } else if (currentLayer == BoardLayer.BOTH) {
+            // Beide Seiten: Zuerst Unterseite (Pins & Lötstellen), dann Oberseite halbtransparent
+            for (PlacedComponent comp : project.getComponents()) {
+                boolean isSel = (comp == selectedComponent);
+                renderComponentBottomPins(gc, comp, isSel);
+            }
+            gc.setGlobalAlpha(0.65);
+            for (PlacedComponent comp : project.getComponents()) {
+                if (!comp.isVisible()) continue;
                 boolean isSel = (comp == selectedComponent);
                 renderComponentInstance(gc, comp, isSel);
             }
             gc.setGlobalAlpha(1.0);
+        } else {
+            // TOP Layer
+            for (PlacedComponent comp : project.getComponents()) {
+                if (!comp.isVisible()) {
+                    // Ausgeblendetes Modul-Overlay: Zeige darunterliegende Pins/Lötpunkte
+                    renderComponentBottomPins(gc, comp, comp == selectedComponent);
+                    continue;
+                }
+                boolean isSel = (comp == selectedComponent);
+                renderComponentInstance(gc, comp, isSel);
+            }
         }
 
         // 5b. Tinkercad Style: Semi-transparent Ghost Preview floating at mouse cursor
@@ -547,14 +589,74 @@ public class PerfBoardCanvas extends Canvas {
         return new PlacedComponent("ghost", type, "COMP", "10k", start, new HoleCoord(start.x() + 2, start.y()), 0, BoardLayer.TOP);
     }
 
+    private String findMountedModulePinLabel(HoleCoord grid) {
+        for (PlacedComponent c : project.getComponents()) {
+            if (c.getType() == ComponentType.ESP32_S3_ZERO) {
+                HoleCoord s = c.getStart();
+                if (grid.x() == s.x()) {
+                    int dy = grid.y() - s.y();
+                    switch (dy) {
+                        case 0 -> { return "ESP32: 5V"; }
+                        case 1 -> { return "ESP32: GND"; }
+                        case 2 -> { return "ESP32: 3V3"; }
+                        case 3 -> { return "ESP32: GP1"; }
+                        case 4 -> { return "ESP32: GP2"; }
+                        case 5 -> { return "ESP32: GP3"; }
+                        case 6 -> { return "ESP32: GP4"; }
+                        case 7 -> { return "ESP32: GP5"; }
+                        case 8 -> { return "ESP32: GP6"; }
+                    }
+                }
+                if (grid.x() == s.x() + 6) {
+                    int dy = grid.y() - s.y();
+                    switch (dy) {
+                        case 0 -> { return "ESP32: TX (GP43)"; }
+                        case 1 -> { return "ESP32: RX (GP44)"; }
+                        case 2 -> { return "ESP32: GP13"; }
+                        case 3 -> { return "ESP32: GP12"; }
+                        case 4 -> { return "ESP32: GP11"; }
+                        case 5 -> { return "ESP32: GP10"; }
+                        case 6 -> { return "ESP32: GP9"; }
+                        case 7 -> { return "ESP32: GP8"; }
+                        case 8 -> { return "ESP32: GP7"; }
+                    }
+                }
+            } else if (c.getType() == ComponentType.TP4056_CHARGER) {
+                HoleCoord s = c.getStart();
+                if (grid.x() == s.x() && grid.y() == s.y()) return "TP4056: IN+";
+                if (grid.x() == s.x() + 6 && grid.y() == s.y()) return "TP4056: IN-";
+                if (grid.x() == s.x() && grid.y() == s.y() + 8) return "TP4056: OUT+";
+                if (grid.x() == s.x() && grid.y() == s.y() + 9) return "TP4056: B+";
+                if (grid.x() == s.x() + 6 && grid.y() == s.y() + 9) return "TP4056: B-";
+                if (grid.x() == s.x() + 6 && grid.y() == s.y() + 8) return "TP4056: OUT-";
+            }
+        }
+        return null;
+    }
+
     private String detectTerminalLabel(HoleCoord grid) {
         if (grid == null) return null;
         for (PlacedComponent c : project.getComponents()) {
-            if (!c.isVisible()) continue;
+            if (!c.isVisible() && currentLayer != BoardLayer.BOTTOM) continue;
             HoleCoord s = c.getStart();
             HoleCoord e = c.getEnd() != null ? c.getEnd() : s;
 
-            if (c.getType() == ComponentType.TACTILE_SWITCH) {
+            if (c.getType() == ComponentType.PIN_HEADER) {
+                int dx = e.x() - s.x();
+                int dy = e.y() - s.y();
+                int steps = Math.max(Math.abs(dx), Math.abs(dy));
+                for (int i = 0; i <= steps; i++) {
+                    int hx = steps == 0 ? s.x() : s.x() + (int) Math.round((double) i * dx / steps);
+                    int hy = steps == 0 ? s.y() : s.y() + (int) Math.round((double) i * dy / steps);
+                    if (grid.x() == hx && grid.y() == hy) {
+                        String mod = findMountedModulePinLabel(grid);
+                        if (mod != null) {
+                            return c.getDesignator() + ": Pin " + (i + 1) + " (" + mod + ")";
+                        }
+                        return c.getDesignator() + ": Pin " + (i + 1);
+                    }
+                }
+            } else if (c.getType() == ComponentType.TACTILE_SWITCH) {
                 if (grid.equals(s)) return c.getDesignator() + ": Terminal 1a";
                 if (grid.equals(new HoleCoord(s.x() + 2, s.y()))) return c.getDesignator() + ": Terminal 1b";
                 if (grid.equals(new HoleCoord(s.x(), s.y() + 3))) return c.getDesignator() + ": Terminal 2a";
@@ -568,17 +670,6 @@ public class PerfBoardCanvas extends Canvas {
             } else if (c.getType() == ComponentType.DIODE) {
                 if (grid.equals(s)) return c.getDesignator() + ": Anode";
                 if (grid.equals(e)) return c.getDesignator() + ": Cathode";
-            } else if (c.getType() == ComponentType.PIN_HEADER) {
-                int dx = e.x() - s.x();
-                int dy = e.y() - s.y();
-                int steps = Math.max(Math.abs(dx), Math.abs(dy));
-                for (int i = 0; i <= steps; i++) {
-                    int hx = steps == 0 ? s.x() : s.x() + (int) Math.round((double) i * dx / steps);
-                    int hy = steps == 0 ? s.y() : s.y() + (int) Math.round((double) i * dy / steps);
-                    if (grid.x() == hx && grid.y() == hy) {
-                        return c.getDesignator() + ": Pin " + (i + 1);
-                    }
-                }
             } else if (c.getType() == ComponentType.ESP32_S3_ZERO) {
                 // Linke Pinleiste (x = s.x)
                 if (grid.x() == s.x()) {
@@ -1174,6 +1265,255 @@ public class PerfBoardCanvas extends Canvas {
         double sy0 = transform.gridToScreenY(s.y());
         gc.setFill(Color.web("#B0BEC5"));
         gc.fillText(comp.getDesignator(), sx0 - boxSize * 0.6, sy0 - boxSize * 0.6);
+    }
+
+    private void drawSolderPin(GraphicsContext gc, double cx, double cy, double hs) {
+        double padR = Math.max(3.2, hs * 0.40);
+        double pinSize = hs * 0.38;
+
+        // 1. Zinn-Lötkelch
+        gc.setFill(Color.web("#B0BEC5"));
+        gc.fillOval(cx - padR * 0.7, cy - padR * 0.7, padR * 1.4, padR * 1.4);
+
+        // 2. Quadratischer metallischer Durchsteck-Pin
+        gc.setFill(Color.web("#ECEFF1"));
+        gc.fillRect(cx - pinSize / 2.0, cy - pinSize / 2.0, pinSize, pinSize);
+        gc.setStroke(Color.web("#78909C"));
+        gc.setLineWidth(0.8);
+        gc.strokeRect(cx - pinSize / 2.0, cy - pinSize / 2.0, pinSize, pinSize);
+
+        // 3. Glanzpunkt an der Kante
+        gc.setFill(Color.web("#FFFFFF"));
+        gc.fillRect(cx - pinSize * 0.25, cy - pinSize * 0.25, pinSize * 0.5, pinSize * 0.5);
+    }
+
+    private void renderComponentBottomPins(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        if (comp.getType() == ComponentType.PIN_HEADER) {
+            renderPinHeaderBottom(gc, comp, isSelected);
+        } else if (comp.getType() == ComponentType.TACTILE_SWITCH) {
+            renderTactileSwitchBottom(gc, comp, isSelected);
+        } else if (comp.getType() == ComponentType.RESISTOR_AXIAL) {
+            renderTwoPinBottom(gc, comp, "R", isSelected);
+        } else if (comp.getType() == ComponentType.LED) {
+            renderTwoPinBottom(gc, comp, "LED", isSelected);
+        } else if (comp.getType() == ComponentType.CAPACITOR_CERAMIC) {
+            renderTwoPinBottom(gc, comp, "C", isSelected);
+        } else if (comp.getType() == ComponentType.DIODE) {
+            renderTwoPinBottom(gc, comp, "D", isSelected);
+        } else if (comp.getType() == ComponentType.IC_DIP) {
+            renderICBottom(gc, comp, isSelected);
+        } else if (comp.getType() == ComponentType.ESP32_S3_ZERO) {
+            renderESP32Bottom(gc, comp, isSelected);
+        } else if (comp.getType() == ComponentType.TP4056_CHARGER) {
+            renderTP4056Bottom(gc, comp, isSelected);
+        }
+    }
+
+    private void renderPinHeaderBottom(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        HoleCoord s = comp.getStart();
+        HoleCoord e = comp.getEnd() != null ? comp.getEnd() : s;
+        double hs = transform.getHoleSpacingPx();
+
+        int dx = e.x() - s.x();
+        int dy = e.y() - s.y();
+        int steps = Math.max(Math.abs(dx), Math.abs(dy));
+
+        double sx0 = transform.gridToScreenX(s.x());
+        double sy0 = transform.gridToScreenY(s.y());
+        double sx1 = transform.gridToScreenX(e.x());
+        double sy1 = transform.gridToScreenY(e.y());
+
+        // Gestrichelter dezenter Umriss der Stiftleiste auf der Unterseite (Backside Silkscreen)
+        gc.setStroke(Color.web("#90A4AE", 0.45));
+        gc.setLineWidth(1.0);
+        gc.setLineDashes(3, 3);
+        double minSx = Math.min(sx0, sx1) - hs * 0.5;
+        double maxSx = Math.max(sx0, sx1) + hs * 0.5;
+        double minSy = Math.min(sy0, sy1) - hs * 0.5;
+        double maxSy = Math.max(sy0, sy1) + hs * 0.5;
+        gc.strokeRoundRect(minSx, minSy, maxSx - minSx, maxSy - minSy, 4, 4);
+        gc.setLineDashes(null);
+
+        // Beschriftung: "J1 (Pins)"
+        gc.setFill(Color.web("#90A4AE", 0.85));
+        gc.fillText(comp.getDesignator() + " (Pins)", minSx, minSy - 4);
+
+        // Durchgesteckte Metallpins an jedem Loch
+        for (int i = 0; i <= steps; i++) {
+            int hx = steps == 0 ? s.x() : s.x() + (int) Math.round((double) i * dx / steps);
+            int hy = steps == 0 ? s.y() : s.y() + (int) Math.round((double) i * dy / steps);
+
+            double cx = transform.gridToScreenX(hx);
+            double cy = transform.gridToScreenY(hy);
+
+            drawSolderPin(gc, cx, cy, hs);
+
+            // Pin-Nummer dezent neben dem Pin (z.B. "1", "2"...)
+            gc.setFill(Color.web("#78909C", 0.85));
+            gc.fillText(String.valueOf(i + 1), cx + hs * 0.45, cy + 3);
+
+            if (isSelected) {
+                gc.setStroke(Color.web("#00E676"));
+                gc.setLineWidth(2.0);
+                gc.strokeOval(cx - hs * 0.45, cy - hs * 0.45, hs * 0.9, hs * 0.9);
+            }
+        }
+    }
+
+    private void renderTactileSwitchBottom(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        int gx = comp.getStart().x();
+        int gy = comp.getStart().y();
+        double hs = transform.getHoleSpacingPx();
+
+        int[][] pinCoords = {
+                {gx, gy},
+                {gx + 2, gy},
+                {gx, gy + 3},
+                {gx + 2, gy + 3}
+        };
+
+        double x0 = transform.gridToScreenX(gx);
+        double y0 = transform.gridToScreenY(gy);
+        double x1 = transform.gridToScreenX(gx + 2);
+        double y1 = transform.gridToScreenY(gy + 3);
+
+        gc.setStroke(Color.web("#90A4AE", 0.35));
+        gc.setLineWidth(1.0);
+        gc.setLineDashes(3, 3);
+        gc.strokeRoundRect(x0 - hs * 0.5, y0 - hs * 0.5, x1 - x0 + hs, y1 - y0 + hs, 4, 4);
+        gc.setLineDashes(null);
+
+        gc.setFill(Color.web("#90A4AE", 0.75));
+        gc.fillText(comp.getDesignator(), x0 - hs * 0.5, y0 - hs * 0.6);
+
+        for (int[] p : pinCoords) {
+            double cx = transform.gridToScreenX(p[0]);
+            double cy = transform.gridToScreenY(p[1]);
+            drawSolderPin(gc, cx, cy, hs);
+            if (isSelected) {
+                gc.setStroke(Color.web("#00E676"));
+                gc.setLineWidth(2.0);
+                gc.strokeOval(cx - hs * 0.45, cy - hs * 0.45, hs * 0.9, hs * 0.9);
+            }
+        }
+    }
+
+    private void renderTwoPinBottom(GraphicsContext gc, PlacedComponent comp, String typeLabel, boolean isSelected) {
+        HoleCoord s = comp.getStart();
+        HoleCoord e = comp.getEnd() != null ? comp.getEnd() : s;
+        double hs = transform.getHoleSpacingPx();
+
+        double x0 = transform.gridToScreenX(s.x());
+        double y0 = transform.gridToScreenY(s.y());
+        double x1 = transform.gridToScreenX(e.x());
+        double y1 = transform.gridToScreenY(e.y());
+
+        gc.setStroke(Color.web("#90A4AE", 0.35));
+        gc.setLineWidth(1.0);
+        gc.setLineDashes(3, 3);
+        gc.strokeLine(x0, y0, x1, y1);
+        gc.setLineDashes(null);
+
+        gc.setFill(Color.web("#90A4AE", 0.75));
+        gc.fillText(comp.getDesignator(), (x0 + x1) / 2.0 - 10, (y0 + y1) / 2.0 - 4);
+
+        drawSolderPin(gc, x0, y0, hs);
+        drawSolderPin(gc, x1, y1, hs);
+
+        if (isSelected) {
+            gc.setStroke(Color.web("#00E676"));
+            gc.setLineWidth(2.0);
+            gc.strokeOval(x0 - hs * 0.45, y0 - hs * 0.45, hs * 0.9, hs * 0.9);
+            gc.strokeOval(x1 - hs * 0.45, y1 - hs * 0.45, hs * 0.9, hs * 0.9);
+        }
+    }
+
+    private void renderICBottom(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        HoleCoord s = comp.getStart();
+        HoleCoord e = comp.getEnd() != null ? comp.getEnd() : s;
+        double hs = transform.getHoleSpacingPx();
+
+        double x0 = transform.gridToScreenX(s.x());
+        double y0 = transform.gridToScreenY(s.y());
+        double x1 = transform.gridToScreenX(e.x());
+        double y1 = transform.gridToScreenY(e.y());
+
+        gc.setStroke(Color.web("#90A4AE", 0.35));
+        gc.setLineWidth(1.0);
+        gc.setLineDashes(3, 3);
+        gc.strokeRoundRect(x0 - hs * 0.5, y0 - hs * 0.5, x1 - x0 + hs, y1 - y0 + hs, 4, 4);
+        gc.setLineDashes(null);
+
+        gc.setFill(Color.web("#90A4AE", 0.75));
+        gc.fillText(comp.getDesignator(), x0 - hs * 0.5, y0 - hs * 0.6);
+
+        int minY = Math.min(s.y(), e.y());
+        int maxY = Math.max(s.y(), e.y());
+        for (int y = minY; y <= maxY; y++) {
+            drawSolderPin(gc, x0, transform.gridToScreenY(y), hs);
+            drawSolderPin(gc, x1, transform.gridToScreenY(y), hs);
+        }
+
+        if (isSelected) {
+            gc.setStroke(Color.web("#00E676"));
+            gc.setLineWidth(2.0);
+            gc.strokeRoundRect(x0 - hs * 0.6, y0 - hs * 0.6, x1 - x0 + hs * 1.2, y1 - y0 + hs * 1.2, 6, 6);
+        }
+    }
+
+    private void renderESP32Bottom(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        int gx = comp.getStart().x();
+        int gy = comp.getStart().y();
+        double hs = transform.getHoleSpacingPx();
+
+        double xLeft = transform.gridToScreenX(gx);
+        double xRight = transform.gridToScreenX(gx + 6);
+        double yTop = transform.gridToScreenY(gy);
+        double yBottom = transform.gridToScreenY(gy + 8);
+
+        gc.setStroke(Color.web("#90A4AE", 0.35));
+        gc.setLineWidth(1.0);
+        gc.setLineDashes(3, 3);
+        gc.strokeRoundRect(xLeft - hs * 0.5, yTop - hs * 0.5, xRight - xLeft + hs, yBottom - yTop + hs, 6, 6);
+        gc.setLineDashes(null);
+
+        gc.setFill(Color.web("#90A4AE", 0.75));
+        gc.fillText(comp.getDesignator() + " (ESP32 Pins)", xLeft - hs * 0.5, yTop - hs * 0.6);
+
+        for (int i = 0; i < 9; i++) {
+            double py = transform.gridToScreenY(gy + i);
+            drawSolderPin(gc, xLeft, py, hs);
+            drawSolderPin(gc, xRight, py, hs);
+        }
+
+        if (isSelected) {
+            gc.setStroke(Color.web("#00E676"));
+            gc.setLineWidth(2.0);
+            gc.strokeRoundRect(xLeft - hs * 0.6, yTop - hs * 0.6, xRight - xLeft + hs * 1.2, yBottom - yTop + hs * 1.2, 8, 8);
+        }
+    }
+
+    private void renderTP4056Bottom(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        int gx = comp.getStart().x();
+        int gy = comp.getStart().y();
+        double hs = transform.getHoleSpacingPx();
+
+        double xLeft = transform.gridToScreenX(gx);
+        double xRight = transform.gridToScreenX(gx + 6);
+        double yTop = transform.gridToScreenY(gy);
+
+        double[][] pads = {
+                {xLeft, yTop},             // IN+
+                {xRight, yTop},            // IN-
+                {xLeft, yTop + hs * 8.0},  // OUT+
+                {xLeft, yTop + hs * 9.0},  // B+
+                {xRight, yTop + hs * 9.0}, // B-
+                {xRight, yTop + hs * 8.0}  // OUT-
+        };
+
+        for (double[] pt : pads) {
+            drawSolderPin(gc, pt[0], pt[1], hs);
+        }
     }
 
     private void drawBand(GraphicsContext gc, double x, double y, double w, double h, String hexColor) {

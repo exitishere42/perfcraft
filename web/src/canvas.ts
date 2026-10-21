@@ -291,8 +291,8 @@ export class PerfBoardCanvas {
   }
 
   private findComponentAt(grid: HoleCoord): PlacedComponent | null {
+    // Auf der Unterseite: Vorrangig Stiftleisten / Pins prüfen
     for (const c of this.project.components) {
-      if (c.visible === false) continue;
       if (c.type === 'PIN_HEADER') {
         const s = c.start;
         const e = c.end || s;
@@ -304,8 +304,13 @@ export class PerfBoardCanvas {
           const hy = steps === 0 ? s.y : s.y + Math.round((i * dy) / steps);
           if (grid.x === hx && grid.y === hy) return c;
         }
-        continue;
       }
+    }
+
+    for (const c of this.project.components) {
+      if (c.visible === false && this.currentLayer !== 'BOTTOM') continue;
+      if (c.type === 'PIN_HEADER') continue; // Bereits oben geprüft
+
       const minX = Math.min(c.start.x, c.end ? c.end.x : c.start.x);
       const maxX = Math.max(c.start.x, c.end ? c.end.x : c.start.x);
       const minY = Math.min(c.start.y, c.end ? c.end.y : c.start.y);
@@ -473,6 +478,23 @@ export class PerfBoardCanvas {
         const sx2 = this.transform.gridToScreenX(wire.points[1].x);
         const sy2 = this.transform.gridToScreenY(wire.points[1].y);
 
+        const isSilver = wire.kind === 'SILVER_WIRE';
+        if (this.currentLayer === 'BOTTOM') {
+          if (!isSilver && wire.layer === 'TOP') {
+            this.ctx.globalAlpha = 0.25;
+          } else {
+            this.ctx.globalAlpha = 1.0;
+          }
+        } else if (this.currentLayer === 'TOP') {
+          if (isSilver || wire.layer === 'BOTTOM') {
+            this.ctx.globalAlpha = 0.60;
+          } else {
+            this.ctx.globalAlpha = 1.0;
+          }
+        } else {
+          this.ctx.globalAlpha = 1.0;
+        }
+
         // Selektions-Aura
         if (wire === this.selectedWire) {
           this.ctx.strokeStyle = '#00E676';
@@ -483,9 +505,9 @@ export class PerfBoardCanvas {
           this.ctx.stroke();
         }
 
-        if (wire.kind === 'SILVER_WIRE') {
+        if (isSilver) {
           this.ctx.strokeStyle = '#E0E0E0';
-          this.ctx.lineWidth = 1.8 * this.transform.getScale();
+          this.ctx.lineWidth = 2.2 * this.transform.getScale();
         } else {
           this.ctx.strokeStyle = wire.color || '#E53935';
           this.ctx.lineWidth = 3.5 * this.transform.getScale();
@@ -494,6 +516,7 @@ export class PerfBoardCanvas {
         this.ctx.moveTo(sx1, sy1);
         this.ctx.lineTo(sx2, sy2);
         this.ctx.stroke();
+        this.ctx.globalAlpha = 1.0;
       }
     }
 
@@ -510,10 +533,29 @@ export class PerfBoardCanvas {
       this.ctx.setLineDash([]);
     }
 
-    // 5. Komponenten
-    if (this.currentLayer === 'TOP' || this.currentLayer === 'BOTH') {
+    // 5. Komponenten & Durchsteck-Pins je nach Layer
+    if (this.currentLayer === 'BOTTOM') {
       for (const comp of this.project.components) {
-        if (comp.visible === false) continue; // Unsichtbar geschaltet
+        this.renderComponentBottomPins(comp, comp === this.selectedComponent);
+      }
+    } else if (this.currentLayer === 'BOTH') {
+      for (const comp of this.project.components) {
+        this.renderComponentBottomPins(comp, comp === this.selectedComponent);
+      }
+      this.ctx.save();
+      this.ctx.globalAlpha = 0.65;
+      for (const comp of this.project.components) {
+        if (comp.visible === false) continue;
+        this.renderComponent(comp, comp === this.selectedComponent);
+      }
+      this.ctx.restore();
+    } else {
+      // TOP
+      for (const comp of this.project.components) {
+        if (comp.visible === false) {
+          this.renderComponentBottomPins(comp, comp === this.selectedComponent);
+          continue;
+        }
         this.renderComponent(comp, comp === this.selectedComponent);
       }
     }
@@ -1141,10 +1183,54 @@ export class PerfBoardCanvas {
     this.ctx.fillText(comp.designator, sx0 - boxSize * 0.6, sy0 - boxSize * 0.6);
   }
 
+  private findMountedModulePinLabel(grid: HoleCoord): string | null {
+    for (const c of this.project.components) {
+      if (c.type === 'ESP32_S3_ZERO') {
+        const s = c.start;
+        if (grid.x === s.x) {
+          const dy = grid.y - s.y;
+          const leftLabels = ['5V', 'GND', '3V3', 'GP1', 'GP2', 'GP3', 'GP4', 'GP5', 'GP6'];
+          if (dy >= 0 && dy < leftLabels.length) return `ESP32: ${leftLabels[dy]}`;
+        }
+        if (grid.x === s.x + 6) {
+          const dy = grid.y - s.y;
+          const rightLabels = ['TX (GP43)', 'RX (GP44)', 'GP13', 'GP12', 'GP11', 'GP10', 'GP9', 'GP8', 'GP7'];
+          if (dy >= 0 && dy < rightLabels.length) return `ESP32: ${rightLabels[dy]}`;
+        }
+      } else if (c.type === 'TP4056_CHARGER') {
+        const s = c.start;
+        if (grid.x === s.x && grid.y === s.y) return 'TP4056: IN+';
+        if (grid.x === s.x + 6 && grid.y === s.y) return 'TP4056: IN-';
+        if (grid.x === s.x && grid.y === s.y + 8) return 'TP4056: OUT+';
+        if (grid.x === s.x && grid.y === s.y + 9) return 'TP4056: B+';
+        if (grid.x === s.x + 6 && grid.y === s.y + 9) return 'TP4056: B-';
+        if (grid.x === s.x + 6 && grid.y === s.y + 8) return 'TP4056: OUT-';
+      }
+    }
+    return null;
+  }
+
   private detectTerminalLabel(grid: HoleCoord): string | null {
     for (const c of this.project.components) {
-      if (c.visible === false) continue;
-      if (c.type === 'TACTILE_SWITCH') {
+      if (c.visible === false && this.currentLayer !== 'BOTTOM') continue;
+      if (c.type === 'PIN_HEADER') {
+        const s = c.start;
+        const e = c.end || s;
+        const dx = e.x - s.x;
+        const dy = e.y - s.y;
+        const steps = Math.max(Math.abs(dx), Math.abs(dy));
+        for (let i = 0; i <= steps; i++) {
+          const hx = steps === 0 ? s.x : s.x + Math.round((i * dx) / steps);
+          const hy = steps === 0 ? s.y : s.y + Math.round((i * dy) / steps);
+          if (grid.x === hx && grid.y === hy) {
+            const mod = this.findMountedModulePinLabel(grid);
+            if (mod) {
+              return `${c.designator}: Pin ${i + 1} (${mod})`;
+            }
+            return `${c.designator}: Pin ${i + 1}`;
+          }
+        }
+      } else if (c.type === 'TACTILE_SWITCH') {
         const s = c.start;
         if (grid.x === s.x && grid.y === s.y) return c.designator + ': Pin 1a';
         if (grid.x === s.x + 2 && grid.y === s.y) return c.designator + ': Pin 1b';
@@ -1156,17 +1242,6 @@ export class PerfBoardCanvas {
       } else if (c.type === 'LED') {
         if (grid.x === c.start.x && grid.y === c.start.y) return c.designator + ': Anode (+)';
         if (c.end && grid.x === c.end.x && grid.y === c.end.y) return c.designator + ': Cathode (-)';
-      } else if (c.type === 'PIN_HEADER') {
-        const s = c.start;
-        const e = c.end || s;
-        const dx = e.x - s.x;
-        const dy = e.y - s.y;
-        const steps = Math.max(Math.abs(dx), Math.abs(dy));
-        for (let i = 0; i <= steps; i++) {
-          const hx = steps === 0 ? s.x : s.x + Math.round((i * dx) / steps);
-          const hy = steps === 0 ? s.y : s.y + Math.round((i * dy) / steps);
-          if (grid.x === hx && grid.y === hy) return `${c.designator}: Pin ${i + 1}`;
-        }
       } else if (c.type === 'ESP32_S3_ZERO') {
         const s = c.start;
         // Links
@@ -1192,6 +1267,286 @@ export class PerfBoardCanvas {
       }
     }
     return null;
+  }
+
+  private drawSolderPin(cx: number, cy: number, hs: number): void {
+    const padR = Math.max(3.2, hs * 0.4);
+    const pinSize = hs * 0.38;
+
+    // 1. Zinn-Lötkelch
+    this.ctx.fillStyle = '#B0BEC5';
+    this.ctx.beginPath();
+    this.ctx.arc(cx, cy, padR * 0.7, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    // 2. Quadratischer Metall-Pin
+    this.ctx.fillStyle = '#ECEFF1';
+    this.ctx.fillRect(cx - pinSize / 2, cy - pinSize / 2, pinSize, pinSize);
+    this.ctx.strokeStyle = '#78909C';
+    this.ctx.lineWidth = 0.8;
+    this.ctx.strokeRect(cx - pinSize / 2, cy - pinSize / 2, pinSize, pinSize);
+
+    // 3. Glanzpunkt
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.fillRect(cx - pinSize * 0.25, cy - pinSize * 0.25, pinSize * 0.5, pinSize * 0.5);
+  }
+
+  private renderComponentBottomPins(comp: PlacedComponent, isSelected: boolean): void {
+    if (comp.type === 'PIN_HEADER') {
+      this.renderPinHeaderBottom(comp, isSelected);
+    } else if (comp.type === 'TACTILE_SWITCH') {
+      this.renderTactileSwitchBottom(comp, isSelected);
+    } else if (comp.type === 'RESISTOR_AXIAL') {
+      this.renderTwoPinBottom(comp, 'R', isSelected);
+    } else if (comp.type === 'LED') {
+      this.renderTwoPinBottom(comp, 'LED', isSelected);
+    } else if (comp.type === 'CAPACITOR_CERAMIC') {
+      this.renderTwoPinBottom(comp, 'C', isSelected);
+    } else if (comp.type === 'DIODE') {
+      this.renderTwoPinBottom(comp, 'D', isSelected);
+    } else if (comp.type === 'IC_DIP') {
+      this.renderICBottom(comp, isSelected);
+    } else if (comp.type === 'ESP32_S3_ZERO') {
+      this.renderESP32Bottom(comp, isSelected);
+    } else if (comp.type === 'TP4056_CHARGER') {
+      this.renderTP4056Bottom(comp, isSelected);
+    }
+  }
+
+  private renderPinHeaderBottom(comp: PlacedComponent, isSelected: boolean): void {
+    const s = comp.start;
+    const e = comp.end || s;
+    const hs = this.transform.getHoleSpacingPx();
+
+    const dx = e.x - s.x;
+    const dy = e.y - s.y;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
+
+    const sx0 = this.transform.gridToScreenX(s.x);
+    const sy0 = this.transform.gridToScreenY(s.y);
+    const sx1 = this.transform.gridToScreenX(e.x);
+    const sy1 = this.transform.gridToScreenY(e.y);
+
+    // Gestrichelter dezenter Umriss der Stiftleiste auf der Unterseite (Backside Silkscreen)
+    this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.45)';
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([3, 3]);
+    const minSx = Math.min(sx0, sx1) - hs * 0.5;
+    const maxSx = Math.max(sx0, sx1) + hs * 0.5;
+    const minSy = Math.min(sy0, sy1) - hs * 0.5;
+    const maxSy = Math.max(sy0, sy1) + hs * 0.5;
+    this.ctx.beginPath();
+    this.ctx.roundRect(minSx, minSy, maxSx - minSx, maxSy - minSy, 4);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
+
+    // Beschriftung: "J1 (Pins)"
+    this.ctx.fillStyle = 'rgba(144, 164, 174, 0.85)';
+    this.ctx.font = '11px sans-serif';
+    this.ctx.fillText(`${comp.designator} (Pins)`, minSx, minSy - 4);
+
+    // Durchgesteckte Metallpins an jedem Loch
+    for (let i = 0; i <= steps; i++) {
+      const hx = steps === 0 ? s.x : s.x + Math.round((i * dx) / steps);
+      const hy = steps === 0 ? s.y : s.y + Math.round((i * dy) / steps);
+
+      const cx = this.transform.gridToScreenX(hx);
+      const cy = this.transform.gridToScreenY(hy);
+
+      this.drawSolderPin(cx, cy, hs);
+
+      // Pin-Nummer dezent neben dem Pin
+      this.ctx.fillStyle = 'rgba(120, 144, 156, 0.85)';
+      this.ctx.font = '10px sans-serif';
+      this.ctx.fillText(String(i + 1), cx + hs * 0.45, cy + 3);
+
+      if (isSelected) {
+        this.ctx.strokeStyle = '#00E676';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, hs * 0.45, 0, Math.PI * 2);
+        this.ctx.stroke();
+      }
+    }
+  }
+
+  private renderTactileSwitchBottom(comp: PlacedComponent, isSelected: boolean): void {
+    const gx = comp.start.x;
+    const gy = comp.start.y;
+    const hs = this.transform.getHoleSpacingPx();
+
+    const pinCoords = [
+      [gx, gy],
+      [gx + 2, gy],
+      [gx, gy + 3],
+      [gx + 2, gy + 3],
+    ];
+
+    const x0 = this.transform.gridToScreenX(gx);
+    const y0 = this.transform.gridToScreenY(gy);
+    const x1 = this.transform.gridToScreenX(gx + 2);
+    const y1 = this.transform.gridToScreenY(gy + 3);
+
+    this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.35)';
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([3, 3]);
+    this.ctx.beginPath();
+    this.ctx.roundRect(x0 - hs * 0.5, y0 - hs * 0.5, x1 - x0 + hs, y1 - y0 + hs, 4);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
+
+    this.ctx.fillStyle = 'rgba(144, 164, 174, 0.75)';
+    this.ctx.font = '10px sans-serif';
+    this.ctx.fillText(comp.designator, x0 - hs * 0.5, y0 - hs * 0.6);
+
+    for (const [px, py] of pinCoords) {
+      const cx = this.transform.gridToScreenX(px);
+      const cy = this.transform.gridToScreenY(py);
+      this.drawSolderPin(cx, cy, hs);
+      if (isSelected) {
+        this.ctx.strokeStyle = '#00E676';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, hs * 0.45, 0, Math.PI * 2);
+        this.ctx.stroke();
+      }
+    }
+  }
+
+  private renderTwoPinBottom(comp: PlacedComponent, _typeLabel: string, isSelected: boolean): void {
+    const s = comp.start;
+    const e = comp.end || s;
+    const hs = this.transform.getHoleSpacingPx();
+
+    const x0 = this.transform.gridToScreenX(s.x);
+    const y0 = this.transform.gridToScreenY(s.y);
+    const x1 = this.transform.gridToScreenX(e.x);
+    const y1 = this.transform.gridToScreenY(e.y);
+
+    this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.35)';
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([3, 3]);
+    this.ctx.beginPath();
+    this.ctx.moveTo(x0, y0);
+    this.ctx.lineTo(x1, y1);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
+
+    this.ctx.fillStyle = 'rgba(144, 164, 174, 0.75)';
+    this.ctx.font = '10px sans-serif';
+    this.ctx.fillText(comp.designator, (x0 + x1) / 2 - 10, (y0 + y1) / 2 - 4);
+
+    this.drawSolderPin(x0, y0, hs);
+    this.drawSolderPin(x1, y1, hs);
+
+    if (isSelected) {
+      this.ctx.strokeStyle = '#00E676';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.arc(x0, y0, hs * 0.45, 0, Math.PI * 2);
+      this.ctx.stroke();
+      this.ctx.beginPath();
+      this.ctx.arc(x1, y1, hs * 0.45, 0, Math.PI * 2);
+      this.ctx.stroke();
+    }
+  }
+
+  private renderICBottom(comp: PlacedComponent, isSelected: boolean): void {
+    const s = comp.start;
+    const e = comp.end || s;
+    const hs = this.transform.getHoleSpacingPx();
+
+    const x0 = this.transform.gridToScreenX(s.x);
+    const y0 = this.transform.gridToScreenY(s.y);
+    const x1 = this.transform.gridToScreenX(e.x);
+    const y1 = this.transform.gridToScreenY(e.y);
+
+    this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.35)';
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([3, 3]);
+    this.ctx.beginPath();
+    this.ctx.roundRect(x0 - hs * 0.5, y0 - hs * 0.5, x1 - x0 + hs, y1 - y0 + hs, 4);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
+
+    this.ctx.fillStyle = 'rgba(144, 164, 174, 0.75)';
+    this.ctx.font = '10px sans-serif';
+    this.ctx.fillText(comp.designator, x0 - hs * 0.5, y0 - hs * 0.6);
+
+    const minY = Math.min(s.y, e.y);
+    const maxY = Math.max(s.y, e.y);
+    for (let y = minY; y <= maxY; y++) {
+      this.drawSolderPin(x0, this.transform.gridToScreenY(y), hs);
+      this.drawSolderPin(x1, this.transform.gridToScreenY(y), hs);
+    }
+
+    if (isSelected) {
+      this.ctx.strokeStyle = '#00E676';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.roundRect(x0 - hs * 0.6, y0 - hs * 0.6, x1 - x0 + hs * 1.2, y1 - y0 + hs * 1.2, 6);
+      this.ctx.stroke();
+    }
+  }
+
+  private renderESP32Bottom(comp: PlacedComponent, isSelected: boolean): void {
+    const gx = comp.start.x;
+    const gy = comp.start.y;
+    const hs = this.transform.getHoleSpacingPx();
+
+    const xLeft = this.transform.gridToScreenX(gx);
+    const xRight = this.transform.gridToScreenX(gx + 6);
+    const yTop = this.transform.gridToScreenY(gy);
+    const yBottom = this.transform.gridToScreenY(gy + 8);
+
+    this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.35)';
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([3, 3]);
+    this.ctx.beginPath();
+    this.ctx.roundRect(xLeft - hs * 0.5, yTop - hs * 0.5, xRight - xLeft + hs, yBottom - yTop + hs, 6);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
+
+    this.ctx.fillStyle = 'rgba(144, 164, 174, 0.75)';
+    this.ctx.font = '10px sans-serif';
+    this.ctx.fillText(`${comp.designator} (ESP32 Pins)`, xLeft - hs * 0.5, yTop - hs * 0.6);
+
+    for (let i = 0; i < 9; i++) {
+      const py = this.transform.gridToScreenY(gy + i);
+      this.drawSolderPin(xLeft, py, hs);
+      this.drawSolderPin(xRight, py, hs);
+    }
+
+    if (isSelected) {
+      this.ctx.strokeStyle = '#00E676';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.roundRect(xLeft - hs * 0.6, yTop - hs * 0.6, xRight - xLeft + hs * 1.2, yBottom - yTop + hs * 1.2, 8);
+      this.ctx.stroke();
+    }
+  }
+
+  private renderTP4056Bottom(comp: PlacedComponent, _isSelected: boolean): void {
+    const gx = comp.start.x;
+    const gy = comp.start.y;
+    const hs = this.transform.getHoleSpacingPx();
+
+    const xLeft = this.transform.gridToScreenX(gx);
+    const xRight = this.transform.gridToScreenX(gx + 6);
+    const yTop = this.transform.gridToScreenY(gy);
+
+    const pads = [
+      [xLeft, yTop],
+      [xRight, yTop],
+      [xLeft, yTop + hs * 8.0],
+      [xLeft, yTop + hs * 9.0],
+      [xRight, yTop + hs * 9.0],
+      [xRight, yTop + hs * 8.0],
+    ];
+
+    for (const [px, py] of pads) {
+      this.drawSolderPin(px, py, hs);
+    }
   }
 
   public applyZoom(factor: number): void {
