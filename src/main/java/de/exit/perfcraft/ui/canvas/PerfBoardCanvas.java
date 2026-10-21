@@ -454,7 +454,8 @@ public class PerfBoardCanvas extends Canvas {
                 }
 
                 if (isSilver) {
-                    gc.setStroke(Color.web("#E0E0E0"));
+                    String col = (w.getColor() != null && !w.getColor().isBlank()) ? w.getColor() : "#CFD8DC";
+                    gc.setStroke(Color.web(col));
                     gc.setLineWidth(2.2 * transform.getScale());
                 } else {
                     gc.setStroke(Color.web(w.getColor()));
@@ -469,7 +470,8 @@ public class PerfBoardCanvas extends Canvas {
         // Elastische Vorschau-Linie beim Drahtziehen
         if (activeTool == ActiveTool.WIRE && wireStartHole != null && currentHoverGrid != null) {
             boolean isSilver = (activeWireKind == WireKind.SILVER_WIRE);
-            gc.setStroke(isSilver ? Color.web("#E0E0E0") : Color.web(activeWireColor));
+            String previewCol = (activeWireColor != null && !activeWireColor.isBlank()) ? activeWireColor : (isSilver ? "#CFD8DC" : "#00C853");
+            gc.setStroke(Color.web(previewCol));
             gc.setLineWidth((isSilver ? 1.8 : 3.0) * transform.getScale());
             gc.setLineDashes(4, 4);
             gc.strokeLine(

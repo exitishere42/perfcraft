@@ -233,11 +233,12 @@ export class PerfBoardCanvas {
             }
 
             this.recordState(); // Undo-Snapshot vor Erstellen des Drahtes
+            const wireCol = this.activeWireColor || (this.activeWireKind === 'SILVER_WIRE' ? '#CFD8DC' : '#E53935');
             this.project.wires.push({
               id: 'w_' + Date.now(),
               kind: this.activeWireKind,
               layer: this.activeWireKind === 'SILVER_WIRE' ? 'BOTTOM' : 'TOP',
-              color: this.activeWireKind === 'SILVER_WIRE' ? '#CFD8DC' : this.activeWireColor,
+              color: wireCol,
               points: [this.wireStartHole, grid],
             });
             this.wireStartHole = null;
@@ -633,7 +634,7 @@ export class PerfBoardCanvas {
         }
 
         if (isSilver) {
-          this.ctx.strokeStyle = '#E0E0E0';
+          this.ctx.strokeStyle = wire.color || '#CFD8DC';
           this.ctx.lineWidth = 2.2 * this.transform.getScale();
         } else {
           this.ctx.strokeStyle = wire.color || '#E53935';
@@ -650,7 +651,8 @@ export class PerfBoardCanvas {
     // Wire live preview rubberband
     if (this.activeTool === 'WIRE' && this.wireStartHole && this.currentHoverGrid) {
       const isSilver = (this.activeWireKind === 'SILVER_WIRE');
-      this.ctx.strokeStyle = isSilver ? '#E0E0E0' : '#00C853';
+      const previewCol = this.activeWireColor || (isSilver ? '#CFD8DC' : '#00C853');
+      this.ctx.strokeStyle = previewCol;
       this.ctx.lineWidth = (isSilver ? 1.8 : 3.0) * this.transform.getScale();
       this.ctx.setLineDash([4, 4]);
       this.ctx.beginPath();

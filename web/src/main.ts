@@ -230,7 +230,7 @@ btnWireCable.addEventListener('click', () => {
 btnWireSilver.addEventListener('click', () => {
   btnWireSilver.classList.add('active');
   btnWireCable.classList.remove('active');
-  cableColorsBox.style.display = 'none';
+  cableColorsBox.style.display = 'flex';
   canvas.setActiveWireKind('SILVER_WIRE');
   setToolActive(toolWire, 'WIRE');
 });
@@ -239,8 +239,17 @@ document.querySelectorAll('.color-dot').forEach((dot) => {
   dot.addEventListener('click', () => {
     document.querySelectorAll('.color-dot').forEach((d) => d.classList.remove('active'));
     dot.classList.add('active');
-    const col = dot.getAttribute('data-color') || '#E53935';
+    const col = dot.getAttribute('data-color') || '#CFD8DC';
     canvas.setActiveWireColor(col);
+
+    // Falls gerade ein Draht selektiert ist, dessen Farbe direkt anpassen
+    const selWire = canvas.getSelectedWire();
+    if (selWire) {
+      canvas.recordState();
+      selWire.color = col;
+      canvas.render();
+      updateInspector(null);
+    }
   });
 });
 
@@ -257,7 +266,14 @@ function updateInspector(comp: PlacedComponent | null) {
     const wire = canvas.getSelectedWire();
     if (wire) {
       propDes.value = wire.kind === 'SILVER_WIRE' ? 'SILVER' : 'WIRE';
-      propVal.value = wire.kind === 'SILVER_WIRE' ? 'Silberdraht' : `Kabel (${wire.color})`;
+      propVal.value = wire.kind === 'SILVER_WIRE' ? `Silberdraht (${wire.color})` : `Kabel (${wire.color})`;
+      document.querySelectorAll('.color-dot').forEach((d) => {
+        if (d.getAttribute('data-color')?.toLowerCase() === wire.color.toLowerCase()) {
+          d.classList.add('active');
+        } else {
+          d.classList.remove('active');
+        }
+      });
     } else {
       propDes.value = '';
       propVal.value = '';

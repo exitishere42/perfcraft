@@ -396,21 +396,24 @@ public class PerfCraftApp extends Application {
             canvas.setActiveWireKind(WireKind.SILVER_WIRE);
             btnWireSilver.setStyle("-fx-background-color: #00C853; -fx-text-fill: black; -fx-font-size: 11px; -fx-font-weight: bold;");
             btnWireCable.setStyle("-fx-background-color: #242424; -fx-text-fill: #B0BEC5; -fx-font-size: 11px;");
-            cableColorsBox.setVisible(false);
+            cableColorsBox.setVisible(true);
             activateTool(PerfBoardCanvas.ActiveTool.WIRE);
         });
 
         wireBtnBox.getChildren().addAll(btnWireCable, btnWireSilver);
 
-        // Farb-Palette für Kabel
+        // Farb-Palette für Kabel und farbigen Silberdraht
         cableColorsBox = new HBox(6);
         cableColorsBox.setAlignment(Pos.CENTER_LEFT);
         cableColorsBox.getChildren().addAll(
-                createColorDot("#E53935"),
-                createColorDot("#212121"),
-                createColorDot("#1E88E5"),
-                createColorDot("#FDD835"),
-                createColorDot("#43A047")
+                createColorDot("#CFD8DC"), // Standard Silber
+                createColorDot("#E53935"), // Rot
+                createColorDot("#212121"), // Schwarz
+                createColorDot("#1E88E5"), // Blau
+                createColorDot("#FDD835"), // Gelb
+                createColorDot("#43A047"), // Grün
+                createColorDot("#8E24AA"), // Lila
+                createColorDot("#00ACC1")  // Cyan
         );
 
         wireTypeBox.getChildren().addAll(lblWireType, wireBtnBox, cableColorsBox);
