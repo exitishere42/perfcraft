@@ -340,6 +340,7 @@ public class PerfCraftApp extends Application {
         compGrid.setVgap(6);
 
         Button btnSwitch = createCompSelectButton(I18n.get("comp.switch"), "switch");
+        Button btnSwitchSmd = createCompSelectButton(I18n.get("comp.switch_smd"), "switch_smd");
         Button btnResistor = createCompSelectButton(I18n.get("comp.resistor"), "resistor");
         Button btnCap = createCompSelectButton(I18n.get("comp.capacitor"), "capacitor");
         Button btnLed = createCompSelectButton(I18n.get("comp.led"), "led");
@@ -350,6 +351,7 @@ public class PerfCraftApp extends Application {
         Button btnPinHeader = createCompSelectButton(I18n.get("comp.pinheader"), "pin_header");
 
         btnSwitch.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.TACTILE_SWITCH); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
+        btnSwitchSmd.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.TACTILE_SWITCH_SMD); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
         btnResistor.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.RESISTOR_AXIAL); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
         btnCap.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.CAPACITOR_CERAMIC); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
         btnLed.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.LED); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
@@ -360,14 +362,15 @@ public class PerfCraftApp extends Application {
         btnPinHeader.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.PIN_HEADER); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
 
         compGrid.add(btnSwitch, 0, 0);
-        compGrid.add(btnResistor, 1, 0);
-        compGrid.add(btnCap, 0, 1);
-        compGrid.add(btnLed, 1, 1);
-        compGrid.add(btnDiode, 0, 2);
-        compGrid.add(btnIc, 1, 2);
-        compGrid.add(btnEsp32, 0, 3);
-        compGrid.add(btnTp4056, 1, 3);
-        compGrid.add(btnPinHeader, 0, 4, 2, 1);
+        compGrid.add(btnSwitchSmd, 1, 0);
+        compGrid.add(btnResistor, 0, 1);
+        compGrid.add(btnCap, 1, 1);
+        compGrid.add(btnLed, 0, 2);
+        compGrid.add(btnDiode, 1, 2);
+        compGrid.add(btnIc, 0, 3);
+        compGrid.add(btnEsp32, 1, 3);
+        compGrid.add(btnTp4056, 0, 4);
+        compGrid.add(btnPinHeader, 1, 4);
 
         // Leitungs-Auswahl
         VBox wireTypeBox = new VBox(6);

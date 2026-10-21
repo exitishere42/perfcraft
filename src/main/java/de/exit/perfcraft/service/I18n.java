@@ -77,6 +77,8 @@ public class I18n {
         DE_MAP.put("comp.resistor", "Widerstand");
         EN_MAP.put("comp.switch", "Tactile Switch");
         DE_MAP.put("comp.switch", "Taster");
+        EN_MAP.put("comp.switch_smd", "SMD Switch");
+        DE_MAP.put("comp.switch_smd", "SMD-Taster");
         EN_MAP.put("comp.capacitor", "Capacitor");
         DE_MAP.put("comp.capacitor", "Kondensator");
         EN_MAP.put("comp.led", "LED");

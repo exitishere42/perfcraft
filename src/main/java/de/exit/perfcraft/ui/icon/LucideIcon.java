@@ -96,6 +96,13 @@ public class LucideIcon extends Canvas {
                 gc.strokeRoundRect(2 * scale, 6 * scale, 20 * scale, 12 * scale, 6 * scale, 6 * scale);
                 gc.fillOval(6 * scale, 10 * scale, 4 * scale, 4 * scale);
             }
+            case "switch_smd", "smd_switch" -> {
+                // Liegender Taster mit herausragendem Knebel
+                gc.strokeRoundRect(4 * scale, 8 * scale, 16 * scale, 10 * scale, 2 * scale, 2 * scale);
+                gc.fillRect(9 * scale, 3 * scale, 6 * scale, 5 * scale);
+                gc.strokeLine(1 * scale, 13 * scale, 4 * scale, 13 * scale);
+                gc.strokeLine(20 * scale, 13 * scale, 23 * scale, 13 * scale);
+            }
             case "resistor" -> {
                 // IEEE Resistor zigzag
                 double[] rx = {2 * scale, 6 * scale, 8.5 * scale, 12 * scale, 15.5 * scale, 18 * scale, 22 * scale};

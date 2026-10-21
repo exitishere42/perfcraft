@@ -5,6 +5,7 @@ export type WireKind = 'CABLE' | 'SILVER_WIRE';
 export type ComponentType =
   | 'RESISTOR_AXIAL'
   | 'TACTILE_SWITCH'
+  | 'TACTILE_SWITCH_SMD'
   | 'LED'
   | 'CAPACITOR_CERAMIC'
   | 'DIODE'

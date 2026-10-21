@@ -483,6 +483,11 @@ export class PerfBoardCanvas {
         // 3x4 Pins Raster (3 breit, 4 hoch -> dx=2, dy=3)
         comp = { id, type: this.activeComponentType, designator: des, value: '6x6 mm', start, end: { x: start.x + 2, y: start.y + 3 }, rotation: 0, layer: 'TOP' };
         break;
+      case 'TACTILE_SWITCH_SMD':
+        des = 'SW' + count;
+        // SMD-Taster liegend 6.0 x 3.5 mm mit 5 mm Knebel (3 Raster Spannweite dx=3, dy=0)
+        comp = { id, type: this.activeComponentType, designator: des, value: '6x3.5mm', start, end: { x: start.x + 3, y: start.y }, rotation: 0, layer: 'TOP' };
+        break;
       case 'RESISTOR_AXIAL':
         des = 'R' + count;
         // 4 Pins verbrauchen -> 4x1 (start bis start.x + 3)
@@ -706,6 +711,8 @@ export class PerfBoardCanvas {
         let dummyEnd: HoleCoord = { x: this.currentHoverGrid.x + 4, y: this.currentHoverGrid.y };
         if (this.activeComponentType === 'TACTILE_SWITCH') {
           dummyEnd = { x: this.currentHoverGrid.x + 2, y: this.currentHoverGrid.y + 3 };
+        } else if (this.activeComponentType === 'TACTILE_SWITCH_SMD') {
+          dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
         } else if (this.activeComponentType === 'RESISTOR_AXIAL') {
           dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
         } else if (this.activeComponentType === 'LED' || this.activeComponentType === 'CAPACITOR_CERAMIC') {
@@ -863,6 +870,8 @@ export class PerfBoardCanvas {
       this.ctx.fillStyle = '#ECEFF1';
       this.ctx.font = '11px sans-serif';
       this.ctx.fillText(comp.designator, cx - 12, cy - bh / 2 - 4);
+    } else if (comp.type === 'TACTILE_SWITCH_SMD') {
+      this.renderTactileSwitchSmd(comp, isSelected);
     } else if (comp.type === 'RESISTOR_AXIAL') {
       const x1 = this.transform.gridToScreenX(comp.start.x);
       const y1 = this.transform.gridToScreenY(comp.start.y);
@@ -1421,6 +1430,8 @@ export class PerfBoardCanvas {
       this.renderPinHeaderBottom(comp, isSelected);
     } else if (comp.type === 'TACTILE_SWITCH') {
       this.renderTactileSwitchBottom(comp, isSelected);
+    } else if (comp.type === 'TACTILE_SWITCH_SMD') {
+      this.renderTwoPinBottom(comp, 'SW', isSelected);
     } else if (comp.type === 'RESISTOR_AXIAL') {
       this.renderTwoPinBottom(comp, 'R', isSelected);
     } else if (comp.type === 'LED') {
@@ -1436,6 +1447,113 @@ export class PerfBoardCanvas {
     } else if (comp.type === 'TP4056_CHARGER') {
       this.renderTP4056Bottom(comp, isSelected);
     }
+  }
+
+  private renderTactileSwitchSmd(comp: PlacedComponent, isSelected: boolean): void {
+    const s = comp.start;
+    const e = comp.end || { x: s.x + 3, y: s.y };
+    const hs = this.transform.getHoleSpacingPx();
+
+    const sx0 = this.transform.gridToScreenX(s.x);
+    const sy0 = this.transform.gridToScreenY(s.y);
+    const sx1 = this.transform.gridToScreenX(e.x);
+    const sy1 = this.transform.gridToScreenY(e.y);
+
+    const cx = (sx0 + sx1) / 2;
+    const cy = (sy0 + sy1) / 2;
+
+    const dx = e.x - s.x;
+    const dy = e.y - s.y;
+    const isHorizontal = Math.abs(dx) >= Math.abs(dy);
+
+    // Gehäusemaße (6.0 x 3.5 mm)
+    const bw = isHorizontal ? hs * 2.36 : hs * 1.38;
+    const bh = isHorizontal ? hs * 1.38 : hs * 2.36;
+
+    // 1. SMD-Lötlaschen
+    this.ctx.strokeStyle = '#CFD8DC';
+    this.ctx.lineWidth = Math.max(2.5, hs * 0.22);
+    this.ctx.lineCap = 'round';
+    this.ctx.beginPath();
+    if (isHorizontal) {
+      this.ctx.moveTo(sx0, sy0);
+      this.ctx.lineTo(cx - bw * 0.45, cy);
+      this.ctx.moveTo(sx1, sy1);
+      this.ctx.lineTo(cx + bw * 0.45, cy);
+    } else {
+      this.ctx.moveTo(sx0, sy0);
+      this.ctx.lineTo(cx, cy - bh * 0.45);
+      this.ctx.moveTo(sx1, sy1);
+      this.ctx.lineTo(cx, cy + bh * 0.45);
+    }
+    this.ctx.stroke();
+
+    // Lötstellen-Punkte an den Pads
+    const padDotR = Math.max(2.5, hs * 0.16);
+    this.ctx.fillStyle = '#ECEFF1';
+    this.ctx.beginPath();
+    this.ctx.arc(sx0, sy0, padDotR, 0, Math.PI * 2);
+    this.ctx.arc(sx1, sy1, padDotR, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    // 2. Herausragender Knebel / Drücker (Stößel 3.0 x 1.5 mm, Höhe 5 mm)
+    this.ctx.fillStyle = '#ECEFF1';
+    this.ctx.strokeStyle = '#78909C';
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    if (isHorizontal) {
+      const btnW = hs * 1.18;
+      const btnH = hs * 0.55;
+      const btnY = (dx >= 0) ? cy - bh / 2 - btnH : cy + bh / 2;
+      this.ctx.roundRect(cx - btnW / 2, btnY, btnW, btnH, 2);
+    } else {
+      const btnW = hs * 0.55;
+      const btnH = hs * 1.18;
+      const btnX = (dy >= 0) ? cx + bw / 2 : cx - bw / 2 - btnW;
+      this.ctx.roundRect(btnX, cy - btnH / 2, btnW, btnH, 2);
+    }
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // 3. Hauptkörper (Dunkler Thermoplast)
+    this.ctx.fillStyle = '#1E1E1E';
+    this.ctx.strokeStyle = '#37474F';
+    this.ctx.lineWidth = 1.2;
+    this.ctx.beginPath();
+    this.ctx.roundRect(cx - bw / 2, cy - bh / 2, bw, bh, 3);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // 4. Metallische Abdeckung / Silberner Deckel
+    const mw = bw * 0.72;
+    const mh = bh * 0.72;
+    this.ctx.fillStyle = '#78909C';
+    this.ctx.strokeStyle = '#90A4AE';
+    this.ctx.lineWidth = 0.8;
+    this.ctx.beginPath();
+    this.ctx.roundRect(cx - mw / 2, cy - mh / 2, mw, mh, 2);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // Zentrierter kleiner runder Schaltpunkt
+    this.ctx.fillStyle = '#263238';
+    this.ctx.beginPath();
+    this.ctx.arc(cx, cy, hs * 0.18, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    // Selektions-Aura
+    if (isSelected) {
+      this.ctx.strokeStyle = '#00E676';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.roundRect(cx - bw / 2 - 2, cy - bh / 2 - 2, bw + 4, bh + 4, 4);
+      this.ctx.stroke();
+    }
+
+    // Beschriftung
+    this.ctx.fillStyle = '#E0E0E0';
+    this.ctx.font = '10px sans-serif';
+    this.ctx.fillText(comp.designator, cx - 10, cy - bh / 2 - hs * 0.65);
   }
 
   private renderPinHeaderBottom(comp: PlacedComponent, isSelected: boolean): void {

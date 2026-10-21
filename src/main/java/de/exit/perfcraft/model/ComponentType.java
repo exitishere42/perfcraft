@@ -5,6 +5,7 @@ package de.exit.perfcraft.model;
  */
 public enum ComponentType {
     TACTILE_SWITCH("Taster", "SW"),
+    TACTILE_SWITCH_SMD("SMD-Taster", "SW"),
     RESISTOR_AXIAL("Widerstand", "R"),
     CAPACITOR_CERAMIC("Kondensator", "C"),
     CAPACITOR_ELECTROLYTIC("Elko", "C"),

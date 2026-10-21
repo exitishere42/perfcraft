@@ -327,6 +327,9 @@ public class PerfBoardCanvas extends Canvas {
         if (activeComponentType == ComponentType.TACTILE_SWITCH) {
             // 3x4 Pins Raster (3 breit, 4 hoch -> dx=2, dy=3)
             comp = new PlacedComponent(id, activeComponentType, des, "6x6 mm", start, new HoleCoord(start.x() + 2, start.y() + 3), 0, BoardLayer.TOP);
+        } else if (activeComponentType == ComponentType.TACTILE_SWITCH_SMD) {
+            // SMD-Minitaster liegend 6.0 x 3.5 mm (3 Rasterabstände Spannweite: start bis start.x + 3)
+            comp = new PlacedComponent(id, activeComponentType, des, "6x3.5mm", start, new HoleCoord(start.x() + 3, start.y()), 0, BoardLayer.TOP);
         } else if (activeComponentType == ComponentType.RESISTOR_AXIAL) {
             // 4 Pins verbrauchen -> 4x1 (start bis start.x + 3 -> 4 Pins total: x, x+1, x+2, x+3)
             comp = new PlacedComponent(id, activeComponentType, des, "10k", start, new HoleCoord(start.x() + 3, start.y()), 0, BoardLayer.TOP);
@@ -554,6 +557,8 @@ public class PerfBoardCanvas extends Canvas {
     private void renderComponentInstance(GraphicsContext gc, PlacedComponent comp, boolean isSel) {
         if (comp.getType() == ComponentType.TACTILE_SWITCH) {
             renderTactileSwitch(gc, comp, isSel);
+        } else if (comp.getType() == ComponentType.TACTILE_SWITCH_SMD) {
+            renderTactileSwitchSmd(gc, comp, isSel);
         } else if (comp.getType() == ComponentType.RESISTOR_AXIAL) {
             renderResistor(gc, comp, isSel);
         } else if (comp.getType() == ComponentType.LED) {
@@ -576,6 +581,8 @@ public class PerfBoardCanvas extends Canvas {
     private PlacedComponent createDummyComponent(ComponentType type, HoleCoord start) {
         if (type == ComponentType.TACTILE_SWITCH) {
             return new PlacedComponent("ghost", type, "SW", "6x6 mm", start, new HoleCoord(start.x() + 2, start.y() + 3), 0, BoardLayer.TOP);
+        } else if (type == ComponentType.TACTILE_SWITCH_SMD) {
+            return new PlacedComponent("ghost", type, "SW", "6x3.5mm", start, new HoleCoord(start.x() + 3, start.y()), 0, BoardLayer.TOP);
         } else if (type == ComponentType.RESISTOR_AXIAL) {
             return new PlacedComponent("ghost", type, "R", "10k", start, new HoleCoord(start.x() + 3, start.y()), 0, BoardLayer.TOP);
         } else if (type == ComponentType.LED) {
@@ -810,6 +817,95 @@ public class PerfBoardCanvas extends Canvas {
 
         gc.setFill(Color.web("#ECEFF1"));
         gc.fillText(comp.getDesignator(), cx - 12, cy - bh/2 - 4);
+    }
+
+    private void renderTactileSwitchSmd(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        HoleCoord s = comp.getStart();
+        HoleCoord e = comp.getEnd() != null ? comp.getEnd() : new HoleCoord(s.x() + 3, s.y());
+        double hs = transform.getHoleSpacingPx();
+
+        double sx0 = transform.gridToScreenX(s.x());
+        double sy0 = transform.gridToScreenY(s.y());
+        double sx1 = transform.gridToScreenX(e.x());
+        double sy1 = transform.gridToScreenY(e.y());
+
+        double cx = (sx0 + sx1) / 2.0;
+        double cy = (sy0 + sy1) / 2.0;
+
+        int dx = e.x() - s.x();
+        int dy = e.y() - s.y();
+        boolean isHorizontal = Math.abs(dx) >= Math.abs(dy);
+
+        // Gehäusemaße (6.0 x 3.5 mm)
+        double bw = isHorizontal ? hs * 2.36 : hs * 1.38;
+        double bh = isHorizontal ? hs * 1.38 : hs * 2.36;
+
+        // 1. SMD-Lötlaschen zu den beiden Pads
+        gc.setStroke(Color.web("#CFD8DC"));
+        gc.setLineWidth(Math.max(2.5, hs * 0.22));
+        gc.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+        if (isHorizontal) {
+            gc.strokeLine(sx0, sy0, cx - bw * 0.45, cy);
+            gc.strokeLine(sx1, sy1, cx + bw * 0.45, cy);
+        } else {
+            gc.strokeLine(sx0, sy0, cx, cy - bh * 0.45);
+            gc.strokeLine(sx1, sy1, cx, cy + bh * 0.45);
+        }
+
+        // Lötstellen-Punkte an den Pads
+        double padDotR = Math.max(2.5, hs * 0.16);
+        gc.setFill(Color.web("#ECEFF1"));
+        gc.fillOval(sx0 - padDotR, sy0 - padDotR, padDotR * 2, padDotR * 2);
+        gc.fillOval(sx1 - padDotR, sy1 - padDotR, padDotR * 2, padDotR * 2);
+
+        // 2. Herausragender Knebel / Drücker (Stößel 3.0 x 1.5 mm, Höhe 5 mm)
+        gc.setFill(Color.web("#ECEFF1"));
+        gc.setStroke(Color.web("#78909C"));
+        gc.setLineWidth(1.0);
+        if (isHorizontal) {
+            double btnW = hs * 1.18;
+            double btnH = hs * 0.55;
+            double btnY = (dx >= 0) ? cy - bh / 2.0 - btnH : cy + bh / 2.0;
+            gc.fillRect(cx - btnW / 2.0, btnY, btnW, btnH);
+            gc.strokeRect(cx - btnW / 2.0, btnY, btnW, btnH);
+        } else {
+            double btnW = hs * 0.55;
+            double btnH = hs * 1.18;
+            double btnX = (dy >= 0) ? cx + bw / 2.0 : cx - bw / 2.0 - btnW;
+            gc.fillRect(btnX, cy - btnH / 2.0, btnW, btnH);
+            gc.strokeRect(btnX, cy - btnH / 2.0, btnW, btnH);
+        }
+
+        // 3. Hauptkörper (Dunkler Thermoplast)
+        gc.setFill(Color.web("#1E1E1E"));
+        gc.fillRoundRect(cx - bw / 2.0, cy - bh / 2.0, bw, bh, 3, 3);
+        gc.setStroke(Color.web("#37474F"));
+        gc.setLineWidth(1.2);
+        gc.strokeRoundRect(cx - bw / 2.0, cy - bh / 2.0, bw, bh, 3, 3);
+
+        // 4. Metallische Abdeckung / Silberner Deckel
+        double mw = bw * 0.72;
+        double mh = bh * 0.72;
+        gc.setFill(Color.web("#78909C"));
+        gc.fillRoundRect(cx - mw / 2.0, cy - mh / 2.0, mw, mh, 2, 2);
+        gc.setStroke(Color.web("#90A4AE"));
+        gc.setLineWidth(0.8);
+        gc.strokeRoundRect(cx - mw / 2.0, cy - mh / 2.0, mw, mh, 2, 2);
+
+        // Zentrierter kleiner runder Schaltpunkt
+        gc.setFill(Color.web("#263238"));
+        gc.fillOval(cx - hs * 0.18, cy - hs * 0.18, hs * 0.36, hs * 0.36);
+
+        // Selektions-Aura
+        if (isSelected) {
+            gc.setStroke(Color.web("#00E676"));
+            gc.setLineWidth(2.0);
+            gc.strokeRoundRect(cx - bw / 2.0 - 2, cy - bh / 2.0 - 2, bw + 4, bh + 4, 4, 4);
+        }
+
+        // Beschriftung
+        gc.setFill(Color.web("#E0E0E0"));
+        gc.fillText(comp.getDesignator(), cx - 10, cy - bh / 2.0 - hs * 0.65);
     }
 
     private void renderResistor(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
@@ -1297,6 +1393,8 @@ public class PerfBoardCanvas extends Canvas {
             renderPinHeaderBottom(gc, comp, isSelected);
         } else if (comp.getType() == ComponentType.TACTILE_SWITCH) {
             renderTactileSwitchBottom(gc, comp, isSelected);
+        } else if (comp.getType() == ComponentType.TACTILE_SWITCH_SMD) {
+            renderTwoPinBottom(gc, comp, "SW", isSelected);
         } else if (comp.getType() == ComponentType.RESISTOR_AXIAL) {
             renderTwoPinBottom(gc, comp, "R", isSelected);
         } else if (comp.getType() == ComponentType.LED) {
