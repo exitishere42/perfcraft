@@ -966,80 +966,90 @@ public class PerfBoardCanvas extends Canvas {
         double cx = (sx0 + sx1) / 2.0;
         double cy = (sy0 + sy1) / 2.0;
 
-        int dx = e.x() - s.x();
-        int dy = e.y() - s.y();
-        boolean isHorizontal = Math.abs(dx) >= Math.abs(dy);
+        double spanPx = Math.hypot(sx1 - sx0, sy1 - sy0);
+        double angleRad = Math.atan2(sy1 - sy0, sx1 - sx0);
+        double angleDeg = Math.toDegrees(angleRad);
 
-        // Gehäusemaße (6.0 x 3.5 mm)
-        double bw = isHorizontal ? hs * 2.36 : hs * 1.38;
-        double bh = isHorizontal ? hs * 1.38 : hs * 2.36;
+        gc.save();
+        gc.translate(cx, cy);
+        gc.rotate(angleDeg);
 
-        // 1. SMD-Lötlaschen zu den beiden Pads
+        // Gehäusemaße Top-Down CAD: 6.0 x 3.5 mm (Liegend)
+        double bw = hs * 2.36; // 6.0 mm Länge entlang der Anschlüsse
+        double bh = hs * 1.38; // 3.5 mm Gehäusetiefe
+        double halfSpan = spanPx / 2.0;
+
+        // 1. SMD Lötlaschen / Gull-Wing Leads zu den Pads
         gc.setStroke(Color.web("#CFD8DC"));
         gc.setLineWidth(Math.max(2.5, hs * 0.22));
         gc.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
-        if (isHorizontal) {
-            gc.strokeLine(sx0, sy0, cx - bw * 0.45, cy);
-            gc.strokeLine(sx1, sy1, cx + bw * 0.45, cy);
-        } else {
-            gc.strokeLine(sx0, sy0, cx, cy - bh * 0.45);
-            gc.strokeLine(sx1, sy1, cx, cy + bh * 0.45);
-        }
+        // Linkes Pad zu Gehäuse
+        gc.strokeLine(-halfSpan, 0, -bw * 0.45, 0);
+        // Rechtes Pad zu Gehäuse
+        gc.strokeLine(halfSpan, 0, bw * 0.45, 0);
 
-        // Lötstellen-Punkte an den Pads
+        // Lötstellen-Punkte auf den Pads
         double padDotR = Math.max(2.5, hs * 0.16);
         gc.setFill(Color.web("#ECEFF1"));
-        gc.fillOval(sx0 - padDotR, sy0 - padDotR, padDotR * 2, padDotR * 2);
-        gc.fillOval(sx1 - padDotR, sy1 - padDotR, padDotR * 2, padDotR * 2);
+        gc.fillOval(-halfSpan - padDotR, -padDotR, padDotR * 2, padDotR * 2);
+        gc.fillOval(halfSpan - padDotR, -padDotR, padDotR * 2, padDotR * 2);
 
-        // 2. Herausragender Knebel / Drücker (Stößel 3.0 x 1.5 mm, Höhe 5 mm)
+        // 2. Horizontale Betätigung / 5mm Knebel (Plunger / Actuator ragt nach vorne heraus)
+        // 5mm Länge = hs * 1.95, Breite = hs * 0.75
+        double actLen = hs * 1.95;
+        double actW = hs * 0.75;
+        double actY = -bh / 2.0 - actLen;
+
+        // Knebel-Schaft
         gc.setFill(Color.web("#ECEFF1"));
+        gc.fillRoundRect(-actW / 2.0, actY, actW, actLen + 1.0, 2, 2);
+        gc.setStroke(Color.web("#90A4AE"));
+        gc.setLineWidth(1.0);
+        gc.strokeRoundRect(-actW / 2.0, actY, actW, actLen + 1.0, 2, 2);
+
+        // Knebel-Spitze / Kappe (Kopffläche)
+        double capW = actW * 1.15;
+        double capH = Math.max(2.5, hs * 0.3);
+        gc.setFill(Color.web("#CFD8DC"));
+        gc.fillRoundRect(-capW / 2.0, actY - capH * 0.4, capW, capH, 1.5, 1.5);
         gc.setStroke(Color.web("#78909C"));
         gc.setLineWidth(1.0);
-        if (isHorizontal) {
-            double btnW = hs * 1.18;
-            double btnH = hs * 0.55;
-            double btnY = (dx >= 0) ? cy - bh / 2.0 - btnH : cy + bh / 2.0;
-            gc.fillRect(cx - btnW / 2.0, btnY, btnW, btnH);
-            gc.strokeRect(cx - btnW / 2.0, btnY, btnW, btnH);
-        } else {
-            double btnW = hs * 0.55;
-            double btnH = hs * 1.18;
-            double btnX = (dy >= 0) ? cx + bw / 2.0 : cx - bw / 2.0 - btnW;
-            gc.fillRect(btnX, cy - btnH / 2.0, btnW, btnH);
-            gc.strokeRect(btnX, cy - btnH / 2.0, btnW, btnH);
-        }
+        gc.strokeRoundRect(-capW / 2.0, actY - capH * 0.4, capW, capH, 1.5, 1.5);
 
-        // 3. Hauptkörper (Dunkler Thermoplast)
+        // 3. Hauptkörper (Dunkler Thermoplast 6.0 x 3.5 mm)
         gc.setFill(Color.web("#1E1E1E"));
-        gc.fillRoundRect(cx - bw / 2.0, cy - bh / 2.0, bw, bh, 3, 3);
+        gc.fillRoundRect(-bw / 2.0, -bh / 2.0, bw, bh, 2.5, 2.5);
         gc.setStroke(Color.web("#37474F"));
         gc.setLineWidth(1.2);
-        gc.strokeRoundRect(cx - bw / 2.0, cy - bh / 2.0, bw, bh, 3, 3);
+        gc.strokeRoundRect(-bw / 2.0, -bh / 2.0, bw, bh, 2.5, 2.5);
 
-        // 4. Metallische Abdeckung / Silberner Deckel
-        double mw = bw * 0.72;
-        double mh = bh * 0.72;
-        gc.setFill(Color.web("#78909C"));
-        gc.fillRoundRect(cx - mw / 2.0, cy - mh / 2.0, mw, mh, 2, 2);
-        gc.setStroke(Color.web("#90A4AE"));
+        // 4. Stanzblech / Silberne Deckplatte (Draufsicht: glatte Metallplatte mit Nieten)
+        double mw = bw * 0.82;
+        double mh = bh * 0.78;
+        gc.setFill(Color.web("#B0BEC5"));
+        gc.fillRoundRect(-mw / 2.0, -mh / 2.0, mw, mh, 2, 2);
+        gc.setStroke(Color.web("#78909C"));
         gc.setLineWidth(0.8);
-        gc.strokeRoundRect(cx - mw / 2.0, cy - mh / 2.0, mw, mh, 2, 2);
+        gc.strokeRoundRect(-mw / 2.0, -mh / 2.0, mw, mh, 2, 2);
 
-        // Zentrierter kleiner runder Schaltpunkt
-        gc.setFill(Color.web("#263238"));
-        gc.fillOval(cx - hs * 0.18, cy - hs * 0.18, hs * 0.36, hs * 0.36);
+        // Metallische Nieten an den Seiten (KEIN runder Druckknopf auf der Oberseite!)
+        gc.setFill(Color.web("#546E7A"));
+        double rivetR = Math.max(1.2, hs * 0.08);
+        gc.fillOval(-mw * 0.32 - rivetR, -rivetR, rivetR * 2, rivetR * 2);
+        gc.fillOval(mw * 0.32 - rivetR, -rivetR, rivetR * 2, rivetR * 2);
 
         // Selektions-Aura
         if (isSelected) {
             gc.setStroke(Color.web("#00E676"));
             gc.setLineWidth(2.0);
-            gc.strokeRoundRect(cx - bw / 2.0 - 2, cy - bh / 2.0 - 2, bw + 4, bh + 4, 4, 4);
+            gc.strokeRoundRect(-bw / 2.0 - 2, -bh / 2.0 - 2, bw + 4, bh + 4, 4, 4);
         }
 
         // Beschriftung
         gc.setFill(Color.web("#E0E0E0"));
-        gc.fillText(comp.getDesignator(), cx - 10, cy - bh / 2.0 - hs * 0.65);
+        gc.fillText(comp.getDesignator(), -10, bh / 2.0 + hs * 0.55);
+
+        gc.restore();
     }
 
     private void renderResistor(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
@@ -1263,18 +1273,30 @@ public class PerfBoardCanvas extends Canvas {
         gc.setLineWidth(1.5);
         gc.strokeRoundRect(-wPx / 2.0, -hPx / 2.0, wPx, hPx, 6, 6);
 
-        // 2. USB-C Port oben mittig (Metall-Gehäuse überstehend)
-        double usbW = hs * 2.6;
-        double usbH = hs * 1.5;
-        double usbY = -hPx / 2.0 - hs * 0.2;
-        gc.setFill(Color.web("#B0BEC5"));
-        gc.fillRoundRect(-usbW / 2.0, usbY, usbW, usbH, 4, 4);
+        // 2. USB-C Port oben mittig (Top-Down Draufsicht: Metallschirm ragt horizontal nach vorne)
+        double usbW = hs * 2.8;
+        double usbH = hs * 1.8;
+        double usbX = -usbW / 2.0;
+        double usbY = -hPx / 2.0 - hs * 0.55;
+        gc.setFill(Color.web("#CFD8DC"));
+        gc.fillRoundRect(usbX, usbY, usbW, usbH, 3, 3);
         gc.setStroke(Color.web("#78909C"));
         gc.setLineWidth(1.0);
-        gc.strokeRoundRect(-usbW / 2.0, usbY, usbW, usbH, 4, 4);
-        // USB-C Schlitz innen
-        gc.setFill(Color.web("#263238"));
-        gc.fillRoundRect(-usbW * 0.35, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2, 2);
+        gc.strokeRoundRect(usbX, usbY, usbW, usbH, 3, 3);
+
+        // Kragenfalz an der vorderen Kante (Bordkante / Steckeröffnung zeigt nach vorne)
+        gc.setStroke(Color.web("#546E7A"));
+        gc.setLineWidth(1.5);
+        gc.strokeLine(usbX + 2, usbY + 1, usbX + usbW - 2, usbY + 1);
+
+        // Top-Down Details: Mittige Falznaht & Grounding-Prägungen
+        gc.setStroke(Color.web("#B0BEC5"));
+        gc.setLineWidth(0.8);
+        gc.strokeLine(0, usbY + 3, 0, usbY + usbH - 3);
+
+        gc.setFill(Color.web("#90A4AE"));
+        gc.fillRect(-usbW * 0.28, usbY + usbH * 0.35, hs * 0.25, hs * 0.35);
+        gc.fillRect(usbW * 0.28 - hs * 0.25, usbY + usbH * 0.35, hs * 0.25, hs * 0.35);
 
         // 3. Taster Boot (B) und Reset (R)
         double btnSize = hs * 0.7;
@@ -1383,18 +1405,30 @@ public class PerfBoardCanvas extends Canvas {
         gc.setLineWidth(1.5);
         gc.strokeRoundRect(boardLeft, boardTop, width, height, 6, 6);
 
-        // 2. USB-C Eingang oben mittig (überstehend)
+        // 2. USB-C Eingang oben mittig (Top-Down Draufsicht: Metallschirm ragt horizontal nach vorne)
         double usbW = hs * 2.8;
-        double usbH = hs * 1.6;
+        double usbH = hs * 1.8;
         double usbX = -usbW / 2.0;
-        double usbY = boardTop - hs * 0.1;
+        double usbY = boardTop - hs * 0.55;
         gc.setFill(Color.web("#CFD8DC"));
-        gc.fillRoundRect(usbX, usbY, usbW, usbH, 4, 4);
-        gc.setStroke(Color.web("#90A4AE"));
+        gc.fillRoundRect(usbX, usbY, usbW, usbH, 3, 3);
+        gc.setStroke(Color.web("#78909C"));
         gc.setLineWidth(1.0);
-        gc.strokeRoundRect(usbX, usbY, usbW, usbH, 4, 4);
-        gc.setFill(Color.web("#263238"));
-        gc.fillRoundRect(usbX + usbW * 0.15, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2, 2);
+        gc.strokeRoundRect(usbX, usbY, usbW, usbH, 3, 3);
+
+        // Kragenfalz an der vorderen Kante
+        gc.setStroke(Color.web("#546E7A"));
+        gc.setLineWidth(1.5);
+        gc.strokeLine(usbX + 2, usbY + 1, usbX + usbW - 2, usbY + 1);
+
+        // Top-Down Details: Mittige Falznaht & Grounding-Prägungen
+        gc.setStroke(Color.web("#B0BEC5"));
+        gc.setLineWidth(0.8);
+        gc.strokeLine(0, usbY + 3, 0, usbY + usbH - 3);
+
+        gc.setFill(Color.web("#90A4AE"));
+        gc.fillRect(-usbW * 0.28, usbY + usbH * 0.35, hs * 0.25, hs * 0.35);
+        gc.fillRect(usbW * 0.28 - hs * 0.25, usbY + usbH * 0.35, hs * 0.25, hs * 0.35);
 
         // 3. Haupt-Lade-IC (TP4056 SOP-8) in der Mitte
         double tpY = boardTop + hs * 3.65;

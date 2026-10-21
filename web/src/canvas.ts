@@ -1314,21 +1314,37 @@ export class PerfBoardCanvas {
       this.ctx.lineWidth = 1.5;
       this.ctx.stroke();
 
-      // 2. USB-C Port oben mittig
-      const usbW = hs * 2.6;
-      const usbH = hs * 1.5;
-      const usbY = -hPx / 2 - hs * 0.2;
-      this.ctx.fillStyle = '#B0BEC5';
+      // 2. USB-C Port oben mittig (Top-Down Draufsicht: Metallschirm ragt horizontal nach vorne)
+      const usbW = hs * 2.8;
+      const usbH = hs * 1.8;
+      const usbY = -hPx / 2 - hs * 0.65;
+      this.ctx.fillStyle = '#CFD8DC';
       this.ctx.beginPath();
-      this.ctx.roundRect(-usbW / 2, usbY, usbW, usbH, 4);
+      this.ctx.roundRect(-usbW / 2, usbY, usbW, usbH, 3);
       this.ctx.fill();
       this.ctx.strokeStyle = '#78909C';
       this.ctx.lineWidth = 1;
       this.ctx.stroke();
-      this.ctx.fillStyle = '#263238';
+
+      // Kragenfalz an der vorderen Kante (wo das Kabel eingesteckt wird)
+      this.ctx.strokeStyle = '#546E7A';
+      this.ctx.lineWidth = 1.5;
       this.ctx.beginPath();
-      this.ctx.roundRect(-usbW * 0.35, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2);
-      this.ctx.fill();
+      this.ctx.moveTo(-usbW / 2 + 2, usbY + 1);
+      this.ctx.lineTo(usbW / 2 - 2, usbY + 1);
+      this.ctx.stroke();
+
+      // Top-Down Shield Details: Mittige Falznaht & zwei Grounding-Prägungen
+      this.ctx.strokeStyle = '#B0BEC5';
+      this.ctx.lineWidth = 0.8;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, usbY + 3);
+      this.ctx.lineTo(0, usbY + usbH - 3);
+      this.ctx.stroke();
+
+      this.ctx.fillStyle = '#90A4AE';
+      this.ctx.fillRect(-usbW * 0.28, usbY + usbH * 0.35, hs * 0.25, hs * 0.35);
+      this.ctx.fillRect(usbW * 0.28 - hs * 0.25, usbY + usbH * 0.35, hs * 0.25, hs * 0.35);
 
       // 3. Taster Boot & Reset
       const btnSize = hs * 0.7;
@@ -1442,22 +1458,38 @@ export class PerfBoardCanvas {
       this.ctx.lineWidth = 1.5;
       this.ctx.stroke();
 
-      // 2. USB-C Eingang oben mittig
+      // 2. USB-C Eingang oben mittig (Top-Down Draufsicht: Metallschirm ragt horizontal nach vorne)
       const usbW = hs * 2.8;
-      const usbH = hs * 1.6;
+      const usbH = hs * 1.8;
       const usbX = -usbW / 2;
-      const usbY = boardTop - hs * 0.1;
+      const usbY = boardTop - hs * 0.55;
       this.ctx.fillStyle = '#CFD8DC';
       this.ctx.beginPath();
-      this.ctx.roundRect(usbX, usbY, usbW, usbH, 4);
+      this.ctx.roundRect(usbX, usbY, usbW, usbH, 3);
       this.ctx.fill();
-      this.ctx.strokeStyle = '#90A4AE';
+      this.ctx.strokeStyle = '#78909C';
       this.ctx.lineWidth = 1;
       this.ctx.stroke();
-      this.ctx.fillStyle = '#263238';
+
+      // Kragenfalz an der vorderen Kante
+      this.ctx.strokeStyle = '#546E7A';
+      this.ctx.lineWidth = 1.5;
       this.ctx.beginPath();
-      this.ctx.roundRect(usbX + usbW * 0.15, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2);
-      this.ctx.fill();
+      this.ctx.moveTo(usbX + 2, usbY + 1);
+      this.ctx.lineTo(usbX + usbW - 2, usbY + 1);
+      this.ctx.stroke();
+
+      // Top-Down Details: Mittige Falznaht & Grounding-Prägungen
+      this.ctx.strokeStyle = '#B0BEC5';
+      this.ctx.lineWidth = 0.8;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, usbY + 3);
+      this.ctx.lineTo(0, usbY + usbH - 3);
+      this.ctx.stroke();
+
+      this.ctx.fillStyle = '#90A4AE';
+      this.ctx.fillRect(-usbW * 0.28, usbY + usbH * 0.35, hs * 0.25, hs * 0.35);
+      this.ctx.fillRect(usbW * 0.28 - hs * 0.25, usbY + usbH * 0.35, hs * 0.25, hs * 0.35);
 
       // 3. Haupt-IC TP4056
       const tpY = boardTop + hs * 3.65;
@@ -1745,83 +1777,91 @@ export class PerfBoardCanvas {
     const cx = (sx0 + sx1) / 2;
     const cy = (sy0 + sy1) / 2;
 
-    const dx = e.x - s.x;
-    const dy = e.y - s.y;
-    const isHorizontal = Math.abs(dx) >= Math.abs(dy);
+    const spanPx = Math.hypot(sx1 - sx0, sy1 - sy0);
+    const angle = Math.atan2(sy1 - sy0, sx1 - sx0);
 
-    // Gehäusemaße (6.0 x 3.5 mm)
-    const bw = isHorizontal ? hs * 2.36 : hs * 1.38;
-    const bh = isHorizontal ? hs * 1.38 : hs * 2.36;
+    this.ctx.save();
+    this.ctx.translate(cx, cy);
+    this.ctx.rotate(angle);
 
-    // 1. SMD-Lötlaschen
+    // Gehäusemaße Top-Down CAD: 6.0 x 3.5 mm (Liegend)
+    const bw = hs * 2.36; // 6.0 mm Länge entlang der Anschlüsse
+    const bh = hs * 1.38; // 3.5 mm Gehäusetiefe
+    const halfSpan = spanPx / 2;
+
+    // 1. SMD Lötlaschen / Gull-Wing Leads zu den Pads
     this.ctx.strokeStyle = '#CFD8DC';
     this.ctx.lineWidth = Math.max(2.5, hs * 0.22);
     this.ctx.lineCap = 'round';
     this.ctx.beginPath();
-    if (isHorizontal) {
-      this.ctx.moveTo(sx0, sy0);
-      this.ctx.lineTo(cx - bw * 0.45, cy);
-      this.ctx.moveTo(sx1, sy1);
-      this.ctx.lineTo(cx + bw * 0.45, cy);
-    } else {
-      this.ctx.moveTo(sx0, sy0);
-      this.ctx.lineTo(cx, cy - bh * 0.45);
-      this.ctx.moveTo(sx1, sy1);
-      this.ctx.lineTo(cx, cy + bh * 0.45);
-    }
+    // Linkes Pad zu Gehäuse
+    this.ctx.moveTo(-halfSpan, 0);
+    this.ctx.lineTo(-bw * 0.45, 0);
+    // Rechtes Pad zu Gehäuse
+    this.ctx.moveTo(halfSpan, 0);
+    this.ctx.lineTo(bw * 0.45, 0);
     this.ctx.stroke();
 
-    // Lötstellen-Punkte an den Pads
+    // Lötstellen-Punkte auf den Pads
     const padDotR = Math.max(2.5, hs * 0.16);
     this.ctx.fillStyle = '#ECEFF1';
     this.ctx.beginPath();
-    this.ctx.arc(sx0, sy0, padDotR, 0, Math.PI * 2);
-    this.ctx.arc(sx1, sy1, padDotR, 0, Math.PI * 2);
+    this.ctx.arc(-halfSpan, 0, padDotR, 0, Math.PI * 2);
+    this.ctx.arc(halfSpan, 0, padDotR, 0, Math.PI * 2);
     this.ctx.fill();
 
-    // 2. Herausragender Knebel / Drücker (Stößel 3.0 x 1.5 mm, Höhe 5 mm)
+    // 2. Horizontale Betätigung / 5mm Knebel (Plunger / Actuator ragt nach vorne heraus)
+    // 5mm Länge = hs * 1.95, Breite = hs * 0.75
+    const actLen = hs * 1.95;
+    const actW = hs * 0.75;
+    const actY = -bh / 2 - actLen;
+
+    // Knebel-Schaft
     this.ctx.fillStyle = '#ECEFF1';
-    this.ctx.strokeStyle = '#78909C';
+    this.ctx.strokeStyle = '#90A4AE';
     this.ctx.lineWidth = 1;
     this.ctx.beginPath();
-    if (isHorizontal) {
-      const btnW = hs * 1.18;
-      const btnH = hs * 0.55;
-      const btnY = (dx >= 0) ? cy - bh / 2 - btnH : cy + bh / 2;
-      this.ctx.roundRect(cx - btnW / 2, btnY, btnW, btnH, 2);
-    } else {
-      const btnW = hs * 0.55;
-      const btnH = hs * 1.18;
-      const btnX = (dy >= 0) ? cx + bw / 2 : cx - bw / 2 - btnW;
-      this.ctx.roundRect(btnX, cy - btnH / 2, btnW, btnH, 2);
-    }
+    this.ctx.roundRect(-actW / 2, actY, actW, actLen + 1, 2);
     this.ctx.fill();
     this.ctx.stroke();
 
-    // 3. Hauptkörper (Dunkler Thermoplast)
+    // Knebel-Spitze / Kappe (Kopffläche)
+    const capW = actW * 1.15;
+    const capH = Math.max(2.5, hs * 0.3);
+    this.ctx.fillStyle = '#CFD8DC';
+    this.ctx.strokeStyle = '#78909C';
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    this.ctx.roundRect(-capW / 2, actY - capH * 0.4, capW, capH, 1.5);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // 3. Hauptkörper (Dunkler Thermoplast 6.0 x 3.5 mm)
     this.ctx.fillStyle = '#1E1E1E';
     this.ctx.strokeStyle = '#37474F';
     this.ctx.lineWidth = 1.2;
     this.ctx.beginPath();
-    this.ctx.roundRect(cx - bw / 2, cy - bh / 2, bw, bh, 3);
+    this.ctx.roundRect(-bw / 2, -bh / 2, bw, bh, 2.5);
     this.ctx.fill();
     this.ctx.stroke();
 
-    // 4. Metallische Abdeckung / Silberner Deckel
-    const mw = bw * 0.72;
-    const mh = bh * 0.72;
-    this.ctx.fillStyle = '#78909C';
-    this.ctx.strokeStyle = '#90A4AE';
+    // 4. Stanzblech / Silberne Deckplatte (Draufsicht: glatte Metallplatte mit Nieten)
+    const mw = bw * 0.82;
+    const mh = bh * 0.78;
+    this.ctx.fillStyle = '#B0BEC5';
+    this.ctx.strokeStyle = '#78909C';
     this.ctx.lineWidth = 0.8;
     this.ctx.beginPath();
-    this.ctx.roundRect(cx - mw / 2, cy - mh / 2, mw, mh, 2);
+    this.ctx.roundRect(-mw / 2, -mh / 2, mw, mh, 2);
     this.ctx.fill();
     this.ctx.stroke();
 
-    // Zentrierter kleiner runder Schaltpunkt
-    this.ctx.fillStyle = '#263238';
+    // Metallische Haltenasen / Nieten an den Seiten (KEIN runder Druckknopf auf der Oberseite!)
+    this.ctx.fillStyle = '#546E7A';
+    const rivetR = Math.max(1.2, hs * 0.08);
     this.ctx.beginPath();
-    this.ctx.arc(cx, cy, hs * 0.18, 0, Math.PI * 2);
+    this.ctx.arc(-mw * 0.32, 0, rivetR, 0, Math.PI * 2);
+    this.ctx.arc(mw * 0.32, 0, rivetR, 0, Math.PI * 2);
     this.ctx.fill();
 
     // Selektions-Aura
@@ -1829,14 +1869,16 @@ export class PerfBoardCanvas {
       this.ctx.strokeStyle = '#00E676';
       this.ctx.lineWidth = 2;
       this.ctx.beginPath();
-      this.ctx.roundRect(cx - bw / 2 - 2, cy - bh / 2 - 2, bw + 4, bh + 4, 4);
+      this.ctx.roundRect(-bw / 2 - 2, -bh / 2 - 2, bw + 4, bh + 4, 4);
       this.ctx.stroke();
     }
 
     // Beschriftung
     this.ctx.fillStyle = '#E0E0E0';
     this.ctx.font = '10px sans-serif';
-    this.ctx.fillText(comp.designator, cx - 10, cy - bh / 2 - hs * 0.65);
+    this.ctx.fillText(comp.designator, -10, bh / 2 + hs * 0.55);
+
+    this.ctx.restore();
   }
 
   private renderPinHeaderBottom(comp: PlacedComponent, isSelected: boolean): void {
