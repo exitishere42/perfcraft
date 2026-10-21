@@ -86,6 +86,20 @@
                 <version>3.2.5</version>
             </plugin>
 
+            <!-- JAR Plugin for Main-Class Manifest -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>de.exit.perfcraft.Main</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
             <!-- Fat-JAR Packaging -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

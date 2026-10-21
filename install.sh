@@ -106,7 +106,22 @@ cat > "$INSTALL_DIR/run.sh" << EOF
 #!/usr/bin/env bash
 SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 cd "\$SCRIPT_DIR"
-exec java -jar "\$SCRIPT_DIR/$JAR_NAME" "\$@"
+
+JAR_PATH="\$SCRIPT_DIR/$JAR_NAME"
+if [ ! -f "\$JAR_PATH" ]; then
+    JAR_PATH="\$(ls -t "\$SCRIPT_DIR"/perfcraft-*-all.jar 2>/dev/null | head -n 1)"
+fi
+
+if [ -f "\$JAR_PATH" ]; then
+    exec java -cp "\$JAR_PATH" de.exit.perfcraft.Main "\$@" 2>/dev/null || exec java -jar "\$JAR_PATH" "\$@"
+fi
+
+if [ -f "\$SCRIPT_DIR/$APPIMAGE_NAME" ] && [ -x "\$SCRIPT_DIR/$APPIMAGE_NAME" ]; then
+    exec "\$SCRIPT_DIR/$APPIMAGE_NAME" "\$@"
+fi
+
+echo "[FEHLER] Keine ausfuehrbare PerfCraft JAR gefunden in \$SCRIPT_DIR"
+exit 1
 EOF
 chmod +x "$INSTALL_DIR/run.sh"
 
