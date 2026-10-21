@@ -1787,7 +1787,7 @@ export class PerfBoardCanvas {
     this.ctx.translate(cx, cy);
     this.ctx.rotate(angle);
 
-    // Gehäusemaße Top-Down CAD: 6.0 x 3.5 mm (Liegend)
+    // Gehäusemaße Top-Down CAD: 6.0 x 3.5 mm (Standard SMD-Taster von oben)
     const bw = hs * 2.36; // 6.0 mm Länge entlang der Anschlüsse
     const bh = hs * 1.38; // 3.5 mm Gehäusetiefe
     const halfSpan = spanPx / 2;
@@ -1797,10 +1797,8 @@ export class PerfBoardCanvas {
     this.ctx.lineWidth = Math.max(2.5, hs * 0.22);
     this.ctx.lineCap = 'round';
     this.ctx.beginPath();
-    // Linkes Pad zu Gehäuse
     this.ctx.moveTo(-halfSpan, 0);
     this.ctx.lineTo(-bw * 0.45, 0);
-    // Rechtes Pad zu Gehäuse
     this.ctx.moveTo(halfSpan, 0);
     this.ctx.lineTo(bw * 0.45, 0);
     this.ctx.stroke();
@@ -1813,59 +1811,56 @@ export class PerfBoardCanvas {
     this.ctx.arc(halfSpan, 0, padDotR, 0, Math.PI * 2);
     this.ctx.fill();
 
-    // 2. Horizontale Betätigung / 5mm Knebel (Plunger / Actuator ragt nach vorne heraus)
-    // 5mm Länge = hs * 1.95, Breite = hs * 0.75
-    const actLen = hs * 1.95;
-    const actW = hs * 0.75;
-    const actY = -bh / 2 - actLen;
-
-    // Knebel-Schaft
-    this.ctx.fillStyle = '#ECEFF1';
-    this.ctx.strokeStyle = '#90A4AE';
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-    this.ctx.roundRect(-actW / 2, actY, actW, actLen + 1, 2);
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // Knebel-Spitze / Kappe (Kopffläche)
-    const capW = actW * 1.15;
-    const capH = Math.max(2.5, hs * 0.3);
-    this.ctx.fillStyle = '#CFD8DC';
-    this.ctx.strokeStyle = '#78909C';
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-    this.ctx.roundRect(-capW / 2, actY - capH * 0.4, capW, capH, 1.5);
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // 3. Hauptkörper (Dunkler Thermoplast 6.0 x 3.5 mm)
+    // 2. Hauptkörper (Schwarzer Thermoplast 6.0 x 3.5 mm)
     this.ctx.fillStyle = '#1E1E1E';
-    this.ctx.strokeStyle = '#37474F';
-    this.ctx.lineWidth = 1.2;
+    this.ctx.strokeStyle = '#121212';
+    this.ctx.lineWidth = 1.0;
     this.ctx.beginPath();
     this.ctx.roundRect(-bw / 2, -bh / 2, bw, bh, 2.5);
     this.ctx.fill();
     this.ctx.stroke();
 
-    // 4. Stanzblech / Silberne Deckplatte (Draufsicht: glatte Metallplatte mit Nieten)
-    const mw = bw * 0.82;
-    const mh = bh * 0.78;
-    this.ctx.fillStyle = '#B0BEC5';
-    this.ctx.strokeStyle = '#78909C';
+    // 3. Silberner Metall-Deckrahmen (Stanzblech mit seitlichen Aussparungen wie im Original)
+    const mw = bw * 0.88;
+    const mh = bh * 0.86;
+    this.ctx.fillStyle = '#CFD8DC';
+    this.ctx.strokeStyle = '#90A4AE';
     this.ctx.lineWidth = 0.8;
     this.ctx.beginPath();
     this.ctx.roundRect(-mw / 2, -mh / 2, mw, mh, 2);
     this.ctx.fill();
     this.ctx.stroke();
 
-    // Metallische Haltenasen / Nieten an den Seiten (KEIN runder Druckknopf auf der Oberseite!)
-    this.ctx.fillStyle = '#546E7A';
-    const rivetR = Math.max(1.2, hs * 0.08);
+    // Vier Aussparungen / Stanzlaschen an den Ecken des Blechs
+    this.ctx.fillStyle = '#263238';
+    const notchW = mw * 0.18;
+    const notchH = mh * 0.22;
+    this.ctx.fillRect(-mw / 2, -mh / 2, notchW, notchH);
+    this.ctx.fillRect(mw / 2 - notchW, -mh / 2, notchW, notchH);
+    this.ctx.fillRect(-mw / 2, mh / 2 - notchH, notchW, notchH);
+    this.ctx.fillRect(mw / 2 - notchW, mh / 2 - notchH, notchW, notchH);
+
+    // 4. Zentraler rechteckiger Betätigungsknopf (Top-Down Draufsicht: von oben drückbar!)
+    const btnW = hs * 1.18; // ca. 3.0 mm
+    const btnH = hs * 0.60; // ca. 1.5 mm
+    // Äußerer Sockel / Schatten
+    this.ctx.fillStyle = '#121212';
     this.ctx.beginPath();
-    this.ctx.arc(-mw * 0.32, 0, rivetR, 0, Math.PI * 2);
-    this.ctx.arc(mw * 0.32, 0, rivetR, 0, Math.PI * 2);
+    this.ctx.roundRect(-btnW / 2 - 1, -btnH / 2 - 1, btnW + 2, btnH + 2, 2);
     this.ctx.fill();
+
+    // Knopf-Hauptfläche (Dunkler Kunststoff)
+    this.ctx.fillStyle = '#263238';
+    this.ctx.strokeStyle = '#37474F';
+    this.ctx.lineWidth = 0.8;
+    this.ctx.beginPath();
+    this.ctx.roundRect(-btnW / 2, -btnH / 2, btnW, btnH, 1.5);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // Feines Glanzlicht auf der Oberseite
+    this.ctx.fillStyle = '#455A64';
+    this.ctx.fillRect(-btnW / 2 + 1.5, -btnH / 2 + 1, btnW - 3, 1.2);
 
     // Selektions-Aura
     if (isSelected) {
@@ -1879,7 +1874,7 @@ export class PerfBoardCanvas {
     // Beschriftung
     this.ctx.fillStyle = '#E0E0E0';
     this.ctx.font = '10px sans-serif';
-    this.ctx.fillText(comp.designator, -10, bh / 2 + hs * 0.55);
+    this.ctx.fillText(comp.designator, -10, -bh / 2 - 4);
 
     this.ctx.restore();
   }

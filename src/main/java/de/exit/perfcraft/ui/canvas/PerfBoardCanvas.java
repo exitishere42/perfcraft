@@ -979,7 +979,7 @@ public class PerfBoardCanvas extends Canvas {
         gc.translate(cx, cy);
         gc.rotate(angleDeg);
 
-        // Gehäusemaße Top-Down CAD: 6.0 x 3.5 mm (Liegend)
+        // Gehäusemaße Top-Down CAD: 6.0 x 3.5 mm (Standard SMD-Taster von oben)
         double bw = hs * 2.36; // 6.0 mm Länge entlang der Anschlüsse
         double bh = hs * 1.38; // 3.5 mm Gehäusetiefe
         double halfSpan = spanPx / 2.0;
@@ -999,49 +999,48 @@ public class PerfBoardCanvas extends Canvas {
         gc.fillOval(-halfSpan - padDotR, -padDotR, padDotR * 2, padDotR * 2);
         gc.fillOval(halfSpan - padDotR, -padDotR, padDotR * 2, padDotR * 2);
 
-        // 2. Horizontale Betätigung / 5mm Knebel (Plunger / Actuator ragt nach vorne heraus)
-        // 5mm Länge = hs * 1.95, Breite = hs * 0.75
-        double actLen = hs * 1.95;
-        double actW = hs * 0.75;
-        double actY = -bh / 2.0 - actLen;
-
-        // Knebel-Schaft
-        gc.setFill(Color.web("#ECEFF1"));
-        gc.fillRoundRect(-actW / 2.0, actY, actW, actLen + 1.0, 2, 2);
-        gc.setStroke(Color.web("#90A4AE"));
-        gc.setLineWidth(1.0);
-        gc.strokeRoundRect(-actW / 2.0, actY, actW, actLen + 1.0, 2, 2);
-
-        // Knebel-Spitze / Kappe (Kopffläche)
-        double capW = actW * 1.15;
-        double capH = Math.max(2.5, hs * 0.3);
-        gc.setFill(Color.web("#CFD8DC"));
-        gc.fillRoundRect(-capW / 2.0, actY - capH * 0.4, capW, capH, 1.5, 1.5);
-        gc.setStroke(Color.web("#78909C"));
-        gc.setLineWidth(1.0);
-        gc.strokeRoundRect(-capW / 2.0, actY - capH * 0.4, capW, capH, 1.5, 1.5);
-
-        // 3. Hauptkörper (Dunkler Thermoplast 6.0 x 3.5 mm)
+        // 2. Hauptkörper (Schwarzer Thermoplast 6.0 x 3.5 mm)
         gc.setFill(Color.web("#1E1E1E"));
         gc.fillRoundRect(-bw / 2.0, -bh / 2.0, bw, bh, 2.5, 2.5);
-        gc.setStroke(Color.web("#37474F"));
-        gc.setLineWidth(1.2);
+        gc.setStroke(Color.web("#121212"));
+        gc.setLineWidth(1.0);
         gc.strokeRoundRect(-bw / 2.0, -bh / 2.0, bw, bh, 2.5, 2.5);
 
-        // 4. Stanzblech / Silberne Deckplatte (Draufsicht: glatte Metallplatte mit Nieten)
-        double mw = bw * 0.82;
-        double mh = bh * 0.78;
-        gc.setFill(Color.web("#B0BEC5"));
+        // 3. Silberner Metall-Deckrahmen (Stanzblech mit seitlichen Aussparungen wie im Original)
+        double mw = bw * 0.88;
+        double mh = bh * 0.86;
+        gc.setFill(Color.web("#CFD8DC"));
         gc.fillRoundRect(-mw / 2.0, -mh / 2.0, mw, mh, 2, 2);
-        gc.setStroke(Color.web("#78909C"));
+        gc.setStroke(Color.web("#90A4AE"));
         gc.setLineWidth(0.8);
         gc.strokeRoundRect(-mw / 2.0, -mh / 2.0, mw, mh, 2, 2);
 
-        // Metallische Nieten an den Seiten (KEIN runder Druckknopf auf der Oberseite!)
-        gc.setFill(Color.web("#546E7A"));
-        double rivetR = Math.max(1.2, hs * 0.08);
-        gc.fillOval(-mw * 0.32 - rivetR, -rivetR, rivetR * 2, rivetR * 2);
-        gc.fillOval(mw * 0.32 - rivetR, -rivetR, rivetR * 2, rivetR * 2);
+        // Vier Aussparungen / Stanzlaschen an den Ecken des Blechs
+        gc.setFill(Color.web("#263238"));
+        double notchW = mw * 0.18;
+        double notchH = mh * 0.22;
+        gc.fillRect(-mw / 2.0, -mh / 2.0, notchW, notchH);
+        gc.fillRect(mw / 2.0 - notchW, -mh / 2.0, notchW, notchH);
+        gc.fillRect(-mw / 2.0, mh / 2.0 - notchH, notchW, notchH);
+        gc.fillRect(mw / 2.0 - notchW, mh / 2.0 - notchH, notchW, notchH);
+
+        // 4. Zentraler rechteckiger Betätigungsknopf (Top-Down Draufsicht: von oben drückbar!)
+        double btnW = hs * 1.18; // ca. 3.0 mm
+        double btnH = hs * 0.60; // ca. 1.5 mm
+        // Äußerer Sockel / Schatten
+        gc.setFill(Color.web("#121212"));
+        gc.fillRoundRect(-btnW / 2.0 - 1, -btnH / 2.0 - 1, btnW + 2, btnH + 2, 2, 2);
+
+        // Knopf-Hauptfläche (Dunkler Kunststoff)
+        gc.setFill(Color.web("#263238"));
+        gc.fillRoundRect(-btnW / 2.0, -btnH / 2.0, btnW, btnH, 1.5, 1.5);
+        gc.setStroke(Color.web("#37474F"));
+        gc.setLineWidth(0.8);
+        gc.strokeRoundRect(-btnW / 2.0, -btnH / 2.0, btnW, btnH, 1.5, 1.5);
+
+        // Feines Glanzlicht auf der Oberseite
+        gc.setFill(Color.web("#455A64"));
+        gc.fillRect(-btnW / 2.0 + 1.5, -btnH / 2.0 + 1, btnW - 3, 1.2);
 
         // Selektions-Aura
         if (isSelected) {
@@ -1052,7 +1051,7 @@ public class PerfBoardCanvas extends Canvas {
 
         // Beschriftung
         gc.setFill(Color.web("#E0E0E0"));
-        gc.fillText(comp.getDesignator(), -10, bh / 2.0 + hs * 0.55);
+        gc.fillText(comp.getDesignator(), -10, -bh / 2.0 - 4);
 
         gc.restore();
     }
