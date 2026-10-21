@@ -4,7 +4,7 @@ chcp 65001 >nul 2>&1
 
 set "REPO=exitishere42/perfcraft"
 set "INSTALL_DIR=%USERPROFILE%\perfcraft"
-set "JAR_NAME=perfcraft-1.0.3-all.jar"
+set "JAR_NAME=perfcraft-1.0.4-all.jar"
 set "RELEASE_URL=https://github.com/%REPO%/releases/latest/download"
 set "RAW_URL=https://raw.githubusercontent.com/%REPO%/main"
 
@@ -47,6 +47,7 @@ echo [*] Lade perfcraft und Logos herunter...
 powershell -NoProfile -Command ^
     "$ProgressPreference = 'SilentlyContinue'; " ^
     "Invoke-WebRequest -Uri '%RELEASE_URL%/%JAR_NAME%' -OutFile '%INSTALL_DIR%\%JAR_NAME%'; " ^
+    "Invoke-WebRequest -Uri '%RELEASE_URL%/perfcraft.exe' -OutFile '%INSTALL_DIR%\perfcraft.exe'; " ^
     "Invoke-WebRequest -Uri '%RAW_URL%/perfcraft.ico' -OutFile '%INSTALL_DIR%\perfcraft.ico'; " ^
     "Invoke-WebRequest -Uri '%RAW_URL%/perfcraft.png' -OutFile '%INSTALL_DIR%\perfcraft.png'; " ^
     "Invoke-WebRequest -Uri '%RAW_URL%/perf-doc.ico' -OutFile '%INSTALL_DIR%\perf-doc.ico'; " ^
@@ -72,14 +73,12 @@ echo start "" javaw -jar "%%~dp0%JAR_NAME%" %%*
 echo [*] Erstelle Startmenue- und Desktop-Eintrag mit Logo...
 powershell -NoProfile -Command ^
     "$ws = New-Object -ComObject WScript.Shell; " ^
-    "$javaw = (Get-Command javaw -ErrorAction SilentlyContinue).Source; " ^
-    "if (-not $javaw) { $javaw = 'javaw.exe' }; " ^
+    "$exePath = '%INSTALL_DIR%\perfcraft.exe'; " ^
     "$smPath = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\perfcraft.lnk'; " ^
     "$dtPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'perfcraft.lnk'; " ^
     "foreach ($lnkPath in @($smPath, $dtPath)) { " ^
     "  $s = $ws.CreateShortcut($lnkPath); " ^
-    "  $s.TargetPath = $javaw; " ^
-    "  $s.Arguments = '-jar \"' + '%INSTALL_DIR%\%JAR_NAME%' + '\"'; " ^
+    "  $s.TargetPath = $exePath; " ^
     "  $s.WorkingDirectory = '%INSTALL_DIR%'; " ^
     "  $s.IconLocation = '%INSTALL_DIR%\perfcraft.ico,0'; " ^
     "  $s.Description = 'PerfCraft - Perfboard & Stripboard CAD Designer'; " ^
@@ -91,15 +90,15 @@ powershell -NoProfile -Command ^
 :: ------------------------------------------------------------------------------
 echo [*] Registriere .perf Dateityp mit eigenem Dokumenten-Icon...
 powershell -NoProfile -Command ^
-    "$javaw = (Get-Command javaw -ErrorAction SilentlyContinue).Source; " ^
-    "if (-not $javaw) { $javaw = 'javaw.exe' }; " ^
-    "$jar = '%INSTALL_DIR%\%JAR_NAME%'; " ^
+    "$exe = '%INSTALL_DIR%\perfcraft.exe'; " ^
     "$docIcon = '%INSTALL_DIR%\perf-doc.ico,0'; " ^
     "New-Item -Path 'HKCU:\Software\Classes\.perf' -Value 'PerfCraft.Project' -Force | Out-Null; " ^
     "New-Item -Path 'HKCU:\Software\Classes\PerfCraft.Project' -Value 'PerfCraft Project' -Force | Out-Null; " ^
     "New-Item -Path 'HKCU:\Software\Classes\PerfCraft.Project\DefaultIcon' -Value $docIcon -Force | Out-Null; " ^
-    "New-Item -Path 'HKCU:\Software\Classes\PerfCraft.Project\shell\open\command' -Value ('\"' + $javaw + '\" -jar \"' + $jar + '\" \"%1\"') -Force | Out-Null; " ^
-    "Write-Output '[OK] .perf Dateiverknuepfung eingerichtet.'"
+    "New-Item -Path 'HKCU:\Software\Classes\PerfCraft.Project\shell\open\command' -Value ('\"' + $exe + '\" \"%1\"') -Force | Out-Null; " ^
+    "New-Item -Path 'HKCU:\Software\Classes\Applications\perfcraft.exe\SupportedTypes' -Force | Out-Null; " ^
+    "New-ItemProperty -Path 'HKCU:\Software\Classes\Applications\perfcraft.exe\SupportedTypes' -Name '.perf' -Value '' -Force | Out-Null; " ^
+    "Write-Output '[OK] .perf Dateiverknuepfung mit perfcraft.exe eingerichtet.'"
 
 echo ==================================================================
 echo   [OK] Installation erfolgreich abgeschlossen!
