@@ -503,13 +503,6 @@ public class PerfBoardCanvas extends Canvas {
             }
         }
 
-        // Subtiler FR-4 Typenaufdruck in der freien Ecke
-        gc.setFont(Font.font("System", FontWeight.BOLD, Math.max(7.0, hs * 0.32)));
-        gc.setTextAlign(TextAlignment.LEFT);
-        gc.setFill(Color.rgb(255, 255, 255, 0.50));
-        String boardLabel = ((cols == 24 && rows == 18) || (cols == 18 && rows == 24)) ? "5x7CM FR-4" : cols + "x" + rows + " FR-4";
-        gc.fillText(boardLabel, boardX + marginX * 1.1, boardY + marginY * 0.22);
-
         // 2. SILBER-PADS (Nutzer-Vorgabe: SILBER statt Gold!)
         double padR = Math.max(3.0, hs * 0.38);
         double drillR = Math.max(1.5, hs * 0.18);
@@ -667,15 +660,27 @@ public class PerfBoardCanvas extends Canvas {
             double hx = transform.gridToScreenX(currentHoverGrid.x());
             double hy = transform.gridToScreenY(currentHoverGrid.y());
 
+            gc.save();
+            Font font = Font.font("System", FontWeight.NORMAL, 11.0);
+            gc.setFont(font);
+            javafx.scene.text.Text textNode = new javafx.scene.text.Text(hoveredTerminalText);
+            textNode.setFont(font);
+            double tw = Math.ceil(textNode.getLayoutBounds().getWidth()) + 16.0;
+            double th = 22.0;
+            double bx = hx + 12.0;
+            double by = hy - 24.0;
+
             gc.setFill(Color.web("#212121"));
             gc.setStroke(Color.web("#00C853"));
             gc.setLineWidth(1.0);
-            double tw = hoveredTerminalText.length() * 6.5 + 12;
-            gc.fillRoundRect(hx + 10, hy - 18, tw, 20, 4, 4);
-            gc.strokeRoundRect(hx + 10, hy - 18, tw, 20, 4, 4);
+            gc.fillRoundRect(bx, by, tw, th, 4, 4);
+            gc.strokeRoundRect(bx, by, tw, th, 4, 4);
 
             gc.setFill(Color.web("#FFFFFF"));
-            gc.fillText(hoveredTerminalText, hx + 16, hy - 4);
+            gc.setTextAlign(TextAlignment.LEFT);
+            gc.setTextBaseline(javafx.geometry.VPos.CENTER);
+            gc.fillText(hoveredTerminalText, bx + 8.0, by + th / 2.0);
+            gc.restore();
         }
     }
 

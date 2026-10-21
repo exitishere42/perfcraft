@@ -709,13 +709,6 @@ export class PerfBoardCanvas {
       }
     }
 
-    // Subtiler FR-4 Typenaufdruck in der freien Ecke (oberhalb oder seitlich der Montagelöcher, niemals über Pads!)
-    this.ctx.font = `600 ${Math.max(7, Math.round(hs * 0.32))}px sans-serif`;
-    this.ctx.textAlign = 'left';
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.50)';
-    const boardLabel = ((cols === 24 && rows === 18) || (cols === 18 && rows === 24)) ? '5x7CM FR-4' : `${cols}x${rows} FR-4`;
-    this.ctx.fillText(boardLabel, boardX + marginX * 1.1, boardY + marginY * 0.22);
-
     // 2. Silber-Pads (Silber #CFD8DC statt Gold!)
     const holePadR = Math.max(3.0, hs * 0.38);
     const drillR = Math.max(1.5, hs * 0.18);
@@ -932,17 +925,27 @@ export class PerfBoardCanvas {
     if (this.hoveredTerminalText && this.currentHoverGrid) {
       const hx = this.transform.gridToScreenX(this.currentHoverGrid.x);
       const hy = this.transform.gridToScreenY(this.currentHoverGrid.y);
+      this.ctx.save();
+      this.ctx.font = '500 11px sans-serif';
+      this.ctx.textAlign = 'left';
+      this.ctx.textBaseline = 'middle';
+      const textMetrics = this.ctx.measureText(this.hoveredTerminalText);
+      const tw = Math.ceil(textMetrics.width) + 16;
+      const th = 22;
+      const bx = hx + 12;
+      const by = hy - 24;
+
       this.ctx.fillStyle = '#212121';
       this.ctx.strokeStyle = '#00C853';
       this.ctx.lineWidth = 1;
-      const tw = this.hoveredTerminalText.length * 6.5 + 12;
       this.ctx.beginPath();
-      this.ctx.roundRect(hx + 10, hy - 18, tw, 20, 4);
+      this.ctx.roundRect(bx, by, tw, th, 4);
       this.ctx.fill();
       this.ctx.stroke();
+
       this.ctx.fillStyle = '#FFFFFF';
-      this.ctx.font = '11px sans-serif';
-      this.ctx.fillText(this.hoveredTerminalText, hx + 16, hy - 4);
+      this.ctx.fillText(this.hoveredTerminalText, bx + 8, by + th / 2);
+      this.ctx.restore();
     }
   }
 
