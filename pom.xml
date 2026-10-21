@@ -5,7 +5,7 @@
 
     <groupId>de.exit</groupId>
     <artifactId>perfcraft</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.1</version>
     <packaging>jar</packaging>
 
     <name>PerfCraft</name>
@@ -14,6 +14,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
+        <main.class>de.exit.perfcraft.Main</main.class>
         <javafx.version>21.0.2</javafx.version>
         <jackson.version>2.17.0</jackson.version>
         <junit.version>5.10.2</junit.version>
@@ -185,12 +186,23 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-all.jar</outputFile>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>all</shadedClassifierName>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>de.exit.perfcraft.Main</mainClass>
+                                    <mainClass>${main.class}</mainClass>
                                 </transformer>
                             </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
                         </configuration>
                     </execution>
                 </executions>

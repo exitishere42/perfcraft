@@ -10,7 +10,7 @@ set -e
 REPO="exitishere42/perfcraft"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/perfcraft}"
 APP_NAME="perfcraft"
-JAR_NAME="perfcraft-1.2.0-all.jar"
+JAR_NAME="perfcraft-1.2.1-all.jar"
 DETECTED_JAR=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null | grep -o '"name": *"perfcraft-[^"]*-all\.jar"' | head -n 1 | cut -d '"' -f 4 || true)
 if [ -n "$DETECTED_JAR" ]; then
     JAR_NAME="$DETECTED_JAR"
@@ -184,7 +184,7 @@ Path=$INSTALL_DIR
 Terminal=false
 Categories=Development;Engineering;Electronics;
 StartupNotify=true
-StartupWMClass=de.exit.perfcraft.Main
+StartupWMClass=de.exit.perfcraft.PerfCraftApp
 MimeType=application/x-perfcraft-project;
 EOF
 chmod +x "$DESKTOP_FILE"
