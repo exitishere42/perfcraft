@@ -14,6 +14,31 @@ import { HistoryManager } from './history.ts';
 
 export type ActiveTool = 'SELECT' | 'WIRE' | 'COMPONENT';
 
+export interface BomItem {
+  pos: number;
+  type: ComponentType;
+  typeName: string;
+  value: string;
+  designators: string[];
+  qty: number;
+}
+
+export function getComponentTypeName(type: ComponentType): string {
+  switch (type) {
+    case 'RESISTOR_AXIAL': return 'Widerstand (Axial)';
+    case 'CAPACITOR_CERAMIC': return 'Kondensator (Keramik)';
+    case 'LED': return 'LED (5mm THT)';
+    case 'DIODE': return 'Diode';
+    case 'IC_DIP': return 'IC / Sockel (DIP)';
+    case 'PIN_HEADER': return 'Stiftleiste (Pin Header)';
+    case 'TACTILE_SWITCH': return 'Taster (6x6mm THT)';
+    case 'TACTILE_SWITCH_SMD': return 'SMD-Taster (6x3.5mm)';
+    case 'ESP32_S3_ZERO': return 'ESP32-S3-Zero Modul';
+    case 'TP4056_CHARGER': return 'TP4056 USB-C Lader';
+    default: return type;
+  }
+}
+
 export class PerfBoardCanvas {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -576,7 +601,25 @@ export class PerfBoardCanvas {
     this.ctx.fillStyle = '#0E0E0E';
     this.ctx.fillRect(0, 0, w, h);
 
-    const cols = this.project.board.columns;
+    this.renderBoardView(this.ctx, this.transform, this.currentLayer, true);
+  }
+
+  public renderBoardView(
+    targetCtx: CanvasRenderingContext2D,
+    targetTransform: CoordinateTransform,
+    layer: BoardLayer,
+    isInteractive: boolean = false
+  ): void {
+    const prevCtx = this.ctx;
+    const prevTransform = this.transform;
+    const prevLayer = this.currentLayer;
+
+    this.ctx = targetCtx;
+    this.transform = targetTransform;
+    this.currentLayer = layer;
+
+    try {
+      const cols = this.project.board.columns;
     const rows = this.project.board.rows;
     const hs = this.transform.getHoleSpacingPx();
 
@@ -719,7 +762,7 @@ export class PerfBoardCanvas {
         const py = this.transform.gridToScreenY(r);
         const key = `${c},${r}`;
 
-        if (this.highlightedNet.has(key)) {
+        if (isInteractive && this.highlightedNet.has(key)) {
           this.ctx.fillStyle = '#FFEE58';
           this.ctx.beginPath();
           this.ctx.arc(px, py, holePadR + 3, 0, Math.PI * 2);
@@ -770,7 +813,7 @@ export class PerfBoardCanvas {
         }
 
         // Selektions-Aura
-        if (wire === this.selectedWire) {
+        if (isInteractive && wire === this.selectedWire) {
           this.ctx.strokeStyle = '#00E676';
           this.ctx.lineWidth = 7 * this.transform.getScale();
           this.ctx.beginPath();
@@ -795,7 +838,7 @@ export class PerfBoardCanvas {
     }
 
     // Wire live preview rubberband
-    if (this.activeTool === 'WIRE' && this.wireStartHole && this.currentHoverGrid) {
+    if (isInteractive && this.activeTool === 'WIRE' && this.wireStartHole && this.currentHoverGrid) {
       const isSilver = (this.activeWireKind === 'SILVER_WIRE');
       const previewCol = this.activeWireColor || (isSilver ? '#CFD8DC' : '#00C853');
       this.ctx.strokeStyle = previewCol;
@@ -812,14 +855,14 @@ export class PerfBoardCanvas {
     if (this.currentLayer === 'BOTTOM') {
       // Unterseite: Ausschließlich Pins und Lötstellen
       for (const comp of this.project.components) {
-        this.renderComponentBottomPins(comp, comp === this.selectedComponent);
+        this.renderComponentBottomPins(comp, isInteractive && comp === this.selectedComponent);
       }
     } else if (this.currentLayer === 'BOTH') {
       // Beide Seiten: Beide Ebenen semi-transparent überlagert
       this.ctx.save();
       this.ctx.globalAlpha = 0.55;
       for (const comp of this.project.components) {
-        this.renderComponentBottomPins(comp, comp === this.selectedComponent);
+        this.renderComponentBottomPins(comp, isInteractive && comp === this.selectedComponent);
       }
       this.ctx.restore();
 
@@ -827,19 +870,19 @@ export class PerfBoardCanvas {
       this.ctx.globalAlpha = 0.65;
       for (const comp of this.project.components) {
         if (comp.visible === false) continue;
-        this.renderComponent(comp, comp === this.selectedComponent);
+        this.renderComponent(comp, isInteractive && comp === this.selectedComponent);
       }
       this.ctx.restore();
     } else {
       // TOP: Ausschließlich Oberseite, absolut nichts von der Unterseite
       for (const comp of this.project.components) {
         if (comp.visible === false) continue;
-        this.renderComponent(comp, comp === this.selectedComponent);
+        this.renderComponent(comp, isInteractive && comp === this.selectedComponent);
       }
     }
 
     // 6. Tinkercad-Ghost Preview am Cursor
-    if (this.activeTool === 'COMPONENT' && this.currentHoverGrid) {
+    if (isInteractive && this.activeTool === 'COMPONENT' && this.currentHoverGrid) {
       this.ctx.save();
       this.ctx.globalAlpha = 0.60;
       if (this.activeComponentType === 'PIN_HEADER') {
@@ -922,7 +965,7 @@ export class PerfBoardCanvas {
     }
 
     // 7. Tinkercad Terminal Badge
-    if (this.hoveredTerminalText && this.currentHoverGrid) {
+    if (isInteractive && this.hoveredTerminalText && this.currentHoverGrid) {
       const hx = this.transform.gridToScreenX(this.currentHoverGrid.x);
       const hy = this.transform.gridToScreenY(this.currentHoverGrid.y);
       this.ctx.save();
@@ -946,6 +989,11 @@ export class PerfBoardCanvas {
       this.ctx.fillStyle = '#FFFFFF';
       this.ctx.fillText(this.hoveredTerminalText, bx + 8, by + th / 2);
       this.ctx.restore();
+    }
+    } finally {
+      this.ctx = prevCtx;
+      this.transform = prevTransform;
+      this.currentLayer = prevLayer;
     }
   }
 
@@ -2288,6 +2336,328 @@ export class PerfBoardCanvas {
 
   public getProject(): PerfProject {
     return this.project;
+  }
+
+  public getBom(): BomItem[] {
+    const groups = new Map<string, { type: ComponentType; value: string; designators: string[] }>();
+    for (const c of this.project.components) {
+      const val = c.value || '';
+      const key = `${c.type}___${val}`;
+      let grp = groups.get(key);
+      if (!grp) {
+        grp = { type: c.type, value: val, designators: [] };
+        groups.set(key, grp);
+      }
+      grp.designators.push(c.designator);
+    }
+
+    const items: BomItem[] = [];
+    for (const grp of groups.values()) {
+      grp.designators.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      items.push({
+        pos: 1,
+        type: grp.type,
+        typeName: getComponentTypeName(grp.type),
+        value: grp.value || '–',
+        designators: grp.designators,
+        qty: grp.designators.length,
+      });
+    }
+
+    items.sort((a, b) => a.typeName.localeCompare(b.typeName) || a.value.localeCompare(b.value));
+    items.forEach((it, idx) => { it.pos = idx + 1; });
+    return items;
+  }
+
+  public exportAssemblySheet(): string {
+    const sheetWidth = 2160;
+    const padX = 40;
+    const padY = 40;
+    const contentW = sheetWidth - 2 * padX; // 2080px
+    const gap = 24;
+    const cardW = Math.floor((contentW - 2 * gap) / 3); // 677px
+
+    const cols = this.project.board.columns;
+    const rows = this.project.board.rows;
+
+    const boardAspect = (rows + 3.8) / (cols + 2.2);
+    const boardDrawW = cardW - 36;
+    const boardDrawH = Math.max(180, Math.round(boardDrawW * boardAspect));
+    const cardHeaderH = 48;
+    const cardH = boardDrawH + cardHeaderH + 20;
+
+    const bomItems = this.getBom();
+    const tableRowH = 32;
+    const tableHeaderH = 36;
+    const tableRowsH = Math.max(1, bomItems.length) * tableRowH;
+    const summaryH = 48;
+    const bomCardH = 50 + tableHeaderH + tableRowsH + summaryH + 20;
+
+    const headerH = 110;
+    const footerH = 40;
+    const sheetHeight = padY + headerH + 20 + cardH + 30 + bomCardH + 30 + footerH + padY;
+
+    const sheetCanvas = document.createElement('canvas');
+    sheetCanvas.width = sheetWidth;
+    sheetCanvas.height = sheetHeight;
+    const sCtx = sheetCanvas.getContext('2d')!;
+
+    // Background
+    sCtx.fillStyle = '#0F1115';
+    sCtx.fillRect(0, 0, sheetWidth, sheetHeight);
+
+    // Header
+    sCtx.fillStyle = '#00E676';
+    sCtx.font = '700 28px sans-serif';
+    sCtx.fillText('PerfCraft - Fertigungs- & Bestückungsplan', padX, padY + 30);
+
+    sCtx.fillStyle = '#FFFFFF';
+    sCtx.font = '600 20px sans-serif';
+    sCtx.fillText(`Projekt: ${this.project.name || 'Unbenannt'}`, padX, padY + 60);
+
+    sCtx.fillStyle = '#90A4AE';
+    sCtx.font = '500 13px sans-serif';
+    const pitchMm = 2.54;
+    const sizeMmW = (cols * pitchMm).toFixed(1);
+    const sizeMmH = (rows * pitchMm).toFixed(1);
+    const dateStr = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    sCtx.fillText(`Lochraster: ${cols} x ${rows} Pins (2.54 mm Pitch) | Platinenmaß: ${sizeMmW} x ${sizeMmH} mm | Erstellt: ${dateStr}`, padX, padY + 84);
+
+    // Divider
+    sCtx.strokeStyle = '#262C36';
+    sCtx.lineWidth = 1.5;
+    sCtx.beginPath();
+    sCtx.moveTo(padX, padY + 100);
+    sCtx.lineTo(padX + contentW, padY + 100);
+    sCtx.stroke();
+
+    // 3 Views
+    const viewsY = padY + headerH + 20;
+    const viewConfigs: Array<{
+      title: string;
+      sub: string;
+      dotCol: string;
+      layer: BoardLayer;
+      flipped: boolean;
+    }> = [
+      {
+        title: '1. FRONT (Top Layer - Bauteilseite)',
+        sub: 'Bestückungsansicht & Markierungen',
+        dotCol: '#00E676',
+        layer: 'TOP',
+        flipped: false,
+      },
+      {
+        title: '2. BACK (Bottom Layer - Lötseite)',
+        sub: 'Horizontal gespiegelt (Lötreferenz)',
+        dotCol: '#448AFF',
+        layer: 'BOTTOM',
+        flipped: true,
+      },
+      {
+        title: '3. OVERLAY (Both - Durchleuchtung)',
+        sub: 'Röntgenblick / Bauteile & Drähte',
+        dotCol: '#FFB74D',
+        layer: 'BOTH',
+        flipped: false,
+      },
+    ];
+
+    for (let i = 0; i < 3; i++) {
+      const cfg = viewConfigs[i];
+      const vx = padX + i * (cardW + gap);
+      const vy = viewsY;
+
+      // Card Background
+      sCtx.fillStyle = '#16191E';
+      sCtx.beginPath();
+      sCtx.roundRect(vx, vy, cardW, cardH, 10);
+      sCtx.fill();
+      sCtx.strokeStyle = '#262C36';
+      sCtx.lineWidth = 1.2;
+      sCtx.stroke();
+
+      // Card Header
+      sCtx.fillStyle = cfg.dotCol;
+      sCtx.beginPath();
+      sCtx.arc(vx + 22, vy + 24, 5, 0, Math.PI * 2);
+      sCtx.fill();
+
+      sCtx.fillStyle = '#FFFFFF';
+      sCtx.font = '700 14px sans-serif';
+      sCtx.textAlign = 'left';
+      sCtx.fillText(cfg.title, vx + 36, vy + 22);
+
+      sCtx.fillStyle = cfg.dotCol;
+      sCtx.font = '500 11px sans-serif';
+      sCtx.fillText(cfg.sub, vx + 36, vy + 38);
+
+      // Render Board View
+      const boardCanvas = document.createElement('canvas');
+      boardCanvas.width = boardDrawW;
+      boardCanvas.height = boardDrawH;
+      const bCtx = boardCanvas.getContext('2d')!;
+
+      const bTransform = new CoordinateTransform();
+      bTransform.setFlippedX(cfg.flipped, cols);
+      bTransform.resetView(boardDrawW, boardDrawH, cols, rows);
+
+      this.renderBoardView(bCtx, bTransform, cfg.layer, false);
+
+      sCtx.save();
+      sCtx.shadowColor = 'rgba(0, 0, 0, 0.40)';
+      sCtx.shadowBlur = 12;
+      sCtx.shadowOffsetY = 4;
+      sCtx.drawImage(boardCanvas, vx + 18, vy + cardHeaderH);
+      sCtx.restore();
+    }
+
+    // 4. BOM Table Card
+    const bomY = viewsY + cardH + 30;
+    sCtx.fillStyle = '#16191E';
+    sCtx.beginPath();
+    sCtx.roundRect(padX, bomY, contentW, bomCardH, 10);
+    sCtx.fill();
+    sCtx.strokeStyle = '#262C36';
+    sCtx.lineWidth = 1.2;
+    sCtx.stroke();
+
+    // BOM Header
+    sCtx.fillStyle = '#00E676';
+    sCtx.beginPath();
+    sCtx.arc(padX + 22, bomY + 26, 5, 0, Math.PI * 2);
+    sCtx.fill();
+
+    sCtx.fillStyle = '#FFFFFF';
+    sCtx.font = '700 18px sans-serif';
+    sCtx.textAlign = 'left';
+    sCtx.fillText('4. Stückliste / Bill of Materials (BOM)', padX + 36, bomY + 32);
+
+    // Columns
+    const tblX = padX + 20;
+    const tblY = bomY + 54;
+    const tblW = contentW - 40; // 2040px
+    const colPosW = 70;
+    const colTypW = 440;
+    const colValW = 340;
+    const colMengeW = 120;
+    const colDesW = tblW - (colPosW + colTypW + colValW + colMengeW); // 1070px
+
+    // Header Row
+    sCtx.fillStyle = '#1F242C';
+    sCtx.beginPath();
+    sCtx.roundRect(tblX, tblY, tblW, tableHeaderH, 6);
+    sCtx.fill();
+
+    sCtx.fillStyle = '#90A4AE';
+    sCtx.font = '600 12px sans-serif';
+    sCtx.textAlign = 'left';
+    sCtx.textBaseline = 'middle';
+    const thMidY = tblY + tableHeaderH / 2;
+    sCtx.fillText('POS', tblX + 16, thMidY);
+    sCtx.fillText('BAUTEIL / TYP', tblX + colPosW + 10, thMidY);
+    sCtx.fillText('WERT / MODELL', tblX + colPosW + colTypW + 10, thMidY);
+    sCtx.fillText('BEZEICHNER (DESIGNATORS)', tblX + colPosW + colTypW + colValW + 10, thMidY);
+    sCtx.textAlign = 'right';
+    sCtx.fillText('MENGE', tblX + tblW - 20, thMidY);
+    sCtx.textAlign = 'left';
+
+    // Rows
+    let curRowY = tblY + tableHeaderH + 2;
+    if (bomItems.length === 0) {
+      sCtx.fillStyle = '#181C22';
+      sCtx.fillRect(tblX, curRowY, tblW, tableRowH);
+      sCtx.fillStyle = '#90A4AE';
+      sCtx.font = 'italic 13px sans-serif';
+      sCtx.textBaseline = 'middle';
+      sCtx.fillText('Keine Bauteile platziert. Reines Lochraster-Board mit Verdrahtung.', tblX + 20, curRowY + tableRowH / 2);
+      curRowY += tableRowH;
+    } else {
+      for (let r = 0; r < bomItems.length; r++) {
+        const item = bomItems[r];
+        const rowBg = r % 2 === 0 ? '#181C22' : '#14171C';
+        sCtx.fillStyle = rowBg;
+        sCtx.fillRect(tblX, curRowY, tblW, tableRowH);
+
+        const rMidY = curRowY + tableRowH / 2;
+        sCtx.textBaseline = 'middle';
+
+        // Pos
+        sCtx.fillStyle = '#90A4AE';
+        sCtx.font = '500 12px sans-serif';
+        sCtx.fillText(String(item.pos), tblX + 16, rMidY);
+
+        // Typ
+        sCtx.fillStyle = '#FFFFFF';
+        sCtx.font = '600 13px sans-serif';
+        sCtx.fillText(item.typeName, tblX + colPosW + 10, rMidY);
+
+        // Wert
+        sCtx.fillStyle = '#00E676';
+        sCtx.font = '600 13px sans-serif';
+        sCtx.fillText(item.value, tblX + colPosW + colTypW + 10, rMidY);
+
+        // Bezeichner
+        sCtx.fillStyle = '#FFD54F';
+        sCtx.font = '500 12px monospace';
+        let desText = item.designators.join(', ');
+        while (sCtx.measureText(desText).width > colDesW - 20 && desText.length > 5) {
+          const lastComma = desText.lastIndexOf(',');
+          if (lastComma > 0) {
+            desText = desText.substring(0, lastComma) + ' ...';
+          } else {
+            desText = desText.substring(0, desText.length - 4) + '...';
+            break;
+          }
+        }
+        sCtx.fillText(desText, tblX + colPosW + colTypW + colValW + 10, rMidY);
+
+        // Menge
+        sCtx.fillStyle = '#FFFFFF';
+        sCtx.font = '700 13px sans-serif';
+        sCtx.textAlign = 'right';
+        sCtx.fillText(`${item.qty}x`, tblX + tblW - 20, rMidY);
+        sCtx.textAlign = 'left';
+
+        curRowY += tableRowH;
+      }
+    }
+
+    // Summary Bar
+    const sumY = curRowY + 8;
+    sCtx.fillStyle = '#121519';
+    sCtx.beginPath();
+    sCtx.roundRect(tblX, sumY, tblW, summaryH, 6);
+    sCtx.fill();
+    sCtx.strokeStyle = '#222832';
+    sCtx.lineWidth = 1;
+    sCtx.stroke();
+
+    const sumMidY = sumY + summaryH / 2;
+    const totalComponents = this.project.components.length;
+    const cableWires = this.project.wires.filter(w => w.kind !== 'SILVER_WIRE').length;
+    const silverWires = this.project.wires.filter(w => w.kind === 'SILVER_WIRE').length;
+
+    sCtx.textBaseline = 'middle';
+    sCtx.fillStyle = '#FFFFFF';
+    sCtx.font = '600 13px sans-serif';
+    sCtx.fillText(`Bauteile gesamt: ${totalComponents} (${bomItems.length} Positionen)`, tblX + 20, sumMidY);
+
+    sCtx.fillStyle = '#90A4AE';
+    sCtx.font = '500 13px sans-serif';
+    sCtx.fillText(`|    Verdrahtung: ${cableWires}x Kabel, ${silverWires}x Silberdraht-Brücken    |    Platine: ${cols}x${rows} (${sizeMmW}x${sizeMmH} mm)`, tblX + 320, sumMidY);
+
+    // Footer
+    sCtx.fillStyle = '#546E7A';
+    sCtx.font = '500 12px sans-serif';
+    sCtx.textBaseline = 'middle';
+    const footerY = sheetHeight - padY / 2;
+    sCtx.fillText('PerfCraft - Lochraster & Perfboard CAD Tool  •  https://exitishere42.github.io/perfcraft', padX, footerY);
+    sCtx.textAlign = 'right';
+    sCtx.fillText('Entwickelt für professionelle DIY-Elektronik & Dokumentation', padX + contentW, footerY);
+    sCtx.textAlign = 'left';
+
+    return sheetCanvas.toDataURL('image/png');
   }
 
   private isTp4056Pad(h1: HoleCoord, h2: HoleCoord): boolean {

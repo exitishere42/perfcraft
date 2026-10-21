@@ -120,12 +120,13 @@ document.getElementById('btnSave')?.addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
-// Export high-res PNG
+// Export high-res Assembly Sheet PNG (Front, Back, Both & BOM)
 document.getElementById('btnExport')?.addEventListener('click', () => {
-  const dataUrl = canvasEl.toDataURL('image/png');
+  const dataUrl = canvas.exportAssemblySheet();
   const a = document.createElement('a');
   a.href = dataUrl;
-  a.download = `${currentProject.name || 'perfcraft'}-render.png`;
+  const safeName = (currentProject.name || 'perfcraft').toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+  a.download = `${safeName}-assembly-sheet.png`;
   a.click();
 });
 
