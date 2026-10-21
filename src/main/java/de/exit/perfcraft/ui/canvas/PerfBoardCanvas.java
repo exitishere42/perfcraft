@@ -287,6 +287,11 @@ public class PerfBoardCanvas extends Canvas {
     private WireTrace findWireNear(double screenX, double screenY) {
         double maxDist = Math.max(8.0, transform.getHoleSpacingPx() * 0.4);
         for (WireTrace w : project.getWires()) {
+            boolean isSilver = (w.getKind() == WireKind.SILVER_WIRE);
+            boolean isBottomWire = isSilver || (w.getLayer() == BoardLayer.BOTTOM);
+            if (currentLayer == BoardLayer.TOP && isBottomWire) continue;
+            if (currentLayer == BoardLayer.BOTTOM && !isBottomWire) continue;
+
             if (w.getPoints().size() >= 2) {
                 var p1 = w.getPoints().get(0);
                 var p2 = w.getPoints().get(1);
@@ -410,7 +415,7 @@ public class PerfBoardCanvas extends Canvas {
         }
 
         // 3. Leitungen (Kabel und Silberdraht)
-        // Silberdraht (1.8px) liegt auf der Unterseite (Lötseite); Kabel (3.5px) primär auf der Oberseite
+        // TOP: Keine Unterseiten-Drähte | BOTTOM: Keine Oberseiten-Drähte | BOTH: Beide transparent
         for (WireTrace w : project.getWires()) {
             if (w.getPoints().size() >= 2) {
                 var p1 = w.getPoints().get(0);
@@ -422,19 +427,17 @@ public class PerfBoardCanvas extends Canvas {
                 double sy2 = transform.gridToScreenY(p2.y());
 
                 boolean isSilver = (w.getKind() == WireKind.SILVER_WIRE);
-                // Layer-spezifische Sichtbarkeit
-                if (currentLayer == BoardLayer.BOTTOM) {
-                    if (!isSilver && w.getLayer() == BoardLayer.TOP) {
-                        gc.setGlobalAlpha(0.25); // Gedimmtes Durchscheinen der Oberseiten-Kabel
-                    } else {
-                        gc.setGlobalAlpha(1.0);
-                    }
-                } else if (currentLayer == BoardLayer.TOP) {
-                    if (isSilver || w.getLayer() == BoardLayer.BOTTOM) {
-                        gc.setGlobalAlpha(0.60); // Silberdraht auf Unterseite schimmert durch
-                    } else {
-                        gc.setGlobalAlpha(1.0);
-                    }
+                boolean isBottomWire = isSilver || (w.getLayer() == BoardLayer.BOTTOM);
+
+                if (currentLayer == BoardLayer.TOP && isBottomWire) {
+                    continue; // Auf TOP absolut nichts von BOTTOM anzeigen
+                }
+                if (currentLayer == BoardLayer.BOTTOM && !isBottomWire) {
+                    continue; // Auf BOTTOM nichts von TOP anzeigen
+                }
+
+                if (currentLayer == BoardLayer.BOTH) {
+                    gc.setGlobalAlpha(0.60); // Bei BOTH beide Ebenen transparent anzeigen
                 } else {
                     gc.setGlobalAlpha(1.0);
                 }
@@ -475,13 +478,14 @@ public class PerfBoardCanvas extends Canvas {
 
         // 5. Komponenten & Durchsteck-Pins je nach gewählter Ebene
         if (currentLayer == BoardLayer.BOTTOM) {
-            // Auf der Unterseite: Durchgesteckte Metall-Pins und Lötstellen aller Bauteile (z.B. Pin Header zum Verbinden mit Silberdraht)
+            // Auf der Unterseite: Ausschließlich Pins und Lötstellen der Bauteile
             for (PlacedComponent comp : project.getComponents()) {
                 boolean isSel = (comp == selectedComponent);
                 renderComponentBottomPins(gc, comp, isSel);
             }
         } else if (currentLayer == BoardLayer.BOTH) {
-            // Beide Seiten: Zuerst Unterseite (Pins & Lötstellen), dann Oberseite halbtransparent
+            // Beide Seiten: Beide Ebenen semi-transparent überlagert
+            gc.setGlobalAlpha(0.55);
             for (PlacedComponent comp : project.getComponents()) {
                 boolean isSel = (comp == selectedComponent);
                 renderComponentBottomPins(gc, comp, isSel);
@@ -494,13 +498,9 @@ public class PerfBoardCanvas extends Canvas {
             }
             gc.setGlobalAlpha(1.0);
         } else {
-            // TOP Layer
+            // TOP Layer: Ausschließlich Oberseite, absolut nichts von der Unterseite
             for (PlacedComponent comp : project.getComponents()) {
-                if (!comp.isVisible()) {
-                    // Ausgeblendetes Modul-Overlay: Zeige darunterliegende Pins/Lötpunkte
-                    renderComponentBottomPins(gc, comp, comp == selectedComponent);
-                    continue;
-                }
+                if (!comp.isVisible()) continue;
                 boolean isSel = (comp == selectedComponent);
                 renderComponentInstance(gc, comp, isSel);
             }

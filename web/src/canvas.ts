@@ -336,6 +336,11 @@ export class PerfBoardCanvas {
   private findWireNear(screenX: number, screenY: number): WireTrace | null {
     const maxDist = Math.max(8.0, this.transform.getHoleSpacingPx() * 0.4);
     for (const wire of this.project.wires) {
+      const isSilver = wire.kind === 'SILVER_WIRE';
+      const isBottomWire = isSilver || wire.layer === 'BOTTOM';
+      if (this.currentLayer === 'TOP' && isBottomWire) continue;
+      if (this.currentLayer === 'BOTTOM' && !isBottomWire) continue;
+
       if (wire.points.length >= 2) {
         const x1 = this.transform.gridToScreenX(wire.points[0].x);
         const y1 = this.transform.gridToScreenY(wire.points[0].y);
@@ -480,6 +485,7 @@ export class PerfBoardCanvas {
     }
 
     // 3. Leitungen (Kabel und Silberdraht)
+    // TOP: Keine Unterseiten-Drähte | BOTTOM: Keine Oberseiten-Drähte | BOTH: Beide transparent
     this.ctx.lineCap = 'round';
     for (const wire of this.project.wires) {
       if (wire.points.length >= 2) {
@@ -489,18 +495,17 @@ export class PerfBoardCanvas {
         const sy2 = this.transform.gridToScreenY(wire.points[1].y);
 
         const isSilver = wire.kind === 'SILVER_WIRE';
-        if (this.currentLayer === 'BOTTOM') {
-          if (!isSilver && wire.layer === 'TOP') {
-            this.ctx.globalAlpha = 0.25;
-          } else {
-            this.ctx.globalAlpha = 1.0;
-          }
-        } else if (this.currentLayer === 'TOP') {
-          if (isSilver || wire.layer === 'BOTTOM') {
-            this.ctx.globalAlpha = 0.60;
-          } else {
-            this.ctx.globalAlpha = 1.0;
-          }
+        const isBottomWire = isSilver || wire.layer === 'BOTTOM';
+
+        if (this.currentLayer === 'TOP' && isBottomWire) {
+          continue; // Auf TOP absolut nichts von BOTTOM anzeigen
+        }
+        if (this.currentLayer === 'BOTTOM' && !isBottomWire) {
+          continue; // Auf BOTTOM nichts von TOP anzeigen
+        }
+
+        if (this.currentLayer === 'BOTH') {
+          this.ctx.globalAlpha = 0.60;
         } else {
           this.ctx.globalAlpha = 1.0;
         }
@@ -545,13 +550,19 @@ export class PerfBoardCanvas {
 
     // 5. Komponenten & Durchsteck-Pins je nach Layer
     if (this.currentLayer === 'BOTTOM') {
+      // Unterseite: Ausschließlich Pins und Lötstellen
       for (const comp of this.project.components) {
         this.renderComponentBottomPins(comp, comp === this.selectedComponent);
       }
     } else if (this.currentLayer === 'BOTH') {
+      // Beide Seiten: Beide Ebenen semi-transparent überlagert
+      this.ctx.save();
+      this.ctx.globalAlpha = 0.55;
       for (const comp of this.project.components) {
         this.renderComponentBottomPins(comp, comp === this.selectedComponent);
       }
+      this.ctx.restore();
+
       this.ctx.save();
       this.ctx.globalAlpha = 0.65;
       for (const comp of this.project.components) {
@@ -560,12 +571,9 @@ export class PerfBoardCanvas {
       }
       this.ctx.restore();
     } else {
-      // TOP
+      // TOP: Ausschließlich Oberseite, absolut nichts von der Unterseite
       for (const comp of this.project.components) {
-        if (comp.visible === false) {
-          this.renderComponentBottomPins(comp, comp === this.selectedComponent);
-          continue;
-        }
+        if (comp.visible === false) continue;
         this.renderComponent(comp, comp === this.selectedComponent);
       }
     }
