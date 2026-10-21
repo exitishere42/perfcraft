@@ -24,6 +24,7 @@ export class PerfBoardCanvas {
   private activeWireKind: WireKind = 'CABLE';
   private activeWireColor: string = '#E53935';
   private activeComponentType: ComponentType = 'RESISTOR_AXIAL';
+  private activeComponentRotation: number = 0;
   private currentLayer: BoardLayer = 'TOP';
 
   private selectedComponent: PlacedComponent | null = null;
@@ -530,6 +531,36 @@ export class PerfBoardCanvas {
         break;
     }
 
+    if (this.activeComponentRotation > 0) {
+      comp.rotation = this.activeComponentRotation;
+      let baseW = 0;
+      let baseH = 0;
+      switch (comp.type) {
+        case 'ESP32_S3_ZERO': baseW = 6; baseH = 8; break;
+        case 'TP4056_CHARGER': baseW = 6; baseH = 9; break;
+        case 'TACTILE_SWITCH': baseW = 2; baseH = 3; break;
+        case 'IC_DIP': baseW = 3; baseH = 3; break;
+        default: break;
+      }
+      if (baseW > 0 && baseH > 0) {
+        const isSwapped = comp.rotation === 90 || comp.rotation === 270;
+        const curW = isSwapped ? baseH : baseW;
+        const curH = isSwapped ? baseW : baseH;
+        comp.end = { x: comp.start.x + curW, y: comp.start.y + curH };
+      } else if (comp.end) {
+        let dx = comp.end.x - comp.start.x;
+        let dy = comp.end.y - comp.start.y;
+        const turns = Math.round(this.activeComponentRotation / 90) % 4;
+        for (let t = 0; t < turns; t++) {
+          const nextDx = -dy;
+          const nextDy = dx;
+          dx = nextDx;
+          dy = nextDy;
+        }
+        comp.end = { x: comp.start.x + dx, y: comp.start.y + dy };
+      }
+    }
+
     this.recordState();
     this.project.components.push(comp);
     this.selectedComponent = comp;
@@ -832,23 +863,45 @@ export class PerfBoardCanvas {
         };
         this.renderPinHeader(dummy, false);
       } else {
-        let dummyEnd: HoleCoord = { x: this.currentHoverGrid.x + 4, y: this.currentHoverGrid.y };
+        const rot = this.activeComponentRotation;
+        const isSwapped = rot === 90 || rot === 270;
+        let baseW = 4;
+        let baseH = 0;
         if (this.activeComponentType === 'TACTILE_SWITCH') {
-          dummyEnd = { x: this.currentHoverGrid.x + 2, y: this.currentHoverGrid.y + 3 };
+          baseW = 2; baseH = 3;
         } else if (this.activeComponentType === 'TACTILE_SWITCH_SMD') {
-          dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
+          baseW = 3; baseH = 0;
         } else if (this.activeComponentType === 'RESISTOR_AXIAL') {
-          dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
+          baseW = 3; baseH = 0;
         } else if (this.activeComponentType === 'LED' || this.activeComponentType === 'CAPACITOR_CERAMIC') {
-          dummyEnd = { x: this.currentHoverGrid.x + 1, y: this.currentHoverGrid.y };
+          baseW = 1; baseH = 0;
         } else if (this.activeComponentType === 'DIODE') {
-          dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
+          baseW = 3; baseH = 0;
         } else if (this.activeComponentType === 'IC_DIP') {
-          dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y + 3 };
+          baseW = 3; baseH = 3;
         } else if (this.activeComponentType === 'ESP32_S3_ZERO') {
-          dummyEnd = { x: this.currentHoverGrid.x + 6, y: this.currentHoverGrid.y + 8 };
+          baseW = 6; baseH = 8;
         } else if (this.activeComponentType === 'TP4056_CHARGER') {
-          dummyEnd = { x: this.currentHoverGrid.x + 6, y: this.currentHoverGrid.y + 9 };
+          baseW = 6; baseH = 9;
+        }
+
+        let dummyEnd: HoleCoord;
+        if (baseH > 0) {
+          dummyEnd = {
+            x: this.currentHoverGrid.x + (isSwapped ? baseH : baseW),
+            y: this.currentHoverGrid.y + (isSwapped ? baseW : baseH),
+          };
+        } else {
+          let dx = baseW;
+          let dy = 0;
+          const turns = Math.round(rot / 90) % 4;
+          for (let t = 0; t < turns; t++) {
+            const nextDx = -dy;
+            const nextDy = dx;
+            dx = nextDx;
+            dy = nextDy;
+          }
+          dummyEnd = { x: this.currentHoverGrid.x + dx, y: this.currentHoverGrid.y + dy };
         }
 
         const dummy: PlacedComponent = {
@@ -858,7 +911,7 @@ export class PerfBoardCanvas {
           value: '10k',
           start: this.currentHoverGrid,
           end: dummyEnd,
-          rotation: 0,
+          rotation: rot,
           layer: 'TOP',
         };
         this.renderComponent(dummy, false);
@@ -897,13 +950,24 @@ export class PerfBoardCanvas {
     const hs = this.transform.getHoleSpacingPx();
 
     if (comp.type === 'TACTILE_SWITCH') {
-      const x0 = this.transform.gridToScreenX(comp.start.x);
-      const y0 = this.transform.gridToScreenY(comp.start.y);
-      const x1 = this.transform.gridToScreenX(comp.start.x + 2);
-      const y1 = this.transform.gridToScreenY(comp.start.y + 3);
+      const isSwapped = comp.rotation === 90 || comp.rotation === 270;
+      const curW = isSwapped ? 3 : 2;
+      const curH = isSwapped ? 2 : 3;
 
-      const cx = (x0 + x1) / 2;
-      const cy = (y0 + y1) / 2;
+      const midGridX = comp.start.x + curW / 2;
+      const midGridY = comp.start.y + curH / 2;
+      const cx = this.transform.gridToScreenX(midGridX);
+      const cy = this.transform.gridToScreenY(midGridY);
+
+      this.ctx.save();
+      this.ctx.translate(cx, cy);
+      const rotAngle = this.transform.isFlippedX() ? -comp.rotation : comp.rotation;
+      this.ctx.rotate((rotAngle * Math.PI) / 180);
+
+      const x0 = -hs * 1.0;
+      const x1 = hs * 1.0;
+      const y0 = -hs * 1.5;
+      const y1 = hs * 1.5;
 
       // Quadratischer Switch-Körper
       const bodySize = hs * 2.4;
@@ -919,11 +983,11 @@ export class PerfBoardCanvas {
 
       this.ctx.beginPath();
       // Oben links / rechts
-      this.ctx.moveTo(x0, y0); this.ctx.lineTo(cx - bodyHalf + hs * 0.15, cy - bodyHalf);
-      this.ctx.moveTo(x1, y0); this.ctx.lineTo(cx + bodyHalf - hs * 0.15, cy - bodyHalf);
+      this.ctx.moveTo(x0, y0); this.ctx.lineTo(-bodyHalf + hs * 0.15, -bodyHalf);
+      this.ctx.moveTo(x1, y0); this.ctx.lineTo(bodyHalf - hs * 0.15, -bodyHalf);
       // Unten links / rechts
-      this.ctx.moveTo(x0, y1); this.ctx.lineTo(cx - bodyHalf + hs * 0.15, cy + bodyHalf);
-      this.ctx.moveTo(x1, y1); this.ctx.lineTo(cx + bodyHalf - hs * 0.15, cy + bodyHalf);
+      this.ctx.moveTo(x0, y1); this.ctx.lineTo(-bodyHalf + hs * 0.15, bodyHalf);
+      this.ctx.moveTo(x1, y1); this.ctx.lineTo(bodyHalf - hs * 0.15, bodyHalf);
       this.ctx.stroke();
 
       // Pin Lötkontaktpunkte
@@ -938,7 +1002,7 @@ export class PerfBoardCanvas {
       // 2. Schwarzes Kunststoffgehäuse (quadratisch)
       this.ctx.fillStyle = '#1E1E1E';
       this.ctx.beginPath();
-      this.ctx.roundRect(cx - bw / 2, cy - bh / 2, bw, bh, 5);
+      this.ctx.roundRect(-bw / 2, -bh / 2, bw, bh, 5);
       this.ctx.fill();
       this.ctx.strokeStyle = '#121212';
       this.ctx.lineWidth = 1;
@@ -949,7 +1013,7 @@ export class PerfBoardCanvas {
       const mh = bh * 0.86;
       this.ctx.fillStyle = '#B0BEC5';
       this.ctx.beginPath();
-      this.ctx.roundRect(cx - mw / 2, cy - mh / 2, mw, mh, 4);
+      this.ctx.roundRect(-mw / 2, -mh / 2, mw, mh, 4);
       this.ctx.fill();
       this.ctx.strokeStyle = '#78909C';
       this.ctx.lineWidth = 1;
@@ -962,7 +1026,7 @@ export class PerfBoardCanvas {
       const ryOffset = mh * 0.38;
       for (const [ox, oy] of [[-rxOffset, -ryOffset], [rxOffset, -ryOffset], [-rxOffset, ryOffset], [rxOffset, ryOffset]]) {
         this.ctx.beginPath();
-        this.ctx.arc(cx + ox, cy + oy, rivetR, 0, Math.PI * 2);
+        this.ctx.arc(ox, oy, rivetR, 0, Math.PI * 2);
         this.ctx.fill();
       }
 
@@ -970,30 +1034,31 @@ export class PerfBoardCanvas {
       const btnR = mw * 0.38;
       this.ctx.fillStyle = '#263238';
       this.ctx.beginPath();
-      this.ctx.arc(cx, cy, btnR, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, btnR, 0, Math.PI * 2);
       this.ctx.fill();
 
       this.ctx.fillStyle = '#151515';
       this.ctx.beginPath();
-      this.ctx.arc(cx, cy, btnR * 0.88, 0, Math.PI * 2);
+      this.ctx.arc(0, 0, btnR * 0.88, 0, Math.PI * 2);
       this.ctx.fill();
 
       this.ctx.fillStyle = '#424242';
       this.ctx.beginPath();
-      this.ctx.arc(cx - btnR * 0.3, cy - btnR * 0.3, btnR * 0.25, 0, Math.PI * 2);
+      this.ctx.arc(-btnR * 0.3, -btnR * 0.3, btnR * 0.25, 0, Math.PI * 2);
       this.ctx.fill();
 
       if (isSelected) {
         this.ctx.strokeStyle = '#00C853';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
-        this.ctx.roundRect(cx - bw / 2 - 3, cy - bh / 2 - 3, bw + 6, bh + 6, 6);
+        this.ctx.roundRect(-bw / 2 - 3, -bh / 2 - 3, bw + 6, bh + 6, 6);
         this.ctx.stroke();
       }
 
       this.ctx.fillStyle = '#ECEFF1';
       this.ctx.font = '11px sans-serif';
-      this.ctx.fillText(comp.designator, cx - 12, cy - bh / 2 - 4);
+      this.ctx.fillText(comp.designator, -12, -bh / 2 - 4);
+      this.ctx.restore();
     } else if (comp.type === 'TACTILE_SWITCH_SMD') {
       this.renderTactileSwitchSmd(comp, isSelected);
     } else if (comp.type === 'RESISTOR_AXIAL') {
@@ -1142,24 +1207,108 @@ export class PerfBoardCanvas {
       this.ctx.fillStyle = '#ECEFF1';
       this.ctx.font = '11px sans-serif';
       this.ctx.fillText(comp.designator, cx - 12, cy - r - 4);
+    } else if (comp.type === 'CAPACITOR_CERAMIC') {
+      const px = this.transform.gridToScreenX(comp.start.x);
+      const py = this.transform.gridToScreenY(comp.start.y);
+      const r = hs * 0.40;
+      this.ctx.fillStyle = '#FFA726';
+      this.ctx.beginPath();
+      this.ctx.roundRect(px - r, py - r, r * 2, r * 2, 4);
+      this.ctx.fill();
+      if (isSelected) {
+        this.ctx.strokeStyle = '#00C853';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(px - r - 3, py - r - 3, (r + 3) * 2, (r + 3) * 2);
+      }
+      this.ctx.fillStyle = '#ECEFF1';
+      this.ctx.font = '11px sans-serif';
+      this.ctx.fillText(comp.designator, px - 10, py - r - 4);
+    } else if (comp.type === 'DIODE') {
+      const x1 = this.transform.gridToScreenX(comp.start.x);
+      const y1 = this.transform.gridToScreenY(comp.start.y);
+      const x2 = this.transform.gridToScreenX(comp.end ? comp.end.x : comp.start.x + 3);
+      const y2 = this.transform.gridToScreenY(comp.end ? comp.end.y : comp.start.y);
+      this.ctx.strokeStyle = '#B0BEC5';
+      this.ctx.lineWidth = 2.0;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x1, y1);
+      this.ctx.lineTo(x2, y2);
+      this.ctx.stroke();
+
+      const midX = (x1 + x2) / 2;
+      const midY = (y1 + y2) / 2;
+      const bw = hs * 1.6;
+      const bh = hs * 0.5;
+      this.ctx.fillStyle = '#FF7043';
+      this.ctx.fillRect(midX - bw / 2, midY - bh / 2, bw, bh);
+      this.ctx.fillStyle = '#1A1A1A';
+      this.ctx.fillRect(midX + bw / 2 - 4, midY - bh / 2, 4, bh);
+      if (isSelected) {
+        this.ctx.strokeStyle = '#00C853';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(midX - bw / 2 - 2, midY - bh / 2 - 2, bw + 4, bh + 4);
+      }
+      this.ctx.fillStyle = '#ECEFF1';
+      this.ctx.font = '11px sans-serif';
+      this.ctx.fillText(comp.designator, midX - 10, midY - bh / 2 - 4);
+    } else if (comp.type === 'IC_DIP') {
+      const isSwapped = comp.rotation === 90 || comp.rotation === 270;
+      const curW = isSwapped ? 3 : 3;
+      const curH = isSwapped ? 3 : 3;
+      const midGridX = comp.start.x + curW / 2;
+      const midGridY = comp.start.y + curH / 2;
+      const cx = this.transform.gridToScreenX(midGridX);
+      const cy = this.transform.gridToScreenY(midGridY);
+
+      this.ctx.save();
+      this.ctx.translate(cx, cy);
+      const rotAngle = this.transform.isFlippedX() ? -comp.rotation : comp.rotation;
+      this.ctx.rotate((rotAngle * Math.PI) / 180);
+
+      const w = hs * 3.5;
+      const h = hs * 3.5;
+      this.ctx.fillStyle = '#263238';
+      this.ctx.beginPath();
+      this.ctx.roundRect(-w / 2, -h / 2, w, h, 6);
+      this.ctx.fill();
+
+      // Notch
+      this.ctx.fillStyle = '#121212';
+      this.ctx.beginPath();
+      this.ctx.arc(0, -h / 2, 6, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      if (isSelected) {
+        this.ctx.strokeStyle = '#00C853';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(-w / 2 - 2, -h / 2 - 2, w + 4, h + 4);
+      }
+      this.ctx.fillStyle = '#ECEFF1';
+      this.ctx.font = '11px sans-serif';
+      this.ctx.fillText(comp.designator + ' (DIP)', -w / 2 + 4, 4);
+      this.ctx.restore();
     } else if (comp.type === 'ESP32_S3_ZERO') {
-      const gx = comp.start.x;
-      const gy = comp.start.y;
+      const isSwapped = comp.rotation === 90 || comp.rotation === 270;
+      const curW = isSwapped ? 8 : 6;
+      const curH = isSwapped ? 6 : 8;
 
-      const xLeft = this.transform.gridToScreenX(gx);
-      const xRight = this.transform.gridToScreenX(gx + 6);
-      const yTop = this.transform.gridToScreenY(gy);
-      const yBottom = this.transform.gridToScreenY(gy + 8);
+      const midGridX = comp.start.x + curW / 2;
+      const midGridY = comp.start.y + curH / 2;
+      const cx = this.transform.gridToScreenX(midGridX);
+      const cy = this.transform.gridToScreenY(midGridY);
 
-      const width = xRight - xLeft + hs * 0.8;
-      const height = yBottom - yTop + hs * 0.8;
-      const boardLeft = xLeft - hs * 0.4;
-      const boardTop = yTop - hs * 0.4;
+      this.ctx.save();
+      this.ctx.translate(cx, cy);
+      const rotAngle = this.transform.isFlippedX() ? -comp.rotation : comp.rotation;
+      this.ctx.rotate((rotAngle * Math.PI) / 180);
+
+      const wPx = hs * 6.8;
+      const hPx = hs * 8.8;
 
       // 1. PCB Grundkörper (Waveshare Classic Blue)
       this.ctx.fillStyle = '#0D47A1';
       this.ctx.beginPath();
-      this.ctx.roundRect(boardLeft, boardTop, width, height, 6);
+      this.ctx.roundRect(-wPx / 2, -hPx / 2, wPx, hPx, 6);
       this.ctx.fill();
       this.ctx.strokeStyle = '#1565C0';
       this.ctx.lineWidth = 1.5;
@@ -1168,38 +1317,36 @@ export class PerfBoardCanvas {
       // 2. USB-C Port oben mittig
       const usbW = hs * 2.6;
       const usbH = hs * 1.5;
-      const usbX = (xLeft + xRight) / 2 - usbW / 2;
-      const usbY = boardTop - hs * 0.6;
+      const usbY = -hPx / 2 - hs * 0.2;
       this.ctx.fillStyle = '#B0BEC5';
       this.ctx.beginPath();
-      this.ctx.roundRect(usbX, usbY, usbW, usbH, 4);
+      this.ctx.roundRect(-usbW / 2, usbY, usbW, usbH, 4);
       this.ctx.fill();
       this.ctx.strokeStyle = '#78909C';
       this.ctx.lineWidth = 1;
       this.ctx.stroke();
       this.ctx.fillStyle = '#263238';
       this.ctx.beginPath();
-      this.ctx.roundRect(usbX + usbW * 0.15, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2);
+      this.ctx.roundRect(-usbW * 0.35, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2);
       this.ctx.fill();
 
       // 3. Taster Boot & Reset
       const btnSize = hs * 0.7;
       this.ctx.fillStyle = '#ECEFF1';
-      this.ctx.fillRect(usbX - btnSize - hs * 0.2, yTop + hs * 0.8, btnSize, btnSize);
-      this.ctx.fillRect(usbX + usbW + hs * 0.2, yTop + hs * 0.8, btnSize, btnSize);
+      this.ctx.fillRect(-usbW / 2 - btnSize - hs * 0.2, -hPx / 2 + hs * 1.2, btnSize, btnSize);
+      this.ctx.fillRect(usbW / 2 + hs * 0.2, -hPx / 2 + hs * 1.2, btnSize, btnSize);
       this.ctx.fillStyle = '#212121';
       this.ctx.beginPath();
-      this.ctx.arc(usbX - btnSize - hs * 0.2 + btnSize / 2, yTop + hs * 0.8 + btnSize / 2, btnSize * 0.3, 0, Math.PI * 2);
-      this.ctx.arc(usbX + usbW + hs * 0.2 + btnSize / 2, yTop + hs * 0.8 + btnSize / 2, btnSize * 0.3, 0, Math.PI * 2);
+      this.ctx.arc(-usbW / 2 - btnSize - hs * 0.2 + btnSize / 2, -hPx / 2 + hs * 1.2 + btnSize / 2, btnSize * 0.3, 0, Math.PI * 2);
+      this.ctx.arc(usbW / 2 + hs * 0.2 + btnSize / 2, -hPx / 2 + hs * 1.2 + btnSize / 2, btnSize * 0.3, 0, Math.PI * 2);
       this.ctx.fill();
 
       // 4. Zentraler ESP32-S3 Chip (45 Grad gedreht)
-      const chipMidX = (xLeft + xRight) / 2;
-      const chipMidY = (yTop + yBottom) / 2 + hs * 0.5;
+      const chipMidY = hs * 0.5;
       const chipR = hs * 1.25;
 
       this.ctx.save();
-      this.ctx.translate(chipMidX, chipMidY);
+      this.ctx.translate(0, chipMidY);
       this.ctx.rotate(Math.PI / 4);
       this.ctx.fillStyle = '#212121';
       this.ctx.fillRect(-chipR, -chipR, chipR * 2, chipR * 2);
@@ -1215,8 +1362,8 @@ export class PerfBoardCanvas {
       // 5. Keramik-Antenne unten ("C3")
       const antW = hs * 3.2;
       const antH = hs * 0.9;
-      const antX = chipMidX - antW / 2;
-      const antY = yBottom - antH + hs * 0.2;
+      const antX = -antW / 2;
+      const antY = hPx / 2 - antH - hs * 0.2;
       this.ctx.fillStyle = '#FAFAFA';
       this.ctx.fillRect(antX, antY, antW, antH);
       this.ctx.strokeStyle = '#BDBDBD';
@@ -1227,55 +1374,64 @@ export class PerfBoardCanvas {
 
       // 6. Goldene Castellated Lötaugen & Pins (je 9 Pins)
       const padR = Math.max(2.8, hs * 0.32);
+      const localXLeft = -hs * 3.0;
+      const localXRight = hs * 3.0;
       for (let i = 0; i < 9; i++) {
-        const py = this.transform.gridToScreenY(gy + i);
+        const localY = -hs * 4.0 + i * hs;
         // Links
         this.ctx.fillStyle = '#FFD54F';
         this.ctx.beginPath();
-        this.ctx.arc(xLeft, py, padR, 0, Math.PI * 2);
+        this.ctx.arc(localXLeft, localY, padR, 0, Math.PI * 2);
         this.ctx.fill();
         this.ctx.fillStyle = '#121212';
         this.ctx.beginPath();
-        this.ctx.arc(xLeft, py, padR * 0.5, 0, Math.PI * 2);
+        this.ctx.arc(localXLeft, localY, padR * 0.5, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Rechts
         this.ctx.fillStyle = '#FFD54F';
         this.ctx.beginPath();
-        this.ctx.arc(xRight, py, padR, 0, Math.PI * 2);
+        this.ctx.arc(localXRight, localY, padR, 0, Math.PI * 2);
         this.ctx.fill();
         this.ctx.fillStyle = '#121212';
         this.ctx.beginPath();
-        this.ctx.arc(xRight, py, padR * 0.5, 0, Math.PI * 2);
+        this.ctx.arc(localXRight, localY, padR * 0.5, 0, Math.PI * 2);
         this.ctx.fill();
       }
 
       this.ctx.fillStyle = '#FFFFFF';
       this.ctx.font = '11px sans-serif';
-      this.ctx.fillText(comp.designator, boardLeft + 8, boardTop + 14);
+      this.ctx.fillText(comp.designator, -wPx / 2 + 8, -hPx / 2 + 14);
       this.ctx.fillStyle = '#90CAF9';
-      this.ctx.fillText('ESP32-S3-Zero', chipMidX - 32, boardTop + height - 4);
+      this.ctx.fillText('ESP32-S3-Zero', -32, hPx / 2 - 4);
 
       if (isSelected) {
         this.ctx.strokeStyle = '#00C853';
         this.ctx.lineWidth = 2.5;
         this.ctx.beginPath();
-        this.ctx.roundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8);
+        this.ctx.roundRect(-wPx / 2 - 4, -hPx / 2 - 4, wPx + 8, hPx + 8, 8);
         this.ctx.stroke();
       }
+      this.ctx.restore();
     } else if (comp.type === 'TP4056_CHARGER') {
-      const gx = comp.start.x;
-      const gy = comp.start.y;
+      const isSwapped = comp.rotation === 90 || comp.rotation === 270;
+      const curW = isSwapped ? 9 : 6;
+      const curH = isSwapped ? 6 : 9;
 
-      const xLeft = this.transform.gridToScreenX(gx);
-      const xRight = this.transform.gridToScreenX(gx + 6);
-      const yTop = this.transform.gridToScreenY(gy);
-      const yBottom = this.transform.gridToScreenY(gy + 9);
+      const midGridX = comp.start.x + curW / 2;
+      const midGridY = comp.start.y + curH / 2;
+      const cx = this.transform.gridToScreenX(midGridX);
+      const cy = this.transform.gridToScreenY(midGridY);
 
-      const width = xRight - xLeft + hs * 0.9;
-      const height = yBottom - yTop + hs * 0.9;
-      const boardLeft = xLeft - hs * 0.45;
-      const boardTop = yTop - hs * 0.45;
+      this.ctx.save();
+      this.ctx.translate(cx, cy);
+      const rotAngle = this.transform.isFlippedX() ? -comp.rotation : comp.rotation;
+      this.ctx.rotate((rotAngle * Math.PI) / 180);
+
+      const width = hs * 6.9;
+      const height = hs * 9.9;
+      const boardLeft = -width / 2;
+      const boardTop = -height / 2;
 
       // 1. PCB Grundkörper (TP4056 Blau)
       this.ctx.fillStyle = '#1565C0';
@@ -1289,8 +1445,8 @@ export class PerfBoardCanvas {
       // 2. USB-C Eingang oben mittig
       const usbW = hs * 2.8;
       const usbH = hs * 1.6;
-      const usbX = (xLeft + xRight) / 2 - usbW / 2;
-      const usbY = boardTop - hs * 0.55;
+      const usbX = -usbW / 2;
+      const usbY = boardTop - hs * 0.1;
       this.ctx.fillStyle = '#CFD8DC';
       this.ctx.beginPath();
       this.ctx.roundRect(usbX, usbY, usbW, usbH, 4);
@@ -1304,44 +1460,46 @@ export class PerfBoardCanvas {
       this.ctx.fill();
 
       // 3. Haupt-IC TP4056
-      const midX = (xLeft + xRight) / 2;
-      const tpY = yTop + hs * 3.2;
+      const tpY = boardTop + hs * 3.65;
       const tpW = hs * 2.2;
       const tpH = hs * 1.6;
       this.ctx.fillStyle = '#212121';
       this.ctx.beginPath();
-      this.ctx.roundRect(midX - tpW / 2, tpY - tpH / 2, tpW, tpH, 2);
+      this.ctx.roundRect(-tpW / 2, tpY - tpH / 2, tpW, tpH, 2);
       this.ctx.fill();
       this.ctx.fillStyle = '#B0BEC5';
       this.ctx.font = '10px monospace';
-      this.ctx.fillText('4056', midX - 11, tpY + 4);
+      this.ctx.fillText('4056', -11, tpY + 4);
 
       // 4. Schutz-IC DW01A
-      const protY = yTop + hs * 5.8;
+      const protY = boardTop + hs * 6.25;
       this.ctx.fillStyle = '#212121';
       this.ctx.beginPath();
-      this.ctx.roundRect(midX - hs * 0.9, protY, hs * 1.8, hs * 2.0, 2);
+      this.ctx.roundRect(-hs * 0.9, protY, hs * 1.8, hs * 2.0, 2);
       this.ctx.fill();
 
       // LEDs
       this.ctx.fillStyle = '#E53935';
       this.ctx.beginPath();
-      this.ctx.arc(midX - hs * 1.2, yTop + hs * 2.0, hs * 0.2, 0, Math.PI * 2);
+      this.ctx.arc(-hs * 1.2, boardTop + hs * 2.45, hs * 0.2, 0, Math.PI * 2);
       this.ctx.fill();
       this.ctx.fillStyle = '#1E88E5';
       this.ctx.beginPath();
-      this.ctx.arc(midX + hs * 1.2, yTop + hs * 2.0, hs * 0.2, 0, Math.PI * 2);
+      this.ctx.arc(hs * 1.2, boardTop + hs * 2.45, hs * 0.2, 0, Math.PI * 2);
       this.ctx.fill();
 
       // 5. Die 6 Löt-Pads (IN+, IN-, OUT+, B+, B-, OUT-)
       const padR = Math.max(3.0, hs * 0.35);
+      const localXLeft = -hs * 3.0;
+      const localXRight = hs * 3.0;
+      const localYTop = -hs * 4.5;
       const pads = [
-        [xLeft, yTop],
-        [xRight, yTop],
-        [xLeft, yTop + hs * 8.0],
-        [xLeft, yTop + hs * 9.0],
-        [xRight, yTop + hs * 9.0],
-        [xRight, yTop + hs * 8.0],
+        [localXLeft, localYTop],
+        [localXRight, localYTop],
+        [localXLeft, localYTop + hs * 8.0],
+        [localXLeft, localYTop + hs * 9.0],
+        [localXRight, localYTop + hs * 9.0],
+        [localXRight, localYTop + hs * 8.0],
       ];
       for (const [px, py] of pads) {
         this.ctx.fillStyle = '#FFD54F';
@@ -1357,12 +1515,12 @@ export class PerfBoardCanvas {
       // Beschriftung Silkscreen
       this.ctx.fillStyle = '#FFFFFF';
       this.ctx.font = '10px sans-serif';
-      this.ctx.fillText('+ IN', xLeft + 6, yTop + 4);
-      this.ctx.fillText('IN -', xRight - 24, yTop + 4);
-      this.ctx.fillText('OUT+', xLeft + 6, yTop + hs * 8.0 + 4);
-      this.ctx.fillText('B+', xLeft + 6, yTop + hs * 9.0 + 4);
-      this.ctx.fillText('B-', xRight - 18, yTop + hs * 9.0 + 4);
-      this.ctx.fillText('OUT-', xRight - 30, yTop + hs * 8.0 + 4);
+      this.ctx.fillText('+ IN', localXLeft + 6, localYTop + 4);
+      this.ctx.fillText('IN -', localXRight - 24, localYTop + 4);
+      this.ctx.fillText('OUT+', localXLeft + 6, localYTop + hs * 8.0 + 4);
+      this.ctx.fillText('B+', localXLeft + 6, localYTop + hs * 9.0 + 4);
+      this.ctx.fillText('B-', localXRight - 18, localYTop + hs * 9.0 + 4);
+      this.ctx.fillText('OUT-', localXRight - 30, localYTop + hs * 8.0 + 4);
       this.ctx.fillText(`${comp.designator} (TP4056)`, boardLeft + 8, boardTop + 14);
 
       if (isSelected) {
@@ -1372,6 +1530,7 @@ export class PerfBoardCanvas {
         this.ctx.roundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8);
         this.ctx.stroke();
       }
+      this.ctx.restore();
     } else if (comp.type === 'PIN_HEADER') {
       this.renderPinHeader(comp, isSelected);
     }
@@ -1738,26 +1897,36 @@ export class PerfBoardCanvas {
   }
 
   private renderTactileSwitchBottom(comp: PlacedComponent, isSelected: boolean): void {
-    const gx = comp.start.x;
-    const gy = comp.start.y;
+    const isSwapped = comp.rotation === 90 || comp.rotation === 270;
+    const curW = isSwapped ? 3 : 2;
+    const curH = isSwapped ? 2 : 3;
     const hs = this.transform.getHoleSpacingPx();
 
+    const midGridX = comp.start.x + curW / 2;
+    const midGridY = comp.start.y + curH / 2;
+    const cx = this.transform.gridToScreenX(midGridX);
+    const cy = this.transform.gridToScreenY(midGridY);
+
+    this.ctx.save();
+    this.ctx.translate(cx, cy);
+    const rotAngle = this.transform.isFlippedX() ? -comp.rotation : comp.rotation;
+    this.ctx.rotate((rotAngle * Math.PI) / 180);
+
+    const x0 = -hs * 1.0;
+    const x1 = hs * 1.0;
+    const y0 = -hs * 1.5;
+    const y1 = hs * 1.5;
     const pinCoords = [
-      [gx, gy],
-      [gx + 2, gy],
-      [gx, gy + 3],
-      [gx + 2, gy + 3],
+      [x0, y0],
+      [x1, y0],
+      [x0, y1],
+      [x1, y1],
     ];
 
-    const x0 = this.transform.gridToScreenX(gx);
-    const y0 = this.transform.gridToScreenY(gy);
-    const x1 = this.transform.gridToScreenX(gx + 2);
-    const y1 = this.transform.gridToScreenY(gy + 3);
-
-    const minX = Math.min(x0, x1);
-    const maxX = Math.max(x0, x1);
-    const minY = Math.min(y0, y1);
-    const maxY = Math.max(y0, y1);
+    const minX = -hs * 1.0;
+    const maxX = hs * 1.0;
+    const minY = -hs * 1.5;
+    const maxY = hs * 1.5;
 
     this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.35)';
     this.ctx.lineWidth = 1;
@@ -1772,17 +1941,16 @@ export class PerfBoardCanvas {
     this.ctx.fillText(comp.designator, minX - hs * 0.5, minY - hs * 0.6);
 
     for (const [px, py] of pinCoords) {
-      const cx = this.transform.gridToScreenX(px);
-      const cy = this.transform.gridToScreenY(py);
-      this.drawSolderPin(cx, cy, hs);
+      this.drawSolderPin(px, py, hs);
       if (isSelected) {
         this.ctx.strokeStyle = '#00E676';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
-        this.ctx.arc(cx, cy, hs * 0.45, 0, Math.PI * 2);
+        this.ctx.arc(px, py, hs * 0.45, 0, Math.PI * 2);
         this.ctx.stroke();
       }
     }
+    this.ctx.restore();
   }
 
   private renderTwoPinBottom(comp: PlacedComponent, _typeLabel: string, isSelected: boolean): void {
@@ -1867,78 +2035,97 @@ export class PerfBoardCanvas {
   }
 
   private renderESP32Bottom(comp: PlacedComponent, isSelected: boolean): void {
-    const gx = comp.start.x;
-    const gy = comp.start.y;
+    const isSwapped = comp.rotation === 90 || comp.rotation === 270;
+    const curW = isSwapped ? 8 : 6;
+    const curH = isSwapped ? 6 : 8;
     const hs = this.transform.getHoleSpacingPx();
 
-    const xLeft = this.transform.gridToScreenX(gx);
-    const xRight = this.transform.gridToScreenX(gx + 6);
-    const yTop = this.transform.gridToScreenY(gy);
-    const yBottom = this.transform.gridToScreenY(gy + 8);
+    const midGridX = comp.start.x + curW / 2;
+    const midGridY = comp.start.y + curH / 2;
+    const cx = this.transform.gridToScreenX(midGridX);
+    const cy = this.transform.gridToScreenY(midGridY);
 
-    const minX = Math.min(xLeft, xRight);
-    const maxX = Math.max(xLeft, xRight);
-    const minY = Math.min(yTop, yBottom);
-    const maxY = Math.max(yTop, yBottom);
+    this.ctx.save();
+    this.ctx.translate(cx, cy);
+    const rotAngle = this.transform.isFlippedX() ? -comp.rotation : comp.rotation;
+    this.ctx.rotate((rotAngle * Math.PI) / 180);
+
+    const wPx = hs * 6.8;
+    const hPx = hs * 8.8;
 
     this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.35)';
     this.ctx.lineWidth = 1;
     this.ctx.setLineDash([3, 3]);
     this.ctx.beginPath();
-    this.ctx.roundRect(minX - hs * 0.5, minY - hs * 0.5, maxX - minX + hs, maxY - minY + hs, 6);
+    this.ctx.roundRect(-wPx / 2, -hPx / 2, wPx, hPx, 6);
     this.ctx.stroke();
     this.ctx.setLineDash([]);
 
     this.ctx.fillStyle = 'rgba(144, 164, 174, 0.75)';
     this.ctx.font = '10px sans-serif';
-    this.ctx.fillText(`${comp.designator} (ESP32 Pins)`, minX - hs * 0.5, minY - hs * 0.6);
+    this.ctx.fillText(`${comp.designator} (ESP32 Pins)`, -wPx / 2, -hPx / 2 - 6);
 
+    const localXLeft = -hs * 3.0;
+    const localXRight = hs * 3.0;
     for (let i = 0; i < 9; i++) {
-      const py = this.transform.gridToScreenY(gy + i);
-      this.drawSolderPin(xLeft, py, hs);
-      this.drawSolderPin(xRight, py, hs);
+      const localY = -hs * 4.0 + i * hs;
+      this.drawSolderPin(localXLeft, localY, hs);
+      this.drawSolderPin(localXRight, localY, hs);
     }
 
     if (isSelected) {
       this.ctx.strokeStyle = '#00E676';
       this.ctx.lineWidth = 2;
       this.ctx.beginPath();
-      this.ctx.roundRect(minX - hs * 0.6, minY - hs * 0.6, maxX - minX + hs * 1.2, maxY - minY + hs * 1.2, 8);
+      this.ctx.roundRect(-wPx / 2 - 3, -hPx / 2 - 3, wPx + 6, hPx + 6, 8);
       this.ctx.stroke();
     }
+    this.ctx.restore();
   }
 
   private renderTP4056Bottom(comp: PlacedComponent, isSelected: boolean): void {
-    const gx = comp.start.x;
-    const gy = comp.start.y;
+    const isSwapped = comp.rotation === 90 || comp.rotation === 270;
+    const curW = isSwapped ? 9 : 6;
+    const curH = isSwapped ? 6 : 9;
     const hs = this.transform.getHoleSpacingPx();
 
-    const xLeft = this.transform.gridToScreenX(gx);
-    const xRight = this.transform.gridToScreenX(gx + 6);
-    const yTop = this.transform.gridToScreenY(gy);
+    const midGridX = comp.start.x + curW / 2;
+    const midGridY = comp.start.y + curH / 2;
+    const cx = this.transform.gridToScreenX(midGridX);
+    const cy = this.transform.gridToScreenY(midGridY);
 
-    const minX = Math.min(xLeft, xRight);
-    const maxX = Math.max(xLeft, xRight);
+    this.ctx.save();
+    this.ctx.translate(cx, cy);
+    const rotAngle = this.transform.isFlippedX() ? -comp.rotation : comp.rotation;
+    this.ctx.rotate((rotAngle * Math.PI) / 180);
+
+    const width = hs * 6.9;
+    const height = hs * 9.9;
+    const boardLeft = -width / 2;
+    const boardTop = -height / 2;
 
     this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.35)';
     this.ctx.lineWidth = 1;
     this.ctx.setLineDash([3, 3]);
     this.ctx.beginPath();
-    this.ctx.roundRect(minX - hs * 0.5, yTop - hs * 0.5, maxX - minX + hs, 9 * hs + hs, 6);
+    this.ctx.roundRect(boardLeft, boardTop, width, height, 6);
     this.ctx.stroke();
     this.ctx.setLineDash([]);
 
     this.ctx.fillStyle = 'rgba(144, 164, 174, 0.75)';
     this.ctx.font = '10px sans-serif';
-    this.ctx.fillText(`${comp.designator} (TP4056 Pins)`, minX - hs * 0.5, yTop - hs * 0.6);
+    this.ctx.fillText(`${comp.designator} (TP4056 Pins)`, boardLeft + 8, boardTop - 6);
 
+    const localXLeft = -hs * 3.0;
+    const localXRight = hs * 3.0;
+    const localYTop = -hs * 4.5;
     const pads = [
-      [xLeft, yTop],
-      [xRight, yTop],
-      [xLeft, yTop + hs * 8.0],
-      [xLeft, yTop + hs * 9.0],
-      [xRight, yTop + hs * 9.0],
-      [xRight, yTop + hs * 8.0],
+      [localXLeft, localYTop],
+      [localXRight, localYTop],
+      [localXLeft, localYTop + hs * 8.0],
+      [localXLeft, localYTop + hs * 9.0],
+      [localXRight, localYTop + hs * 9.0],
+      [localXRight, localYTop + hs * 8.0],
     ];
 
     for (const [px, py] of pads) {
@@ -1949,9 +2136,10 @@ export class PerfBoardCanvas {
       this.ctx.strokeStyle = '#00E676';
       this.ctx.lineWidth = 2;
       this.ctx.beginPath();
-      this.ctx.roundRect(minX - hs * 0.6, yTop - hs * 0.6, maxX - minX + hs * 1.2, 9 * hs + hs * 1.2, 8);
+      this.ctx.roundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8);
       this.ctx.stroke();
     }
+    this.ctx.restore();
   }
 
   public applyZoom(factor: number): void {
@@ -1991,16 +2179,38 @@ export class PerfBoardCanvas {
   public rotateSelected(): void {
     if (this.selectedComponent) {
       this.recordState();
-      this.selectedComponent.rotation = (this.selectedComponent.rotation + 90) % 360;
-      if (this.selectedComponent.end) {
-        const dx = this.selectedComponent.end.x - this.selectedComponent.start.x;
-        const dy = this.selectedComponent.end.y - this.selectedComponent.start.y;
-        this.selectedComponent.end = {
-          x: this.selectedComponent.start.x - dy,
-          y: this.selectedComponent.start.y + dx,
+      const comp = this.selectedComponent;
+      comp.rotation = ((comp.rotation || 0) + 90) % 360;
+
+      let baseW = 0;
+      let baseH = 0;
+      switch (comp.type) {
+        case 'ESP32_S3_ZERO': baseW = 6; baseH = 8; break;
+        case 'TP4056_CHARGER': baseW = 6; baseH = 9; break;
+        case 'TACTILE_SWITCH': baseW = 2; baseH = 3; break;
+        case 'IC_DIP': baseW = 3; baseH = 3; break;
+        default: break;
+      }
+
+      if (baseW > 0 && baseH > 0) {
+        const isSwapped = comp.rotation === 90 || comp.rotation === 270;
+        const curW = isSwapped ? baseH : baseW;
+        const curH = isSwapped ? baseW : baseH;
+        comp.end = { x: comp.start.x + curW, y: comp.start.y + curH };
+      } else if (comp.end) {
+        const dx = comp.end.x - comp.start.x;
+        const dy = comp.end.y - comp.start.y;
+        comp.end = {
+          x: comp.start.x - dy,
+          y: comp.start.y + dx,
         };
       }
+
+      this.activeComponentRotation = comp.rotation;
       if (this.onProjectModified) this.onProjectModified();
+      this.render();
+    } else if (this.activeTool === 'COMPONENT') {
+      this.activeComponentRotation = ((this.activeComponentRotation || 0) + 90) % 360;
       this.render();
     }
   }

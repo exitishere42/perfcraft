@@ -57,6 +57,29 @@ public class PlacedComponent {
 
     public void rotate90() {
         this.rotation = (this.rotation + 1) % 4;
+
+        int baseW = 0;
+        int baseH = 0;
+        if (type != null) {
+            switch (type) {
+                case ESP32_S3_ZERO -> { baseW = 6; baseH = 8; }
+                case TP4056_CHARGER -> { baseW = 6; baseH = 9; }
+                case TACTILE_SWITCH -> { baseW = 2; baseH = 3; }
+                case IC_DIP -> { baseW = 3; baseH = 3; }
+                default -> {}
+            }
+        }
+
+        if (baseW > 0 && baseH > 0) {
+            boolean isSwapped = (rotation == 1 || rotation == 3);
+            int curW = isSwapped ? baseH : baseW;
+            int curH = isSwapped ? baseW : baseH;
+            this.end = new HoleCoord(start.x() + curW, start.y() + curH);
+        } else if (end != null) {
+            int dx = end.x() - start.x();
+            int dy = end.y() - start.y();
+            this.end = new HoleCoord(start.x() - dy, start.y() + dx);
+        }
     }
 
     @Override

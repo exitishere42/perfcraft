@@ -40,11 +40,19 @@ public class CoordinateTransform {
     }
 
     public double gridToScreenX(int gridX) {
-        int effX = flippedX ? (boardCols - 1 - gridX) : gridX;
+        return gridToScreenX((double) gridX);
+    }
+
+    public double gridToScreenX(double gridX) {
+        double effX = flippedX ? (boardCols - 1.0 - gridX) : gridX;
         return (effX * PITCH_MM * pixelsPerMm * scale) + translateX;
     }
 
     public double gridToScreenY(int gridY) {
+        return gridToScreenY((double) gridY);
+    }
+
+    public double gridToScreenY(double gridY) {
         return (gridY * PITCH_MM * pixelsPerMm * scale) + translateY;
     }
 

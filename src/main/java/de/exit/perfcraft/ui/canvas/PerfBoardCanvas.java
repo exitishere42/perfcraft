@@ -852,18 +852,26 @@ public class PerfBoardCanvas extends Canvas {
     }
 
     private void renderTactileSwitch(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
-        int gx = comp.getStart().x();
-        int gy = comp.getStart().y();
         double hs = transform.getHoleSpacingPx();
+        boolean isSwapped = comp.getRotation() == 1 || comp.getRotation() == 3;
+        double curW = isSwapped ? 3.0 : 2.0;
+        double curH = isSwapped ? 2.0 : 3.0;
 
-        // 3x4 Pins Raster: Pin 1a=(gx, gy), 1b=(gx+2, gy), Pin 2a=(gx, gy+3), 2b=(gx+2, gy+3)
-        double x0 = transform.gridToScreenX(gx);
-        double y0 = transform.gridToScreenY(gy);
-        double x1 = transform.gridToScreenX(gx + 2);
-        double y1 = transform.gridToScreenY(gy + 3);
+        double midGridX = comp.getStart().x() + curW / 2.0;
+        double midGridY = comp.getStart().y() + curH / 2.0;
+        double cx = transform.gridToScreenX(midGridX);
+        double cy = transform.gridToScreenY(midGridY);
 
-        double cx = (x0 + x1) / 2.0;
-        double cy = (y0 + y1) / 2.0;
+        gc.save();
+        gc.translate(cx, cy);
+        double rotDeg = comp.getRotation() * 90.0;
+        if (transform.isFlippedX()) rotDeg = -rotDeg;
+        gc.rotate(rotDeg);
+
+        double x0 = -hs * 1.0;
+        double x1 = hs * 1.0;
+        double y0 = -hs * 1.5;
+        double y1 = hs * 1.5;
 
         // Quadratischer Switch-Körper (ca. 2.4 * hs breit und hoch)
         double bodySize = hs * 2.4;
@@ -879,13 +887,13 @@ public class PerfBoardCanvas extends Canvas {
         double bodyHalf = bodySize / 2.0;
 
         // Oben-links (Pin 1a)
-        gc.strokeLine(x0, y0, cx - bodyHalf + hs * 0.15, cy - bodyHalf);
+        gc.strokeLine(x0, y0, -bodyHalf + hs * 0.15, -bodyHalf);
         // Oben-rechts (Pin 1b)
-        gc.strokeLine(x1, y0, cx + bodyHalf - hs * 0.15, cy - bodyHalf);
+        gc.strokeLine(x1, y0, bodyHalf - hs * 0.15, -bodyHalf);
         // Unten-links (Pin 2a)
-        gc.strokeLine(x0, y1, cx - bodyHalf + hs * 0.15, cy + bodyHalf);
+        gc.strokeLine(x0, y1, -bodyHalf + hs * 0.15, bodyHalf);
         // Unten-rechts (Pin 2b)
-        gc.strokeLine(x1, y1, cx + bodyHalf - hs * 0.15, cy + bodyHalf);
+        gc.strokeLine(x1, y1, bodyHalf - hs * 0.15, bodyHalf);
 
         // Kleine glänzende Löt-Pads an den Pins
         gc.setFill(Color.web("#ECEFF1"));
@@ -897,51 +905,52 @@ public class PerfBoardCanvas extends Canvas {
 
         // 2. Schwarzer Kunststoff-Körper (quadratisch)
         gc.setFill(Color.web("#1E1E1E")); // Tiefschwarzer Thermoplast
-        gc.fillRoundRect(cx - bw/2, cy - bh/2, bw, bh, 5, 5);
+        gc.fillRoundRect(-bw / 2.0, -bh / 2.0, bw, bh, 5, 5);
         gc.setStroke(Color.web("#121212"));
         gc.setLineWidth(1.0);
-        gc.strokeRoundRect(cx - bw/2, cy - bh/2, bw, bh, 5, 5);
+        gc.strokeRoundRect(-bw / 2.0, -bh / 2.0, bw, bh, 5, 5);
 
         // 3. Silberne quadratische Metall-Deckplatte mit 4 Eck-Nieten
         double mw = bw * 0.86;
         double mh = bh * 0.86;
         gc.setFill(Color.web("#B0BEC5")); // Mattes Silber-Blech
-        gc.fillRoundRect(cx - mw/2, cy - mh/2, mw, mh, 4, 4);
+        gc.fillRoundRect(-mw / 2.0, -mh / 2.0, mw, mh, 4, 4);
         gc.setStroke(Color.web("#78909C"));
         gc.setLineWidth(1.0);
-        gc.strokeRoundRect(cx - mw/2, cy - mh/2, mw, mh, 4, 4);
+        gc.strokeRoundRect(-mw / 2.0, -mh / 2.0, mw, mh, 4, 4);
 
         // 4 Eck-Nieten / Befestigungspunkte
         gc.setFill(Color.web("#37474F"));
         double rivetR = Math.max(1.2, hs * 0.08);
         double rxOffset = mw * 0.38;
         double ryOffset = mh * 0.38;
-        gc.fillOval(cx - rxOffset - rivetR, cy - ryOffset - rivetR, rivetR * 2, rivetR * 2);
-        gc.fillOval(cx + rxOffset - rivetR, cy - ryOffset - rivetR, rivetR * 2, rivetR * 2);
-        gc.fillOval(cx - rxOffset - rivetR, cy + ryOffset - rivetR, rivetR * 2, rivetR * 2);
-        gc.fillOval(cx + rxOffset - rivetR, cy + ryOffset - rivetR, rivetR * 2, rivetR * 2);
+        gc.fillOval(-rxOffset - rivetR, -ryOffset - rivetR, rivetR * 2, rivetR * 2);
+        gc.fillOval(rxOffset - rivetR, -ryOffset - rivetR, rivetR * 2, rivetR * 2);
+        gc.fillOval(-rxOffset - rivetR, ryOffset - rivetR, rivetR * 2, rivetR * 2);
+        gc.fillOval(rxOffset - rivetR, ryOffset - rivetR, rivetR * 2, rivetR * 2);
 
         // 4. Zentraler runder schwarzer Betätigungs-Knopf
         double btnR = mw * 0.38;
         // Äußerer Schatten/Sockel
         gc.setFill(Color.web("#263238"));
-        gc.fillOval(cx - btnR, cy - btnR, btnR * 2, btnR * 2);
+        gc.fillOval(-btnR, -btnR, btnR * 2, btnR * 2);
         // Knopf-Oberseite mit dezenter Schattierung
         gc.setFill(Color.web("#151515"));
-        gc.fillOval(cx - btnR * 0.88, cy - btnR * 0.88, btnR * 1.76, btnR * 1.76);
+        gc.fillOval(-btnR * 0.88, -btnR * 0.88, btnR * 1.76, btnR * 1.76);
         // Kleines Glanzlicht oben links
         gc.setFill(Color.web("#424242"));
-        gc.fillOval(cx - btnR * 0.5, cy - btnR * 0.5, btnR * 0.35, btnR * 0.35);
+        gc.fillOval(-btnR * 0.5, -btnR * 0.5, btnR * 0.35, btnR * 0.35);
 
         // Selektions-Rahmen
         if (isSelected) {
             gc.setStroke(Color.web("#00C853"));
             gc.setLineWidth(2.0);
-            gc.strokeRoundRect(cx - bw/2 - 3, cy - bh/2 - 3, bw + 6, bh + 6, 6, 6);
+            gc.strokeRoundRect(-bw / 2.0 - 3, -bh / 2.0 - 3, bw + 6, bh + 6, 6, 6);
         }
 
         gc.setFill(Color.web("#ECEFF1"));
-        gc.fillText(comp.getDesignator(), cx - 12, cy - bh/2 - 4);
+        gc.fillText(comp.getDesignator(), -12, -bh / 2.0 - 4);
+        gc.restore();
     }
 
     private void renderTactileSwitchSmd(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
@@ -1228,62 +1237,65 @@ public class PerfBoardCanvas extends Canvas {
     }
 
     private void renderESP32S3Zero(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
-        int gx = comp.getStart().x();
-        int gy = comp.getStart().y();
         double hs = transform.getHoleSpacingPx();
+        boolean isSwapped = comp.getRotation() == 1 || comp.getRotation() == 3;
+        double curW = isSwapped ? 8.0 : 6.0;
+        double curH = isSwapped ? 6.0 : 8.0;
 
-        double xLeft = transform.gridToScreenX(gx);
-        double xRight = transform.gridToScreenX(gx + 6);
-        double yTop = transform.gridToScreenY(gy);
-        double yBottom = transform.gridToScreenY(gy + 8);
+        double midGridX = comp.getStart().x() + curW / 2.0;
+        double midGridY = comp.getStart().y() + curH / 2.0;
+        double cx = transform.gridToScreenX(midGridX);
+        double cy = transform.gridToScreenY(midGridY);
 
-        double width = xRight - xLeft + hs * 0.8;
-        double height = yBottom - yTop + hs * 0.8;
-        double boardLeft = xLeft - hs * 0.4;
-        double boardTop = yTop - hs * 0.4;
+        gc.save();
+        gc.translate(cx, cy);
+        double rotDeg = comp.getRotation() * 90.0;
+        if (transform.isFlippedX()) rotDeg = -rotDeg;
+        gc.rotate(rotDeg);
+
+        double wPx = hs * 6.8;
+        double hPx = hs * 8.8;
 
         // 1. PCB Grundkörper (Waveshare Classic Blue #0D47A1)
         gc.setFill(Color.web("#0D47A1"));
-        gc.fillRoundRect(boardLeft, boardTop, width, height, 6, 6);
+        gc.fillRoundRect(-wPx / 2.0, -hPx / 2.0, wPx, hPx, 6, 6);
         gc.setStroke(Color.web("#1565C0"));
         gc.setLineWidth(1.5);
-        gc.strokeRoundRect(boardLeft, boardTop, width, height, 6, 6);
+        gc.strokeRoundRect(-wPx / 2.0, -hPx / 2.0, wPx, hPx, 6, 6);
 
         // 2. USB-C Port oben mittig (Metall-Gehäuse überstehend)
         double usbW = hs * 2.6;
         double usbH = hs * 1.5;
-        double usbX = (xLeft + xRight) / 2.0 - usbW / 2.0;
-        double usbY = boardTop - hs * 0.6;
+        double usbY = -hPx / 2.0 - hs * 0.2;
         gc.setFill(Color.web("#B0BEC5"));
-        gc.fillRoundRect(usbX, usbY, usbW, usbH, 4, 4);
+        gc.fillRoundRect(-usbW / 2.0, usbY, usbW, usbH, 4, 4);
         gc.setStroke(Color.web("#78909C"));
         gc.setLineWidth(1.0);
-        gc.strokeRoundRect(usbX, usbY, usbW, usbH, 4, 4);
+        gc.strokeRoundRect(-usbW / 2.0, usbY, usbW, usbH, 4, 4);
         // USB-C Schlitz innen
         gc.setFill(Color.web("#263238"));
-        gc.fillRoundRect(usbX + usbW * 0.15, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2, 2);
+        gc.fillRoundRect(-usbW * 0.35, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2, 2);
 
         // 3. Taster Boot (B) und Reset (R)
         double btnSize = hs * 0.7;
         // Boot Button (links neben USB)
         gc.setFill(Color.web("#ECEFF1"));
-        gc.fillRect(usbX - btnSize - hs * 0.2, yTop + hs * 0.8, btnSize, btnSize);
+        gc.fillRect(-usbW / 2.0 - btnSize - hs * 0.2, -hPx / 2.0 + hs * 1.2, btnSize, btnSize);
         gc.setFill(Color.web("#212121"));
-        gc.fillOval(usbX - btnSize - hs * 0.2 + btnSize * 0.2, yTop + hs * 0.8 + btnSize * 0.2, btnSize * 0.6, btnSize * 0.6);
+        gc.fillOval(-usbW / 2.0 - btnSize - hs * 0.2 + btnSize * 0.2, -hPx / 2.0 + hs * 1.2 + btnSize * 0.2, btnSize * 0.6, btnSize * 0.6);
 
         // Reset Button (rechts neben USB)
         gc.setFill(Color.web("#ECEFF1"));
-        gc.fillRect(usbX + usbW + hs * 0.2, yTop + hs * 0.8, btnSize, btnSize);
+        gc.fillRect(usbW / 2.0 + hs * 0.2, -hPx / 2.0 + hs * 1.2, btnSize, btnSize);
         gc.setFill(Color.web("#212121"));
-        gc.fillOval(usbX + usbW + hs * 0.2 + btnSize * 0.2, yTop + hs * 0.8 + btnSize * 0.2, btnSize * 0.6, btnSize * 0.6);
+        gc.fillOval(usbW / 2.0 + hs * 0.2 + btnSize * 0.2, -hPx / 2.0 + hs * 1.2 + btnSize * 0.2, btnSize * 0.6, btnSize * 0.6);
 
         // 4. Zentraler ESP32-S3 QFN-Chip (schwarz, diagonal rotiert wie im Original!)
-        double chipMidX = (xLeft + xRight) / 2.0;
-        double chipMidY = (yTop + yBottom) / 2.0 + hs * 0.5;
+        double chipMidY = hs * 0.5;
         double chipR = hs * 1.25;
 
         gc.save();
-        gc.translate(chipMidX, chipMidY);
+        gc.translate(0, chipMidY);
         gc.rotate(45);
         gc.setFill(Color.web("#212121"));
         gc.fillRect(-chipR, -chipR, chipR * 2, chipR * 2);
@@ -1298,8 +1310,8 @@ public class PerfBoardCanvas extends Canvas {
         // 5. Keramik-Antenne unten (weißes Rechteck mit roten Streifen "C3")
         double antW = hs * 3.2;
         double antH = hs * 0.9;
-        double antX = chipMidX - antW / 2.0;
-        double antY = yBottom - antH + hs * 0.2;
+        double antX = -antW / 2.0;
+        double antY = hPx / 2.0 - antH - hs * 0.2;
         gc.setFill(Color.web("#FAFAFA"));
         gc.fillRect(antX, antY, antW, antH);
         gc.setStroke(Color.web("#BDBDBD"));
@@ -1310,49 +1322,59 @@ public class PerfBoardCanvas extends Canvas {
 
         // 6. Goldene Castellated Pads & Pin-Lötkontakte links & rechts (je 9 Pins)
         double padR = Math.max(2.8, hs * 0.32);
+        double localXLeft = -hs * 3.0;
+        double localXRight = hs * 3.0;
         for (int i = 0; i < 9; i++) {
-            double py = transform.gridToScreenY(gy + i);
+            double localY = -hs * 4.0 + i * hs;
 
             // Links (Pin 1 bis 9)
             gc.setFill(Color.web("#FFD54F")); // Goldene Lötaugen
-            gc.fillOval(xLeft - padR, py - padR, padR * 2, padR * 2);
+            gc.fillOval(localXLeft - padR, localY - padR, padR * 2, padR * 2);
             gc.setFill(Color.web("#121212")); // Lochbohrung
-            gc.fillOval(xLeft - padR * 0.5, py - padR * 0.5, padR, padR);
+            gc.fillOval(localXLeft - padR * 0.5, localY - padR * 0.5, padR, padR);
 
             // Rechts (Pin 10 bis 18)
             gc.setFill(Color.web("#FFD54F"));
-            gc.fillOval(xRight - padR, py - padR, padR * 2, padR * 2);
+            gc.fillOval(localXRight - padR, localY - padR, padR * 2, padR * 2);
             gc.setFill(Color.web("#121212"));
-            gc.fillOval(xRight - padR * 0.5, py - padR * 0.5, padR, padR);
+            gc.fillOval(localXRight - padR * 0.5, localY - padR * 0.5, padR, padR);
         }
 
         // Beschriftung & Silkscreen
         gc.setFill(Color.web("#FFFFFF"));
-        gc.fillText(comp.getDesignator(), boardLeft + 8, boardTop + 14);
+        gc.fillText(comp.getDesignator(), -wPx / 2.0 + 8, -hPx / 2.0 + 14);
         gc.setFill(Color.web("#90CAF9"));
-        gc.fillText("ESP32-S3-Zero", chipMidX - 32, boardTop + height - 4);
+        gc.fillText("ESP32-S3-Zero", -32, hPx / 2.0 - 4);
 
         if (isSelected) {
             gc.setStroke(Color.web("#00C853"));
             gc.setLineWidth(2.5);
-            gc.strokeRoundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8, 8);
+            gc.strokeRoundRect(-wPx / 2.0 - 4, -hPx / 2.0 - 4, wPx + 8, hPx + 8, 8, 8);
         }
+        gc.restore();
     }
 
     private void renderTP4056(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
-        int gx = comp.getStart().x();
-        int gy = comp.getStart().y();
         double hs = transform.getHoleSpacingPx();
+        boolean isSwapped = comp.getRotation() == 1 || comp.getRotation() == 3;
+        double curW = isSwapped ? 9.0 : 6.0;
+        double curH = isSwapped ? 6.0 : 9.0;
 
-        double xLeft = transform.gridToScreenX(gx);
-        double xRight = transform.gridToScreenX(gx + 6);
-        double yTop = transform.gridToScreenY(gy);
-        double yBottom = transform.gridToScreenY(gy + 9);
+        double midGridX = comp.getStart().x() + curW / 2.0;
+        double midGridY = comp.getStart().y() + curH / 2.0;
+        double cx = transform.gridToScreenX(midGridX);
+        double cy = transform.gridToScreenY(midGridY);
 
-        double width = xRight - xLeft + hs * 0.9;
-        double height = yBottom - yTop + hs * 0.9;
-        double boardLeft = xLeft - hs * 0.45;
-        double boardTop = yTop - hs * 0.45;
+        gc.save();
+        gc.translate(cx, cy);
+        double rotDeg = comp.getRotation() * 90.0;
+        if (transform.isFlippedX()) rotDeg = -rotDeg;
+        gc.rotate(rotDeg);
+
+        double width = hs * 6.9;
+        double height = hs * 9.9;
+        double boardLeft = -width / 2.0;
+        double boardTop = -height / 2.0;
 
         // 1. PCB Grundkörper (Klassisches TP4056 Dunkelblau #1565C0)
         gc.setFill(Color.web("#1565C0"));
@@ -1364,8 +1386,8 @@ public class PerfBoardCanvas extends Canvas {
         // 2. USB-C Eingang oben mittig (überstehend)
         double usbW = hs * 2.8;
         double usbH = hs * 1.6;
-        double usbX = (xLeft + xRight) / 2.0 - usbW / 2.0;
-        double usbY = boardTop - hs * 0.55;
+        double usbX = -usbW / 2.0;
+        double usbY = boardTop - hs * 0.1;
         gc.setFill(Color.web("#CFD8DC"));
         gc.fillRoundRect(usbX, usbY, usbW, usbH, 4, 4);
         gc.setStroke(Color.web("#90A4AE"));
@@ -1375,41 +1397,43 @@ public class PerfBoardCanvas extends Canvas {
         gc.fillRoundRect(usbX + usbW * 0.15, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2, 2);
 
         // 3. Haupt-Lade-IC (TP4056 SOP-8) in der Mitte
-        double midX = (xLeft + xRight) / 2.0;
-        double tpY = yTop + hs * 3.2;
+        double tpY = boardTop + hs * 3.65;
         double tpW = hs * 2.2;
         double tpH = hs * 1.6;
         gc.setFill(Color.web("#212121"));
-        gc.fillRoundRect(midX - tpW / 2.0, tpY - tpH / 2.0, tpW, tpH, 2, 2);
+        gc.fillRoundRect(-tpW / 2.0, tpY - tpH / 2.0, tpW, tpH, 2, 2);
         gc.setStroke(Color.web("#424242"));
         gc.setLineWidth(1.0);
-        gc.strokeRoundRect(midX - tpW / 2.0, tpY - tpH / 2.0, tpW, tpH, 2, 2);
+        gc.strokeRoundRect(-tpW / 2.0, tpY - tpH / 2.0, tpW, tpH, 2, 2);
         gc.setFill(Color.web("#B0BEC5"));
-        gc.fillText("4056", midX - 11, tpY + 4);
+        gc.fillText("4056", -11, tpY + 4);
 
         // 4. Schutz-IC DW01A + 8205A Dual-MOSFET unten
-        double protY = yTop + hs * 5.8;
+        double protY = boardTop + hs * 6.25;
         gc.setFill(Color.web("#212121"));
-        gc.fillRoundRect(midX - hs * 0.9, protY, hs * 1.8, hs * 2.0, 2, 2);
+        gc.fillRoundRect(-hs * 0.9, protY, hs * 1.8, hs * 2.0, 2, 2);
         gc.setStroke(Color.web("#37474F"));
         gc.setLineWidth(1.0);
-        gc.strokeRoundRect(midX - hs * 0.9, protY, hs * 1.8, hs * 2.0, 2, 2);
+        gc.strokeRoundRect(-hs * 0.9, protY, hs * 1.8, hs * 2.0, 2, 2);
 
         // Zwei Status-LEDs (Rot = Laden, Blau = Voll)
         gc.setFill(Color.web("#E53935")); // Rot
-        gc.fillOval(midX - hs * 1.4, yTop + hs * 1.8, hs * 0.4, hs * 0.4);
+        gc.fillOval(-hs * 1.4, boardTop + hs * 2.45, hs * 0.4, hs * 0.4);
         gc.setFill(Color.web("#1E88E5")); // Blau
-        gc.fillOval(midX + hs * 1.0, yTop + hs * 1.8, hs * 0.4, hs * 0.4);
+        gc.fillOval(hs * 1.0, boardTop + hs * 2.45, hs * 0.4, hs * 0.4);
 
         // 5. Die 6 Löt-Pads (IN+, IN-, OUT+, B+, B-, OUT-)
         double padR = Math.max(3.0, hs * 0.35);
+        double localXLeft = -hs * 3.0;
+        double localXRight = hs * 3.0;
+        double localYTop = -hs * 4.5;
         double[][] pads = {
-                {xLeft, yTop},             // IN+
-                {xRight, yTop},            // IN-
-                {xLeft, yTop + hs * 8.0},  // OUT+
-                {xLeft, yTop + hs * 9.0},  // B+
-                {xRight, yTop + hs * 9.0}, // B-
-                {xRight, yTop + hs * 8.0}  // OUT-
+                {localXLeft, localYTop},             // IN+
+                {localXRight, localYTop},            // IN-
+                {localXLeft, localYTop + hs * 8.0},  // OUT+
+                {localXLeft, localYTop + hs * 9.0},  // B+
+                {localXRight, localYTop + hs * 9.0}, // B-
+                {localXRight, localYTop + hs * 8.0}  // OUT-
         };
         for (double[] pt : pads) {
             gc.setFill(Color.web("#FFD54F")); // Goldener Lötkontakt
@@ -1420,12 +1444,12 @@ public class PerfBoardCanvas extends Canvas {
 
         // Beschriftung Silkscreen
         gc.setFill(Color.web("#FFFFFF"));
-        gc.fillText("+ IN", xLeft + 6, yTop + 4);
-        gc.fillText("IN -", xRight - 24, yTop + 4);
-        gc.fillText("OUT+", xLeft + 6, yTop + hs * 8.0 + 4);
-        gc.fillText("B+", xLeft + 6, yTop + hs * 9.0 + 4);
-        gc.fillText("B-", xRight - 18, yTop + hs * 9.0 + 4);
-        gc.fillText("OUT-", xRight - 30, yTop + hs * 8.0 + 4);
+        gc.fillText("+ IN", localXLeft + 6, localYTop + 4);
+        gc.fillText("IN -", localXRight - 24, localYTop + 4);
+        gc.fillText("OUT+", localXLeft + 6, localYTop + hs * 8.0 + 4);
+        gc.fillText("B+", localXLeft + 6, localYTop + hs * 9.0 + 4);
+        gc.fillText("B-", localXRight - 18, localYTop + hs * 9.0 + 4);
+        gc.fillText("OUT-", localXRight - 30, localYTop + hs * 8.0 + 4);
         gc.fillText(comp.getDesignator() + " (TP4056)", boardLeft + 8, boardTop + 14);
 
         if (isSelected) {
@@ -1433,6 +1457,7 @@ public class PerfBoardCanvas extends Canvas {
             gc.setLineWidth(2.5);
             gc.strokeRoundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8, 8);
         }
+        gc.restore();
     }
 
     private void renderPinHeader(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
@@ -1589,26 +1614,38 @@ public class PerfBoardCanvas extends Canvas {
     }
 
     private void renderTactileSwitchBottom(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
-        int gx = comp.getStart().x();
-        int gy = comp.getStart().y();
         double hs = transform.getHoleSpacingPx();
+        boolean isSwapped = comp.getRotation() == 1 || comp.getRotation() == 3;
+        double curW = isSwapped ? 3.0 : 2.0;
+        double curH = isSwapped ? 2.0 : 3.0;
 
-        int[][] pinCoords = {
-                {gx, gy},
-                {gx + 2, gy},
-                {gx, gy + 3},
-                {gx + 2, gy + 3}
+        double midGridX = comp.getStart().x() + curW / 2.0;
+        double midGridY = comp.getStart().y() + curH / 2.0;
+        double cx = transform.gridToScreenX(midGridX);
+        double cy = transform.gridToScreenY(midGridY);
+
+        gc.save();
+        gc.translate(cx, cy);
+        double rotDeg = comp.getRotation() * 90.0;
+        if (transform.isFlippedX()) rotDeg = -rotDeg;
+        gc.rotate(rotDeg);
+
+        double x0 = -hs * 1.0;
+        double x1 = hs * 1.0;
+        double y0 = -hs * 1.5;
+        double y1 = hs * 1.5;
+
+        double[][] pinCoords = {
+                {x0, y0},
+                {x1, y0},
+                {x0, y1},
+                {x1, y1}
         };
 
-        double x0 = transform.gridToScreenX(gx);
-        double y0 = transform.gridToScreenY(gy);
-        double x1 = transform.gridToScreenX(gx + 2);
-        double y1 = transform.gridToScreenY(gy + 3);
-
-        double minX = Math.min(x0, x1);
-        double maxX = Math.max(x0, x1);
-        double minY = Math.min(y0, y1);
-        double maxY = Math.max(y0, y1);
+        double minX = -hs * 1.0;
+        double maxX = hs * 1.0;
+        double minY = -hs * 1.5;
+        double maxY = hs * 1.5;
 
         gc.setStroke(Color.web("#90A4AE", 0.35));
         gc.setLineWidth(1.0);
@@ -1619,16 +1656,15 @@ public class PerfBoardCanvas extends Canvas {
         gc.setFill(Color.web("#90A4AE", 0.75));
         gc.fillText(comp.getDesignator(), minX - hs * 0.5, minY - hs * 0.6);
 
-        for (int[] p : pinCoords) {
-            double cx = transform.gridToScreenX(p[0]);
-            double cy = transform.gridToScreenY(p[1]);
-            drawSolderPin(gc, cx, cy, hs);
+        for (double[] p : pinCoords) {
+            drawSolderPin(gc, p[0], p[1], hs);
             if (isSelected) {
                 gc.setStroke(Color.web("#00E676"));
                 gc.setLineWidth(2.0);
-                gc.strokeOval(cx - hs * 0.45, cy - hs * 0.45, hs * 0.9, hs * 0.9);
+                gc.strokeOval(p[0] - hs * 0.45, p[1] - hs * 0.45, hs * 0.9, hs * 0.9);
             }
         }
+        gc.restore();
     }
 
     private void renderTwoPinBottom(GraphicsContext gc, PlacedComponent comp, String typeLabel, boolean isSelected) {
@@ -1700,70 +1736,91 @@ public class PerfBoardCanvas extends Canvas {
     }
 
     private void renderESP32Bottom(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
-        int gx = comp.getStart().x();
-        int gy = comp.getStart().y();
         double hs = transform.getHoleSpacingPx();
+        boolean isSwapped = comp.getRotation() == 1 || comp.getRotation() == 3;
+        double curW = isSwapped ? 8.0 : 6.0;
+        double curH = isSwapped ? 6.0 : 8.0;
 
-        double xLeft = transform.gridToScreenX(gx);
-        double xRight = transform.gridToScreenX(gx + 6);
-        double yTop = transform.gridToScreenY(gy);
-        double yBottom = transform.gridToScreenY(gy + 8);
+        double midGridX = comp.getStart().x() + curW / 2.0;
+        double midGridY = comp.getStart().y() + curH / 2.0;
+        double cx = transform.gridToScreenX(midGridX);
+        double cy = transform.gridToScreenY(midGridY);
 
-        double minX = Math.min(xLeft, xRight);
-        double maxX = Math.max(xLeft, xRight);
-        double minY = Math.min(yTop, yBottom);
-        double maxY = Math.max(yTop, yBottom);
+        gc.save();
+        gc.translate(cx, cy);
+        double rotDeg = comp.getRotation() * 90.0;
+        if (transform.isFlippedX()) rotDeg = -rotDeg;
+        gc.rotate(rotDeg);
+
+        double wPx = hs * 6.8;
+        double hPx = hs * 8.8;
 
         gc.setStroke(Color.web("#90A4AE", 0.35));
         gc.setLineWidth(1.0);
         gc.setLineDashes(3, 3);
-        gc.strokeRoundRect(minX - hs * 0.5, minY - hs * 0.5, (maxX - minX) + hs, (maxY - minY) + hs, 6, 6);
+        gc.strokeRoundRect(-wPx / 2.0, -hPx / 2.0, wPx, hPx, 6, 6);
         gc.setLineDashes(null);
 
         gc.setFill(Color.web("#90A4AE", 0.75));
-        gc.fillText(comp.getDesignator() + " (ESP32 Pins)", minX - hs * 0.5, minY - hs * 0.6);
+        gc.fillText(comp.getDesignator() + " (ESP32 Pins)", -wPx / 2.0, -hPx / 2.0 - 6);
 
+        double localXLeft = -hs * 3.0;
+        double localXRight = hs * 3.0;
         for (int i = 0; i < 9; i++) {
-            double py = transform.gridToScreenY(gy + i);
-            drawSolderPin(gc, xLeft, py, hs);
-            drawSolderPin(gc, xRight, py, hs);
+            double localY = -hs * 4.0 + i * hs;
+            drawSolderPin(gc, localXLeft, localY, hs);
+            drawSolderPin(gc, localXRight, localY, hs);
         }
 
         if (isSelected) {
             gc.setStroke(Color.web("#00E676"));
             gc.setLineWidth(2.0);
-            gc.strokeRoundRect(minX - hs * 0.6, minY - hs * 0.6, (maxX - minX) + hs * 1.2, (maxY - minY) + hs * 1.2, 8, 8);
+            gc.strokeRoundRect(-wPx / 2.0 - 3, -hPx / 2.0 - 3, wPx + 6, hPx + 6, 8, 8);
         }
+        gc.restore();
     }
 
     private void renderTP4056Bottom(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
-        int gx = comp.getStart().x();
-        int gy = comp.getStart().y();
         double hs = transform.getHoleSpacingPx();
+        boolean isSwapped = comp.getRotation() == 1 || comp.getRotation() == 3;
+        double curW = isSwapped ? 9.0 : 6.0;
+        double curH = isSwapped ? 6.0 : 9.0;
 
-        double xLeft = transform.gridToScreenX(gx);
-        double xRight = transform.gridToScreenX(gx + 6);
-        double yTop = transform.gridToScreenY(gy);
+        double midGridX = comp.getStart().x() + curW / 2.0;
+        double midGridY = comp.getStart().y() + curH / 2.0;
+        double cx = transform.gridToScreenX(midGridX);
+        double cy = transform.gridToScreenY(midGridY);
 
-        double minX = Math.min(xLeft, xRight);
-        double maxX = Math.max(xLeft, xRight);
+        gc.save();
+        gc.translate(cx, cy);
+        double rotDeg = comp.getRotation() * 90.0;
+        if (transform.isFlippedX()) rotDeg = -rotDeg;
+        gc.rotate(rotDeg);
+
+        double width = hs * 6.9;
+        double height = hs * 9.9;
+        double boardLeft = -width / 2.0;
+        double boardTop = -height / 2.0;
 
         gc.setStroke(Color.web("#90A4AE", 0.35));
         gc.setLineWidth(1.0);
         gc.setLineDashes(3, 3);
-        gc.strokeRoundRect(minX - hs * 0.5, yTop - hs * 0.5, (maxX - minX) + hs, 9 * hs + hs, 6, 6);
+        gc.strokeRoundRect(boardLeft, boardTop, width, height, 6, 6);
         gc.setLineDashes(null);
 
         gc.setFill(Color.web("#90A4AE", 0.75));
-        gc.fillText(comp.getDesignator() + " (TP4056 Pins)", minX - hs * 0.5, yTop - hs * 0.6);
+        gc.fillText(comp.getDesignator() + " (TP4056 Pins)", boardLeft + 8, boardTop - 6);
 
+        double localXLeft = -hs * 3.0;
+        double localXRight = hs * 3.0;
+        double localYTop = -hs * 4.5;
         double[][] pads = {
-                {xLeft, yTop},             // IN+
-                {xRight, yTop},            // IN-
-                {xLeft, yTop + hs * 8.0},  // OUT+
-                {xLeft, yTop + hs * 9.0},  // B+
-                {xRight, yTop + hs * 9.0}, // B-
-                {xRight, yTop + hs * 8.0}  // OUT-
+                {localXLeft, localYTop},             // IN+
+                {localXRight, localYTop},            // IN-
+                {localXLeft, localYTop + hs * 8.0},  // OUT+
+                {localXLeft, localYTop + hs * 9.0},  // B+
+                {localXRight, localYTop + hs * 9.0}, // B-
+                {localXRight, localYTop + hs * 8.0}  // OUT-
         };
 
         for (double[] pt : pads) {
@@ -1773,8 +1830,9 @@ public class PerfBoardCanvas extends Canvas {
         if (isSelected) {
             gc.setStroke(Color.web("#00E676"));
             gc.setLineWidth(2.0);
-            gc.strokeRoundRect(minX - hs * 0.6, yTop - hs * 0.6, (maxX - minX) + hs * 1.2, 9 * hs + hs * 1.2, 8, 8);
+            gc.strokeRoundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8, 8);
         }
+        gc.restore();
     }
 
     private void drawBand(GraphicsContext gc, double x, double y, double w, double h, String hexColor) {
