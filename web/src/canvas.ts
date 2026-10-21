@@ -143,6 +143,14 @@ export class PerfBoardCanvas {
           this.wireStartHole = grid;
         } else {
           if (this.wireStartHole.x !== grid.x || this.wireStartHole.y !== grid.y) {
+            // Prüfung: TP4056 Lader mit Silberdraht verbunden?
+            if (this.activeWireKind === 'SILVER_WIRE' && this.isTp4056Pad(this.wireStartHole, grid)) {
+              alert('Warnung: TP4056 Lader darf NICHT mit unisolierter Silber-Drahtbrücke verbunden werden! Bitte isoliertes Kabel verwenden (Kurzschlussgefahr LiPo-Akku).');
+              this.wireStartHole = null;
+              this.render();
+              return;
+            }
+
             this.project.wires.push({
               id: 'w_' + Date.now(),
               kind: this.activeWireKind,
@@ -295,6 +303,11 @@ export class PerfBoardCanvas {
         // ESP32-S3-Zero: 7 Spalten x 9 Zeilen (dx=6, dy=8)
         comp = { id, type: this.activeComponentType, designator: des, value: 'ESP32-S3-Zero', start, end: { x: start.x + 6, y: start.y + 8 }, rotation: 0, layer: 'TOP' };
         break;
+      case 'TP4056_CHARGER':
+        des = 'U' + count;
+        // TP4056 Lipo Lader: 7 Spalten x 10 Zeilen (dx=6, dy=9)
+        comp = { id, type: this.activeComponentType, designator: des, value: 'TP4056', start, end: { x: start.x + 6, y: start.y + 9 }, rotation: 0, layer: 'TOP' };
+        break;
     }
 
     this.project.components.push(comp);
@@ -419,6 +432,8 @@ export class PerfBoardCanvas {
         dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y + 3 };
       } else if (this.activeComponentType === 'ESP32_S3_ZERO') {
         dummyEnd = { x: this.currentHoverGrid.x + 6, y: this.currentHoverGrid.y + 8 };
+      } else if (this.activeComponentType === 'TP4056_CHARGER') {
+        dummyEnd = { x: this.currentHoverGrid.x + 6, y: this.currentHoverGrid.y + 9 };
       }
 
       const dummy: PlacedComponent = {
@@ -830,6 +845,115 @@ export class PerfBoardCanvas {
         this.ctx.roundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8);
         this.ctx.stroke();
       }
+    } else if (comp.type === 'TP4056_CHARGER') {
+      const gx = comp.start.x;
+      const gy = comp.start.y;
+
+      const xLeft = this.transform.gridToScreenX(gx);
+      const xRight = this.transform.gridToScreenX(gx + 6);
+      const yTop = this.transform.gridToScreenY(gy);
+      const yBottom = this.transform.gridToScreenY(gy + 9);
+
+      const width = xRight - xLeft + hs * 0.9;
+      const height = yBottom - yTop + hs * 0.9;
+      const boardLeft = xLeft - hs * 0.45;
+      const boardTop = yTop - hs * 0.45;
+
+      // 1. PCB Grundkörper (TP4056 Blau)
+      this.ctx.fillStyle = '#1565C0';
+      this.ctx.beginPath();
+      this.ctx.roundRect(boardLeft, boardTop, width, height, 6);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#1E88E5';
+      this.ctx.lineWidth = 1.5;
+      this.ctx.stroke();
+
+      // 2. USB-C Eingang oben mittig
+      const usbW = hs * 2.8;
+      const usbH = hs * 1.6;
+      const usbX = (xLeft + xRight) / 2 - usbW / 2;
+      const usbY = boardTop - hs * 0.55;
+      this.ctx.fillStyle = '#CFD8DC';
+      this.ctx.beginPath();
+      this.ctx.roundRect(usbX, usbY, usbW, usbH, 4);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#90A4AE';
+      this.ctx.lineWidth = 1;
+      this.ctx.stroke();
+      this.ctx.fillStyle = '#263238';
+      this.ctx.beginPath();
+      this.ctx.roundRect(usbX + usbW * 0.15, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2);
+      this.ctx.fill();
+
+      // 3. Haupt-IC TP4056
+      const midX = (xLeft + xRight) / 2;
+      const tpY = yTop + hs * 3.2;
+      const tpW = hs * 2.2;
+      const tpH = hs * 1.6;
+      this.ctx.fillStyle = '#212121';
+      this.ctx.beginPath();
+      this.ctx.roundRect(midX - tpW / 2, tpY - tpH / 2, tpW, tpH, 2);
+      this.ctx.fill();
+      this.ctx.fillStyle = '#B0BEC5';
+      this.ctx.font = '10px monospace';
+      this.ctx.fillText('4056', midX - 11, tpY + 4);
+
+      // 4. Schutz-IC DW01A
+      const protY = yTop + hs * 5.8;
+      this.ctx.fillStyle = '#212121';
+      this.ctx.beginPath();
+      this.ctx.roundRect(midX - hs * 0.9, protY, hs * 1.8, hs * 2.0, 2);
+      this.ctx.fill();
+
+      // LEDs
+      this.ctx.fillStyle = '#E53935';
+      this.ctx.beginPath();
+      this.ctx.arc(midX - hs * 1.2, yTop + hs * 2.0, hs * 0.2, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.fillStyle = '#1E88E5';
+      this.ctx.beginPath();
+      this.ctx.arc(midX + hs * 1.2, yTop + hs * 2.0, hs * 0.2, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // 5. Die 6 Löt-Pads (IN+, IN-, OUT+, B+, B-, OUT-)
+      const padR = Math.max(3.0, hs * 0.35);
+      const pads = [
+        [xLeft, yTop],
+        [xRight, yTop],
+        [xLeft, yTop + hs * 8.0],
+        [xLeft, yTop + hs * 9.0],
+        [xRight, yTop + hs * 9.0],
+        [xRight, yTop + hs * 8.0],
+      ];
+      for (const [px, py] of pads) {
+        this.ctx.fillStyle = '#FFD54F';
+        this.ctx.beginPath();
+        this.ctx.arc(px, py, padR, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.fillStyle = '#121212';
+        this.ctx.beginPath();
+        this.ctx.arc(px, py, padR * 0.5, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+
+      // Beschriftung Silkscreen
+      this.ctx.fillStyle = '#FFFFFF';
+      this.ctx.font = '10px sans-serif';
+      this.ctx.fillText('+ IN', xLeft + 6, yTop + 4);
+      this.ctx.fillText('IN -', xRight - 24, yTop + 4);
+      this.ctx.fillText('OUT+', xLeft + 6, yTop + hs * 8.0 + 4);
+      this.ctx.fillText('B+', xLeft + 6, yTop + hs * 9.0 + 4);
+      this.ctx.fillText('B-', xRight - 18, yTop + hs * 9.0 + 4);
+      this.ctx.fillText('OUT-', xRight - 30, yTop + hs * 8.0 + 4);
+      this.ctx.fillText(`${comp.designator} (TP4056)`, boardLeft + 8, boardTop + 14);
+
+      if (isSelected) {
+        this.ctx.strokeStyle = '#00C853';
+        this.ctx.lineWidth = 2.5;
+        this.ctx.beginPath();
+        this.ctx.roundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8);
+        this.ctx.stroke();
+      }
     }
   }
 
@@ -861,6 +985,14 @@ export class PerfBoardCanvas {
           const rightLabels = ['TX (GP43)', 'RX (GP44)', 'GP13', 'GP12', 'GP11', 'GP10', 'GP9', 'GP8', 'GP7'];
           if (dy >= 0 && dy < rightLabels.length) return `${c.designator} (ESP32): ${rightLabels[dy]}`;
         }
+      } else if (c.type === 'TP4056_CHARGER') {
+        const s = c.start;
+        if (grid.x === s.x && grid.y === s.y) return `${c.designator} (TP4056): IN+ (4.5V-5.5V)`;
+        if (grid.x === s.x + 6 && grid.y === s.y) return `${c.designator} (TP4056): IN- (GND)`;
+        if (grid.x === s.x && grid.y === s.y + 8) return `${c.designator} (TP4056): OUT+`;
+        if (grid.x === s.x && grid.y === s.y + 9) return `${c.designator} (TP4056): B+ (Batterie +)`;
+        if (grid.x === s.x + 6 && grid.y === s.y + 9) return `${c.designator} (TP4056): B- (Batterie -)`;
+        if (grid.x === s.x + 6 && grid.y === s.y + 8) return `${c.designator} (TP4056): OUT-`;
       }
     }
     return null;
@@ -931,5 +1063,27 @@ export class PerfBoardCanvas {
 
   public getProject(): PerfProject {
     return this.project;
+  }
+
+  private isTp4056Pad(h1: HoleCoord, h2: HoleCoord): boolean {
+    for (const c of this.project.components) {
+      if (c.type === 'TP4056_CHARGER') {
+        const s = c.start;
+        const pads = [
+          { x: s.x, y: s.y },
+          { x: s.x + 6, y: s.y },
+          { x: s.x, y: s.y + 8 },
+          { x: s.x, y: s.y + 9 },
+          { x: s.x + 6, y: s.y + 9 },
+          { x: s.x + 6, y: s.y + 8 },
+        ];
+        for (const p of pads) {
+          if ((p.x === h1.x && p.y === h1.y) || (p.x === h2.x && p.y === h2.y)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 }

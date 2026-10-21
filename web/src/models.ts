@@ -9,7 +9,8 @@ export type ComponentType =
   | 'CAPACITOR_CERAMIC'
   | 'DIODE'
   | 'IC_DIP'
-  | 'ESP32_S3_ZERO';
+  | 'ESP32_S3_ZERO'
+  | 'TP4056_CHARGER';
 
 export interface HoleCoord {
   x: number;

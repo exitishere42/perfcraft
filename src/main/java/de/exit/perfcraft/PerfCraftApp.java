@@ -113,6 +113,15 @@ public class PerfCraftApp extends Application {
             }
         });
 
+        canvas.setOnWarningNotification(msg -> {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.initOwner(primaryStage);
+            alert.setTitle("Verdrahtungs-Warnung");
+            alert.setHeaderText("Achtung: Kurzschlussgefahr!");
+            alert.setContentText(msg);
+            alert.showAndWait();
+        });
+
         if (canvas.getSelectedComponent() != null) {
             updateInspector(canvas.getSelectedComponent());
         }
@@ -316,6 +325,7 @@ public class PerfCraftApp extends Application {
         Button btnDiode = createCompSelectButton(I18n.get("comp.diode"), "▷|");
         Button btnIc = createCompSelectButton(I18n.get("comp.ic"), "⚏");
         Button btnEsp32 = createCompSelectButton(I18n.get("comp.esp32"), "🖳");
+        Button btnTp4056 = createCompSelectButton(I18n.get("comp.tp4056"), "🔋");
 
         btnSwitch.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.TACTILE_SWITCH); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
         btnResistor.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.RESISTOR_AXIAL); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
@@ -324,6 +334,7 @@ public class PerfCraftApp extends Application {
         btnDiode.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.DIODE); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
         btnIc.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.IC_DIP); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
         btnEsp32.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.ESP32_S3_ZERO); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
+        btnTp4056.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.TP4056_CHARGER); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
 
         compGrid.add(btnSwitch, 0, 0);
         compGrid.add(btnResistor, 1, 0);
@@ -331,7 +342,8 @@ public class PerfCraftApp extends Application {
         compGrid.add(btnLed, 1, 1);
         compGrid.add(btnDiode, 0, 2);
         compGrid.add(btnIc, 1, 2);
-        compGrid.add(btnEsp32, 0, 3, 2, 1);
+        compGrid.add(btnEsp32, 0, 3);
+        compGrid.add(btnTp4056, 1, 3);
 
         // Leitungs-Auswahl
         VBox wireTypeBox = new VBox(6);

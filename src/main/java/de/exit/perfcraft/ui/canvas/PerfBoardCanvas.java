@@ -44,6 +44,7 @@ public class PerfBoardCanvas extends Canvas {
     private BiConsumer<Integer, Integer> onHoverCoordinate;
     private Consumer<PlacedComponent> onComponentSelected;
     private Runnable onProjectModified;
+    private Consumer<String> onWarningNotification;
 
     private boolean initialFitDone = false;
 
@@ -115,6 +116,16 @@ public class PerfBoardCanvas extends Canvas {
                         wireStartHole = grid;
                     } else {
                         if (!wireStartHole.equals(grid)) {
+                            // Prüfung: Ist einer der Endpunkte ein TP4056 Pad und wird Silberdraht verwendet?
+                            if (activeWireKind == WireKind.SILVER_WIRE && isTp4056Pad(wireStartHole, grid)) {
+                                if (onWarningNotification != null) {
+                                    onWarningNotification.accept("Warnung: TP4056 Lader darf NICHT mit unisolierter Silber-Drahtbrücke verbunden werden! Bitte isoliertes Kabel verwenden (Kurzschlussgefahr LiPo-Akku).");
+                                }
+                                wireStartHole = null;
+                                render();
+                                return;
+                            }
+
                             WireTrace trace = new WireTrace(
                                     UUID.randomUUID().toString(),
                                     activeWireKind,
@@ -231,6 +242,9 @@ public class PerfBoardCanvas extends Canvas {
         } else if (activeComponentType == ComponentType.ESP32_S3_ZERO) {
             // ESP32-S3-Zero: 7 Spalten x 9 Zeilen (dx=6, dy=8)
             comp = new PlacedComponent(id, activeComponentType, des, "ESP32-S3-Zero", start, new HoleCoord(start.x() + 6, start.y() + 8), 0, BoardLayer.TOP);
+        } else if (activeComponentType == ComponentType.TP4056_CHARGER) {
+            // TP4056 Lipo Charger: 7 Spalten x 10 Zeilen (dx=6, dy=9)
+            comp = new PlacedComponent(id, activeComponentType, des, "TP4056", start, new HoleCoord(start.x() + 6, start.y() + 9), 0, BoardLayer.TOP);
         } else {
             comp = new PlacedComponent(id, activeComponentType, des, "10k", start, new HoleCoord(start.x() + 2, start.y()), 0, BoardLayer.TOP);
         }
@@ -401,6 +415,8 @@ public class PerfBoardCanvas extends Canvas {
             renderIC(gc, comp, isSel);
         } else if (comp.getType() == ComponentType.ESP32_S3_ZERO) {
             renderESP32S3Zero(gc, comp, isSel);
+        } else if (comp.getType() == ComponentType.TP4056_CHARGER) {
+            renderTP4056(gc, comp, isSel);
         }
     }
 
@@ -419,6 +435,8 @@ public class PerfBoardCanvas extends Canvas {
             return new PlacedComponent("ghost", type, "U", "DIP-8", start, new HoleCoord(start.x() + 3, start.y() + 3), 0, BoardLayer.TOP);
         } else if (type == ComponentType.ESP32_S3_ZERO) {
             return new PlacedComponent("ghost", type, "U", "ESP32-S3-Zero", start, new HoleCoord(start.x() + 6, start.y() + 8), 0, BoardLayer.TOP);
+        } else if (type == ComponentType.TP4056_CHARGER) {
+            return new PlacedComponent("ghost", type, "U", "TP4056", start, new HoleCoord(start.x() + 6, start.y() + 9), 0, BoardLayer.TOP);
         }
         return new PlacedComponent("ghost", type, "COMP", "10k", start, new HoleCoord(start.x() + 2, start.y()), 0, BoardLayer.TOP);
     }
@@ -474,6 +492,14 @@ public class PerfBoardCanvas extends Canvas {
                         case 8 -> { return c.getDesignator() + " (ESP32): GP7"; }
                     }
                 }
+            } else if (c.getType() == ComponentType.TP4056_CHARGER) {
+                // TP4056 Lader (7 Spalten breit: x = s.x oder s.x + 6; y = s.y, s.y+1, s.y+8, s.y+9)
+                if (grid.x() == s.x() && grid.y() == s.y()) return c.getDesignator() + " (TP4056): IN+ (4.5V-5.5V)";
+                if (grid.x() == s.x() + 6 && grid.y() == s.y()) return c.getDesignator() + " (TP4056): IN- (GND)";
+                if (grid.x() == s.x() && grid.y() == s.y() + 8) return c.getDesignator() + " (TP4056): OUT+";
+                if (grid.x() == s.x() && grid.y() == s.y() + 9) return c.getDesignator() + " (TP4056): B+ (Batterie +)";
+                if (grid.x() == s.x() + 6 && grid.y() == s.y() + 9) return c.getDesignator() + " (TP4056): B- (Batterie -)";
+                if (grid.x() == s.x() + 6 && grid.y() == s.y() + 8) return c.getDesignator() + " (TP4056): OUT-";
             }
         }
         return null;
@@ -878,6 +904,102 @@ public class PerfBoardCanvas extends Canvas {
         }
     }
 
+    private void renderTP4056(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        int gx = comp.getStart().x();
+        int gy = comp.getStart().y();
+        double hs = transform.getHoleSpacingPx();
+
+        double xLeft = transform.gridToScreenX(gx);
+        double xRight = transform.gridToScreenX(gx + 6);
+        double yTop = transform.gridToScreenY(gy);
+        double yBottom = transform.gridToScreenY(gy + 9);
+
+        double width = xRight - xLeft + hs * 0.9;
+        double height = yBottom - yTop + hs * 0.9;
+        double boardLeft = xLeft - hs * 0.45;
+        double boardTop = yTop - hs * 0.45;
+
+        // 1. PCB Grundkörper (Klassisches TP4056 Dunkelblau #1565C0)
+        gc.setFill(Color.web("#1565C0"));
+        gc.fillRoundRect(boardLeft, boardTop, width, height, 6, 6);
+        gc.setStroke(Color.web("#1E88E5"));
+        gc.setLineWidth(1.5);
+        gc.strokeRoundRect(boardLeft, boardTop, width, height, 6, 6);
+
+        // 2. USB-C Eingang oben mittig (überstehend)
+        double usbW = hs * 2.8;
+        double usbH = hs * 1.6;
+        double usbX = (xLeft + xRight) / 2.0 - usbW / 2.0;
+        double usbY = boardTop - hs * 0.55;
+        gc.setFill(Color.web("#CFD8DC"));
+        gc.fillRoundRect(usbX, usbY, usbW, usbH, 4, 4);
+        gc.setStroke(Color.web("#90A4AE"));
+        gc.setLineWidth(1.0);
+        gc.strokeRoundRect(usbX, usbY, usbW, usbH, 4, 4);
+        gc.setFill(Color.web("#263238"));
+        gc.fillRoundRect(usbX + usbW * 0.15, usbY + usbH * 0.25, usbW * 0.7, usbH * 0.45, 2, 2);
+
+        // 3. Haupt-Lade-IC (TP4056 SOP-8) in der Mitte
+        double midX = (xLeft + xRight) / 2.0;
+        double tpY = yTop + hs * 3.2;
+        double tpW = hs * 2.2;
+        double tpH = hs * 1.6;
+        gc.setFill(Color.web("#212121"));
+        gc.fillRoundRect(midX - tpW / 2.0, tpY - tpH / 2.0, tpW, tpH, 2, 2);
+        gc.setStroke(Color.web("#424242"));
+        gc.setLineWidth(1.0);
+        gc.strokeRoundRect(midX - tpW / 2.0, tpY - tpH / 2.0, tpW, tpH, 2, 2);
+        gc.setFill(Color.web("#B0BEC5"));
+        gc.fillText("4056", midX - 11, tpY + 4);
+
+        // 4. Schutz-IC DW01A + 8205A Dual-MOSFET unten
+        double protY = yTop + hs * 5.8;
+        gc.setFill(Color.web("#212121"));
+        gc.fillRoundRect(midX - hs * 0.9, protY, hs * 1.8, hs * 2.0, 2, 2);
+        gc.setStroke(Color.web("#37474F"));
+        gc.setLineWidth(1.0);
+        gc.strokeRoundRect(midX - hs * 0.9, protY, hs * 1.8, hs * 2.0, 2, 2);
+
+        // Zwei Status-LEDs (Rot = Laden, Blau = Voll)
+        gc.setFill(Color.web("#E53935")); // Rot
+        gc.fillOval(midX - hs * 1.4, yTop + hs * 1.8, hs * 0.4, hs * 0.4);
+        gc.setFill(Color.web("#1E88E5")); // Blau
+        gc.fillOval(midX + hs * 1.0, yTop + hs * 1.8, hs * 0.4, hs * 0.4);
+
+        // 5. Die 6 Löt-Pads (IN+, IN-, OUT+, B+, B-, OUT-)
+        double padR = Math.max(3.0, hs * 0.35);
+        double[][] pads = {
+                {xLeft, yTop},             // IN+
+                {xRight, yTop},            // IN-
+                {xLeft, yTop + hs * 8.0},  // OUT+
+                {xLeft, yTop + hs * 9.0},  // B+
+                {xRight, yTop + hs * 9.0}, // B-
+                {xRight, yTop + hs * 8.0}  // OUT-
+        };
+        for (double[] pt : pads) {
+            gc.setFill(Color.web("#FFD54F")); // Goldener Lötkontakt
+            gc.fillOval(pt[0] - padR, pt[1] - padR, padR * 2, padR * 2);
+            gc.setFill(Color.web("#121212")); // Lochbohrung
+            gc.fillOval(pt[0] - padR * 0.5, pt[1] - padR * 0.5, padR, padR);
+        }
+
+        // Beschriftung Silkscreen
+        gc.setFill(Color.web("#FFFFFF"));
+        gc.fillText("+ IN", xLeft + 6, yTop + 4);
+        gc.fillText("IN -", xRight - 24, yTop + 4);
+        gc.fillText("OUT+", xLeft + 6, yTop + hs * 8.0 + 4);
+        gc.fillText("B+", xLeft + 6, yTop + hs * 9.0 + 4);
+        gc.fillText("B-", xRight - 18, yTop + hs * 9.0 + 4);
+        gc.fillText("OUT-", xRight - 30, yTop + hs * 8.0 + 4);
+        gc.fillText(comp.getDesignator() + " (TP4056)", boardLeft + 8, boardTop + 14);
+
+        if (isSelected) {
+            gc.setStroke(Color.web("#00C853"));
+            gc.setLineWidth(2.5);
+            gc.strokeRoundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8, 8);
+        }
+    }
+
     private void drawBand(GraphicsContext gc, double x, double y, double w, double h, String hexColor) {
         gc.setFill(Color.web(hexColor));
         gc.fillRect(x, y, w, h);
@@ -950,7 +1072,31 @@ public class PerfBoardCanvas extends Canvas {
         this.onComponentSelected = callback;
     }
 
+    private boolean isTp4056Pad(HoleCoord h1, HoleCoord h2) {
+        for (PlacedComponent c : project.getComponents()) {
+            if (c.getType() == ComponentType.TP4056_CHARGER) {
+                HoleCoord s = c.getStart();
+                HoleCoord[] pads = {
+                        new HoleCoord(s.x(), s.y()),
+                        new HoleCoord(s.x() + 6, s.y()),
+                        new HoleCoord(s.x(), s.y() + 8),
+                        new HoleCoord(s.x(), s.y() + 9),
+                        new HoleCoord(s.x() + 6, s.y() + 9),
+                        new HoleCoord(s.x() + 6, s.y() + 8)
+                };
+                for (HoleCoord p : pads) {
+                    if (p.equals(h1) || p.equals(h2)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public void setOnProjectModified(Runnable callback) {
         this.onProjectModified = callback;
+    }
+
+    public void setOnWarningNotification(Consumer<String> callback) {
+        this.onWarningNotification = callback;
     }
 }
