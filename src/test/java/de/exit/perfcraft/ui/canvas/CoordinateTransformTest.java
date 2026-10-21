@@ -41,4 +41,25 @@ class CoordinateTransformTest {
         assertEquals(initialX + 25.5, transform.getTranslateX(), 0.001);
         assertEquals(initialY - 15.0, transform.getTranslateY(), 0.001);
     }
+
+    @Test
+    void testFlippedXMirroring() {
+        CoordinateTransform transform = new CoordinateTransform();
+        int cols = 24;
+        transform.setFlippedX(true, cols);
+
+        // X=0 sollte auf der Unterseite am rechten Rand (X=23) liegen
+        double sx0 = transform.gridToScreenX(0);
+        double sxLast = transform.gridToScreenX(cols - 1);
+        assertTrue(sx0 > sxLast, "X=0 must be to the right of X=23 when flipped");
+
+        // Rücktransformation von Bildschirmkoordinaten
+        HoleCoord g0 = transform.screenToGrid(sx0, transform.gridToScreenY(5));
+        assertEquals(0, g0.x());
+        assertEquals(5, g0.y());
+
+        HoleCoord gLast = transform.screenToGrid(sxLast, transform.gridToScreenY(5));
+        assertEquals(cols - 1, gLast.x());
+        assertEquals(5, gLast.y());
+    }
 }

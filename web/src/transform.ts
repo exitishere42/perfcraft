@@ -8,9 +8,20 @@ export class CoordinateTransform {
   private translateX: number = 40.0;
   private translateY: number = 40.0;
   private readonly pixelsPerMm: number;
+  private flippedX: boolean = false;
+  private boardCols: number = 24;
 
   constructor(pixelsPerMm: number = CoordinateTransform.DEFAULT_PPM) {
     this.pixelsPerMm = pixelsPerMm;
+  }
+
+  public setFlippedX(flippedX: boolean, boardCols: number): void {
+    this.flippedX = flippedX;
+    this.boardCols = Math.max(1, boardCols);
+  }
+
+  public isFlippedX(): boolean {
+    return this.flippedX;
   }
 
   public getHoleSpacingPx(): number {
@@ -18,7 +29,8 @@ export class CoordinateTransform {
   }
 
   public gridToScreenX(gridX: number): number {
-    return gridX * CoordinateTransform.PITCH_MM * this.pixelsPerMm * this.scale + this.translateX;
+    const effX = this.flippedX ? this.boardCols - 1 - gridX : gridX;
+    return effX * CoordinateTransform.PITCH_MM * this.pixelsPerMm * this.scale + this.translateX;
   }
 
   public gridToScreenY(gridY: number): number {
@@ -27,8 +39,11 @@ export class CoordinateTransform {
 
   public screenToGrid(screenX: number, screenY: number): HoleCoord {
     const spacing = this.getHoleSpacingPx();
-    const gx = Math.round((screenX - this.translateX) / spacing);
+    let gx = Math.round((screenX - this.translateX) / spacing);
     const gy = Math.round((screenY - this.translateY) / spacing);
+    if (this.flippedX) {
+      gx = this.boardCols - 1 - gx;
+    }
     return { x: gx, y: gy };
   }
 
@@ -46,6 +61,7 @@ export class CoordinateTransform {
   }
 
   public resetView(canvasWidth: number, canvasHeight: number, cols: number, rows: number): void {
+    this.boardCols = Math.max(1, cols);
     const boardWidthPx = (cols - 1) * CoordinateTransform.PITCH_MM * this.pixelsPerMm;
     const boardHeightPx = (rows - 1) * CoordinateTransform.PITCH_MM * this.pixelsPerMm;
     const margin = 32.0;

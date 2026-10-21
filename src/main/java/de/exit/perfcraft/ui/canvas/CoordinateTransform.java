@@ -11,6 +11,8 @@ public class CoordinateTransform {
     private double translateX = 40.0;
     private double translateY = 40.0;
     private final double pixelsPerMm;
+    private boolean flippedX = false;
+    private int boardCols = 24;
 
     public CoordinateTransform() {
         this(DEFAULT_PIXELS_PER_MM);
@@ -20,12 +22,26 @@ public class CoordinateTransform {
         this.pixelsPerMm = pixelsPerMm;
     }
 
+    public void setFlippedX(boolean flippedX, int boardCols) {
+        this.flippedX = flippedX;
+        this.boardCols = Math.max(1, boardCols);
+    }
+
+    public boolean isFlippedX() {
+        return flippedX;
+    }
+
+    public int getBoardCols() {
+        return boardCols;
+    }
+
     public double getHoleSpacingPx() {
         return PITCH_MM * pixelsPerMm * scale;
     }
 
     public double gridToScreenX(int gridX) {
-        return (gridX * PITCH_MM * pixelsPerMm * scale) + translateX;
+        int effX = flippedX ? (boardCols - 1 - gridX) : gridX;
+        return (effX * PITCH_MM * pixelsPerMm * scale) + translateX;
     }
 
     public double gridToScreenY(int gridY) {
@@ -37,6 +53,9 @@ public class CoordinateTransform {
         double worldMmY = (screenY - translateY) / (pixelsPerMm * scale);
         int gx = (int) Math.round(worldMmX / PITCH_MM);
         int gy = (int) Math.round(worldMmY / PITCH_MM);
+        if (flippedX) {
+            gx = (boardCols - 1) - gx;
+        }
         return new HoleCoord(gx, gy);
     }
 
@@ -60,6 +79,7 @@ public class CoordinateTransform {
     }
 
     public void resetView(double canvasWidth, double canvasHeight, int boardCols, int boardRows) {
+        this.boardCols = Math.max(1, boardCols);
         double boardWidthPx = (boardCols - 1) * PITCH_MM * pixelsPerMm;
         double boardHeightPx = (boardRows - 1) * PITCH_MM * pixelsPerMm;
         // Zoom completely to fill canvas while leaving a minimal neat margin (30px)

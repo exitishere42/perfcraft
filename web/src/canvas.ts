@@ -431,7 +431,7 @@ export class PerfBoardCanvas {
     const rows = this.project.board.rows;
     const hs = this.transform.getHoleSpacingPx();
 
-    const boardX = this.transform.gridToScreenX(0) - hs * 0.8;
+    const minBoardX = Math.min(this.transform.gridToScreenX(0), this.transform.gridToScreenX(cols - 1)) - hs * 0.8;
     const boardY = this.transform.gridToScreenY(0) - hs * 0.8;
     const boardW = (cols - 1) * hs + hs * 1.6;
     const boardH = (rows - 1) * hs + hs * 1.6;
@@ -439,7 +439,7 @@ export class PerfBoardCanvas {
     // 1. Platinen-Substrat (Clean sattes PCB-Grün)
     this.ctx.fillStyle = '#1B4D2E';
     this.ctx.beginPath();
-    this.ctx.roundRect(boardX, boardY, boardW, boardH, 12);
+    this.ctx.roundRect(minBoardX, boardY, boardW, boardH, 12);
     this.ctx.fill();
     this.ctx.strokeStyle = '#143922';
     this.ctx.lineWidth = 3;
@@ -1397,17 +1397,22 @@ export class PerfBoardCanvas {
     const x1 = this.transform.gridToScreenX(gx + 2);
     const y1 = this.transform.gridToScreenY(gy + 3);
 
+    const minX = Math.min(x0, x1);
+    const maxX = Math.max(x0, x1);
+    const minY = Math.min(y0, y1);
+    const maxY = Math.max(y0, y1);
+
     this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.35)';
     this.ctx.lineWidth = 1;
     this.ctx.setLineDash([3, 3]);
     this.ctx.beginPath();
-    this.ctx.roundRect(x0 - hs * 0.5, y0 - hs * 0.5, x1 - x0 + hs, y1 - y0 + hs, 4);
+    this.ctx.roundRect(minX - hs * 0.5, minY - hs * 0.5, maxX - minX + hs, maxY - minY + hs, 4);
     this.ctx.stroke();
     this.ctx.setLineDash([]);
 
     this.ctx.fillStyle = 'rgba(144, 164, 174, 0.75)';
     this.ctx.font = '10px sans-serif';
-    this.ctx.fillText(comp.designator, x0 - hs * 0.5, y0 - hs * 0.6);
+    this.ctx.fillText(comp.designator, minX - hs * 0.5, minY - hs * 0.6);
 
     for (const [px, py] of pinCoords) {
       const cx = this.transform.gridToScreenX(px);
@@ -1471,21 +1476,26 @@ export class PerfBoardCanvas {
     const x1 = this.transform.gridToScreenX(e.x);
     const y1 = this.transform.gridToScreenY(e.y);
 
+    const minX = Math.min(x0, x1);
+    const maxX = Math.max(x0, x1);
+    const minY = Math.min(y0, y1);
+    const maxY = Math.max(y0, y1);
+
     this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.35)';
     this.ctx.lineWidth = 1;
     this.ctx.setLineDash([3, 3]);
     this.ctx.beginPath();
-    this.ctx.roundRect(x0 - hs * 0.5, y0 - hs * 0.5, x1 - x0 + hs, y1 - y0 + hs, 4);
+    this.ctx.roundRect(minX - hs * 0.5, minY - hs * 0.5, maxX - minX + hs, maxY - minY + hs, 4);
     this.ctx.stroke();
     this.ctx.setLineDash([]);
 
     this.ctx.fillStyle = 'rgba(144, 164, 174, 0.75)';
     this.ctx.font = '10px sans-serif';
-    this.ctx.fillText(comp.designator, x0 - hs * 0.5, y0 - hs * 0.6);
+    this.ctx.fillText(comp.designator, minX - hs * 0.5, minY - hs * 0.6);
 
-    const minY = Math.min(s.y, e.y);
-    const maxY = Math.max(s.y, e.y);
-    for (let y = minY; y <= maxY; y++) {
+    const minGy = Math.min(s.y, e.y);
+    const maxGy = Math.max(s.y, e.y);
+    for (let y = minGy; y <= maxGy; y++) {
       this.drawSolderPin(x0, this.transform.gridToScreenY(y), hs);
       this.drawSolderPin(x1, this.transform.gridToScreenY(y), hs);
     }
@@ -1494,7 +1504,7 @@ export class PerfBoardCanvas {
       this.ctx.strokeStyle = '#00E676';
       this.ctx.lineWidth = 2;
       this.ctx.beginPath();
-      this.ctx.roundRect(x0 - hs * 0.6, y0 - hs * 0.6, x1 - x0 + hs * 1.2, y1 - y0 + hs * 1.2, 6);
+      this.ctx.roundRect(minX - hs * 0.6, minY - hs * 0.6, maxX - minX + hs * 1.2, maxY - minY + hs * 1.2, 6);
       this.ctx.stroke();
     }
   }
@@ -1509,17 +1519,22 @@ export class PerfBoardCanvas {
     const yTop = this.transform.gridToScreenY(gy);
     const yBottom = this.transform.gridToScreenY(gy + 8);
 
+    const minX = Math.min(xLeft, xRight);
+    const maxX = Math.max(xLeft, xRight);
+    const minY = Math.min(yTop, yBottom);
+    const maxY = Math.max(yTop, yBottom);
+
     this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.35)';
     this.ctx.lineWidth = 1;
     this.ctx.setLineDash([3, 3]);
     this.ctx.beginPath();
-    this.ctx.roundRect(xLeft - hs * 0.5, yTop - hs * 0.5, xRight - xLeft + hs, yBottom - yTop + hs, 6);
+    this.ctx.roundRect(minX - hs * 0.5, minY - hs * 0.5, maxX - minX + hs, maxY - minY + hs, 6);
     this.ctx.stroke();
     this.ctx.setLineDash([]);
 
     this.ctx.fillStyle = 'rgba(144, 164, 174, 0.75)';
     this.ctx.font = '10px sans-serif';
-    this.ctx.fillText(`${comp.designator} (ESP32 Pins)`, xLeft - hs * 0.5, yTop - hs * 0.6);
+    this.ctx.fillText(`${comp.designator} (ESP32 Pins)`, minX - hs * 0.5, minY - hs * 0.6);
 
     for (let i = 0; i < 9; i++) {
       const py = this.transform.gridToScreenY(gy + i);
@@ -1531,12 +1546,12 @@ export class PerfBoardCanvas {
       this.ctx.strokeStyle = '#00E676';
       this.ctx.lineWidth = 2;
       this.ctx.beginPath();
-      this.ctx.roundRect(xLeft - hs * 0.6, yTop - hs * 0.6, xRight - xLeft + hs * 1.2, yBottom - yTop + hs * 1.2, 8);
+      this.ctx.roundRect(minX - hs * 0.6, minY - hs * 0.6, maxX - minX + hs * 1.2, maxY - minY + hs * 1.2, 8);
       this.ctx.stroke();
     }
   }
 
-  private renderTP4056Bottom(comp: PlacedComponent, _isSelected: boolean): void {
+  private renderTP4056Bottom(comp: PlacedComponent, isSelected: boolean): void {
     const gx = comp.start.x;
     const gy = comp.start.y;
     const hs = this.transform.getHoleSpacingPx();
@@ -1544,6 +1559,21 @@ export class PerfBoardCanvas {
     const xLeft = this.transform.gridToScreenX(gx);
     const xRight = this.transform.gridToScreenX(gx + 6);
     const yTop = this.transform.gridToScreenY(gy);
+
+    const minX = Math.min(xLeft, xRight);
+    const maxX = Math.max(xLeft, xRight);
+
+    this.ctx.strokeStyle = 'rgba(144, 164, 174, 0.35)';
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([3, 3]);
+    this.ctx.beginPath();
+    this.ctx.roundRect(minX - hs * 0.5, yTop - hs * 0.5, maxX - minX + hs, 9 * hs + hs, 6);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
+
+    this.ctx.fillStyle = 'rgba(144, 164, 174, 0.75)';
+    this.ctx.font = '10px sans-serif';
+    this.ctx.fillText(`${comp.designator} (TP4056 Pins)`, minX - hs * 0.5, yTop - hs * 0.6);
 
     const pads = [
       [xLeft, yTop],
@@ -1556,6 +1586,14 @@ export class PerfBoardCanvas {
 
     for (const [px, py] of pads) {
       this.drawSolderPin(px, py, hs);
+    }
+
+    if (isSelected) {
+      this.ctx.strokeStyle = '#00E676';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.roundRect(minX - hs * 0.6, yTop - hs * 0.6, maxX - minX + hs * 1.2, 9 * hs + hs * 1.2, 8);
+      this.ctx.stroke();
     }
   }
 
@@ -1588,6 +1626,8 @@ export class PerfBoardCanvas {
 
   public setLayer(layer: BoardLayer): void {
     this.currentLayer = layer;
+    const cols = this.project?.board?.columns || 24;
+    this.transform.setFlippedX(layer === 'BOTTOM', cols);
     this.render();
   }
 
@@ -1630,6 +1670,8 @@ export class PerfBoardCanvas {
   public setProject(project: PerfProject): void {
     this.project = project;
     this.selectedComponent = project.components[0] || null;
+    const cols = this.project?.board?.columns || 24;
+    this.transform.setFlippedX(this.currentLayer === 'BOTTOM', cols);
     this.resize();
   }
 

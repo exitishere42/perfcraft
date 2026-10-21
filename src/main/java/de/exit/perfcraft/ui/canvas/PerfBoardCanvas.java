@@ -367,17 +367,17 @@ public class PerfBoardCanvas extends Canvas {
         int rows = project.getBoard().getRows();
         double hs = transform.getHoleSpacingPx();
 
-        double boardX = transform.gridToScreenX(0) - hs * 0.8;
+        double minBoardX = Math.min(transform.gridToScreenX(0), transform.gridToScreenX(cols - 1)) - hs * 0.8;
         double boardY = transform.gridToScreenY(0) - hs * 0.8;
         double boardW = (cols - 1) * hs + hs * 1.6;
         double boardH = (rows - 1) * hs + hs * 1.6;
 
         // 1. Platinen-Substrat (Clean sattes PCB-Grün)
         gc.setFill(Color.web("#1B4D2E"));
-        gc.fillRoundRect(boardX, boardY, boardW, boardH, 12, 12);
+        gc.fillRoundRect(minBoardX, boardY, boardW, boardH, 12, 12);
         gc.setStroke(Color.web("#143922"));
         gc.setLineWidth(3);
-        gc.strokeRoundRect(boardX, boardY, boardW, boardH, 12, 12);
+        gc.strokeRoundRect(minBoardX, boardY, boardW, boardH, 12, 12);
 
         // 2. SILBER-PADS (Nutzer-Vorgabe: SILBER statt Gold!)
         double padR = Math.max(3.0, hs * 0.38);
@@ -1382,14 +1382,19 @@ public class PerfBoardCanvas extends Canvas {
         double x1 = transform.gridToScreenX(gx + 2);
         double y1 = transform.gridToScreenY(gy + 3);
 
+        double minX = Math.min(x0, x1);
+        double maxX = Math.max(x0, x1);
+        double minY = Math.min(y0, y1);
+        double maxY = Math.max(y0, y1);
+
         gc.setStroke(Color.web("#90A4AE", 0.35));
         gc.setLineWidth(1.0);
         gc.setLineDashes(3, 3);
-        gc.strokeRoundRect(x0 - hs * 0.5, y0 - hs * 0.5, x1 - x0 + hs, y1 - y0 + hs, 4, 4);
+        gc.strokeRoundRect(minX - hs * 0.5, minY - hs * 0.5, (maxX - minX) + hs, (maxY - minY) + hs, 4, 4);
         gc.setLineDashes(null);
 
         gc.setFill(Color.web("#90A4AE", 0.75));
-        gc.fillText(comp.getDesignator(), x0 - hs * 0.5, y0 - hs * 0.6);
+        gc.fillText(comp.getDesignator(), minX - hs * 0.5, minY - hs * 0.6);
 
         for (int[] p : pinCoords) {
             double cx = transform.gridToScreenX(p[0]);
@@ -1443,18 +1448,23 @@ public class PerfBoardCanvas extends Canvas {
         double x1 = transform.gridToScreenX(e.x());
         double y1 = transform.gridToScreenY(e.y());
 
+        double minX = Math.min(x0, x1);
+        double maxX = Math.max(x0, x1);
+        double minY = Math.min(y0, y1);
+        double maxY = Math.max(y0, y1);
+
         gc.setStroke(Color.web("#90A4AE", 0.35));
         gc.setLineWidth(1.0);
         gc.setLineDashes(3, 3);
-        gc.strokeRoundRect(x0 - hs * 0.5, y0 - hs * 0.5, x1 - x0 + hs, y1 - y0 + hs, 4, 4);
+        gc.strokeRoundRect(minX - hs * 0.5, minY - hs * 0.5, (maxX - minX) + hs, (maxY - minY) + hs, 4, 4);
         gc.setLineDashes(null);
 
         gc.setFill(Color.web("#90A4AE", 0.75));
-        gc.fillText(comp.getDesignator(), x0 - hs * 0.5, y0 - hs * 0.6);
+        gc.fillText(comp.getDesignator(), minX - hs * 0.5, minY - hs * 0.6);
 
-        int minY = Math.min(s.y(), e.y());
-        int maxY = Math.max(s.y(), e.y());
-        for (int y = minY; y <= maxY; y++) {
+        int minGy = Math.min(s.y(), e.y());
+        int maxGy = Math.max(s.y(), e.y());
+        for (int y = minGy; y <= maxGy; y++) {
             drawSolderPin(gc, x0, transform.gridToScreenY(y), hs);
             drawSolderPin(gc, x1, transform.gridToScreenY(y), hs);
         }
@@ -1462,7 +1472,7 @@ public class PerfBoardCanvas extends Canvas {
         if (isSelected) {
             gc.setStroke(Color.web("#00E676"));
             gc.setLineWidth(2.0);
-            gc.strokeRoundRect(x0 - hs * 0.6, y0 - hs * 0.6, x1 - x0 + hs * 1.2, y1 - y0 + hs * 1.2, 6, 6);
+            gc.strokeRoundRect(minX - hs * 0.6, minY - hs * 0.6, (maxX - minX) + hs * 1.2, (maxY - minY) + hs * 1.2, 6, 6);
         }
     }
 
@@ -1476,14 +1486,19 @@ public class PerfBoardCanvas extends Canvas {
         double yTop = transform.gridToScreenY(gy);
         double yBottom = transform.gridToScreenY(gy + 8);
 
+        double minX = Math.min(xLeft, xRight);
+        double maxX = Math.max(xLeft, xRight);
+        double minY = Math.min(yTop, yBottom);
+        double maxY = Math.max(yTop, yBottom);
+
         gc.setStroke(Color.web("#90A4AE", 0.35));
         gc.setLineWidth(1.0);
         gc.setLineDashes(3, 3);
-        gc.strokeRoundRect(xLeft - hs * 0.5, yTop - hs * 0.5, xRight - xLeft + hs, yBottom - yTop + hs, 6, 6);
+        gc.strokeRoundRect(minX - hs * 0.5, minY - hs * 0.5, (maxX - minX) + hs, (maxY - minY) + hs, 6, 6);
         gc.setLineDashes(null);
 
         gc.setFill(Color.web("#90A4AE", 0.75));
-        gc.fillText(comp.getDesignator() + " (ESP32 Pins)", xLeft - hs * 0.5, yTop - hs * 0.6);
+        gc.fillText(comp.getDesignator() + " (ESP32 Pins)", minX - hs * 0.5, minY - hs * 0.6);
 
         for (int i = 0; i < 9; i++) {
             double py = transform.gridToScreenY(gy + i);
@@ -1494,7 +1509,7 @@ public class PerfBoardCanvas extends Canvas {
         if (isSelected) {
             gc.setStroke(Color.web("#00E676"));
             gc.setLineWidth(2.0);
-            gc.strokeRoundRect(xLeft - hs * 0.6, yTop - hs * 0.6, xRight - xLeft + hs * 1.2, yBottom - yTop + hs * 1.2, 8, 8);
+            gc.strokeRoundRect(minX - hs * 0.6, minY - hs * 0.6, (maxX - minX) + hs * 1.2, (maxY - minY) + hs * 1.2, 8, 8);
         }
     }
 
@@ -1506,6 +1521,18 @@ public class PerfBoardCanvas extends Canvas {
         double xLeft = transform.gridToScreenX(gx);
         double xRight = transform.gridToScreenX(gx + 6);
         double yTop = transform.gridToScreenY(gy);
+
+        double minX = Math.min(xLeft, xRight);
+        double maxX = Math.max(xLeft, xRight);
+
+        gc.setStroke(Color.web("#90A4AE", 0.35));
+        gc.setLineWidth(1.0);
+        gc.setLineDashes(3, 3);
+        gc.strokeRoundRect(minX - hs * 0.5, yTop - hs * 0.5, (maxX - minX) + hs, 9 * hs + hs, 6, 6);
+        gc.setLineDashes(null);
+
+        gc.setFill(Color.web("#90A4AE", 0.75));
+        gc.fillText(comp.getDesignator() + " (TP4056 Pins)", minX - hs * 0.5, yTop - hs * 0.6);
 
         double[][] pads = {
                 {xLeft, yTop},             // IN+
@@ -1519,6 +1546,12 @@ public class PerfBoardCanvas extends Canvas {
         for (double[] pt : pads) {
             drawSolderPin(gc, pt[0], pt[1], hs);
         }
+
+        if (isSelected) {
+            gc.setStroke(Color.web("#00E676"));
+            gc.setLineWidth(2.0);
+            gc.strokeRoundRect(minX - hs * 0.6, yTop - hs * 0.6, (maxX - minX) + hs * 1.2, 9 * hs + hs * 1.2, 8, 8);
+        }
     }
 
     private void drawBand(GraphicsContext gc, double x, double y, double w, double h, String hexColor) {
@@ -1528,6 +1561,8 @@ public class PerfBoardCanvas extends Canvas {
 
     public void setLayer(BoardLayer layer) {
         this.currentLayer = layer;
+        int cols = (project != null && project.getBoard() != null) ? project.getBoard().getColumns() : 24;
+        transform.setFlippedX(layer == BoardLayer.BOTTOM, cols);
         render();
     }
 
@@ -1581,6 +1616,8 @@ public class PerfBoardCanvas extends Canvas {
     public void setProject(PerfProject project) {
         this.project = project;
         this.selectedComponent = project.getComponents().isEmpty() ? null : project.getComponents().getFirst();
+        int cols = (project != null && project.getBoard() != null) ? project.getBoard().getColumns() : 24;
+        transform.setFlippedX(currentLayer == BoardLayer.BOTTOM, cols);
         zoomToFit();
         render();
     }
