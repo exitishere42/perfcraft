@@ -129,6 +129,23 @@ document.getElementById('btnExport')?.addEventListener('click', () => {
   a.click();
 });
 
+// Undo / Redo Management
+const btnUndo = document.getElementById('btnUndo') as HTMLButtonElement;
+const btnRedo = document.getElementById('btnRedo') as HTMLButtonElement;
+
+btnUndo?.addEventListener('click', () => {
+  canvas.undo();
+});
+
+btnRedo?.addEventListener('click', () => {
+  canvas.redo();
+});
+
+canvas.history.onStateChanged = (canUndo, canRedo) => {
+  if (btnUndo) btnUndo.disabled = !canUndo;
+  if (btnRedo) btnRedo.disabled = !canRedo;
+};
+
 // Layer buttons
 const btnLayerTop = document.getElementById('btnLayerTop')!;
 const btnLayerBottom = document.getElementById('btnLayerBottom')!;
@@ -276,17 +293,19 @@ function updateInspector(comp: PlacedComponent | null) {
 
 canvas.onComponentSelected = updateInspector;
 
-propDes.addEventListener('input', () => {
+propDes.addEventListener('change', () => {
   const sel = (canvas as any).selectedComponent;
   if (sel) {
+    canvas.recordState();
     sel.designator = propDes.value;
     canvas.render();
   }
 });
 
-propVal.addEventListener('input', () => {
+propVal.addEventListener('change', () => {
   const sel = (canvas as any).selectedComponent;
   if (sel) {
+    canvas.recordState();
     sel.value = propVal.value;
     updateInspector(sel);
     canvas.render();
@@ -296,6 +315,7 @@ propVal.addEventListener('input', () => {
 propVisible.addEventListener('change', () => {
   const sel = (canvas as any).selectedComponent;
   if (sel) {
+    canvas.recordState();
     sel.visible = propVisible.checked;
     canvas.render();
   }
@@ -310,8 +330,24 @@ canvas.onHoverCoordinate = (gx, gy) => {
   statMm.textContent = `Pos: ${(gx * 2.54).toFixed(2)} mm x ${(gy * 2.54).toFixed(2)} mm`;
 };
 
-// Keyboard Shortcuts identical to desktop
+// Keyboard Shortcuts identical to desktop & Undo/Redo
 window.addEventListener('keydown', (e) => {
+  // Global Undo / Redo Shortcuts
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    if (e.shiftKey) {
+      canvas.redo();
+    } else {
+      canvas.undo();
+    }
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+    e.preventDefault();
+    canvas.redo();
+    return;
+  }
+
   if (document.activeElement?.tagName === 'INPUT') return;
   switch (e.key.toLowerCase()) {
     case 'v': setToolActive(toolSelect, 'SELECT'); break;

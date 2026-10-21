@@ -10,6 +10,7 @@ import {
 import { CoordinateTransform } from './transform.ts';
 import { parseResistorColorCode } from './resistor.ts';
 import { findConnectedNet } from './continuity.ts';
+import { HistoryManager } from './history.ts';
 
 export type ActiveTool = 'SELECT' | 'WIRE' | 'COMPONENT';
 
@@ -33,11 +34,18 @@ export class PerfBoardCanvas {
   private highlightedNet: Set<string> = new Set();
   private hoveredTerminalText: string | null = null;
 
-  // Touch & Pointer state
+  // Touch & Pointer state (Tablet Optimized)
   private activePointers: Map<number, { x: number; y: number }> = new Map();
-  private initialPinchDistance: number = 0;
+  private lastPinchDistance: number = 0;
+  private lastPinchMidpoint: { x: number; y: number } | null = null;
   private isDraggingObject: boolean = false;
+  private dragStartSnapshot: string | null = null;
+  private hasObjectMoved: boolean = false;
   private longPressTimeout: number | null = null;
+  private longPressStartPos: { x: number; y: number } | null = null;
+
+  // History Manager (Undo / Redo)
+  public readonly history: HistoryManager = new HistoryManager();
 
   // Callbacks
   public onHoverCoordinate?: (gx: number, gy: number) => void;
@@ -81,6 +89,7 @@ export class PerfBoardCanvas {
   }
 
   private initPointers(): void {
+    this.canvas.style.touchAction = 'none'; // Verhindert unerwünschtes Browser-Scrollen auf Tablets
     this.canvas.addEventListener('pointerdown', (e) => this.handlePointerDown(e));
     this.canvas.addEventListener('pointermove', (e) => this.handlePointerMove(e));
     this.canvas.addEventListener('pointerup', (e) => this.handlePointerUp(e));
@@ -115,6 +124,36 @@ export class PerfBoardCanvas {
     };
   }
 
+  public recordState(): void {
+    this.history.pushState(this.project);
+  }
+
+  public undo(): void {
+    const restored = this.history.undo(this.project);
+    if (restored) {
+      this.project = restored;
+      this.selectedComponent = null;
+      this.selectedWire = null;
+      this.wireStartHole = null;
+      this.pinHeaderStartHole = null;
+      this.render();
+      if (this.onProjectModified) this.onProjectModified();
+    }
+  }
+
+  public redo(): void {
+    const restored = this.history.redo(this.project);
+    if (restored) {
+      this.project = restored;
+      this.selectedComponent = null;
+      this.selectedWire = null;
+      this.wireStartHole = null;
+      this.pinHeaderStartHole = null;
+      this.render();
+      if (this.onProjectModified) this.onProjectModified();
+    }
+  }
+
   private handlePointerDown(e: PointerEvent): void {
     this.canvas.setPointerCapture(e.pointerId);
     const pt = this.getCanvasPoint(e);
@@ -133,6 +172,22 @@ export class PerfBoardCanvas {
     }
 
     if (this.activePointers.size === 1) {
+      // Tablet Long-Press Timer starten (450ms Halten bricht Aktion ab wie Rechtsklick)
+      if (e.pointerType === 'touch') {
+        this.longPressStartPos = { x: pt.x, y: pt.y };
+        if (this.longPressTimeout) clearTimeout(this.longPressTimeout);
+        this.longPressTimeout = window.setTimeout(() => {
+          if (navigator.vibrate) {
+            try { navigator.vibrate(35); } catch (_) {}
+          }
+          this.wireStartHole = null;
+          this.pinHeaderStartHole = null;
+          this.setActiveTool('SELECT');
+          if (this.onToolChanged) this.onToolChanged('SELECT');
+          this.render();
+        }, 450);
+      }
+
       // 1-Finger / Linksklick
       const grid = this.transform.screenToGrid(pt.x, pt.y);
 
@@ -153,6 +208,8 @@ export class PerfBoardCanvas {
           this.selectedComponent = hit;
           this.selectedWire = null;
           this.isDraggingObject = true;
+          this.dragStartSnapshot = JSON.stringify(this.project);
+          this.hasObjectMoved = false;
           if (this.onComponentSelected) this.onComponentSelected(hit);
         } else {
           const wireHit = this.findWireNear(pt.x, pt.y);
@@ -175,6 +232,7 @@ export class PerfBoardCanvas {
               return;
             }
 
+            this.recordState(); // Undo-Snapshot vor Erstellen des Drahtes
             this.project.wires.push({
               id: 'w_' + Date.now(),
               kind: this.activeWireKind,
@@ -194,6 +252,7 @@ export class PerfBoardCanvas {
           if (!this.pinHeaderStartHole) {
             this.pinHeaderStartHole = grid;
           } else {
+            this.recordState(); // Undo-Snapshot vor Pin-Header
             const count = this.project.components.filter((c) => c.type === 'PIN_HEADER').length + 1;
             const pinCount = Math.max(Math.abs(grid.x - this.pinHeaderStartHole.x), Math.abs(grid.y - this.pinHeaderStartHole.y)) + 1;
             const headerComp: PlacedComponent = {
@@ -220,11 +279,18 @@ export class PerfBoardCanvas {
         this.render();
       }
     } else if (this.activePointers.size === 2) {
-      // 2-Finger Pinch to Zoom / Pan
+      // 2-Finger Tablet Pinch to Zoom & Pan
+      if (this.longPressTimeout) {
+        clearTimeout(this.longPressTimeout);
+        this.longPressTimeout = null;
+      }
+      this.isDraggingObject = false;
       const pts = Array.from(this.activePointers.values());
-      const dx = pts[0].x - pts[1].x;
-      const dy = pts[0].y - pts[1].y;
-      this.initialPinchDistance = Math.hypot(dx, dy);
+      this.lastPinchDistance = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      this.lastPinchMidpoint = {
+        x: (pts[0].x + pts[1].x) / 2,
+        y: (pts[0].y + pts[1].y) / 2,
+      };
     }
   }
 
@@ -252,6 +318,15 @@ export class PerfBoardCanvas {
       const dx = pt.x - prevPt.x;
       const dy = pt.y - prevPt.y;
 
+      // Wenn der Finger sich bewegt, Long-Press-Timer abbrechen
+      if (this.longPressStartPos) {
+        const moveDist = Math.hypot(pt.x - this.longPressStartPos.x, pt.y - this.longPressStartPos.y);
+        if (moveDist > 8 && this.longPressTimeout) {
+          clearTimeout(this.longPressTimeout);
+          this.longPressTimeout = null;
+        }
+      }
+
       if (e.buttons === 2 || e.buttons === 4 || (e.buttons === 1 && e.altKey)) {
         // Pan
         this.transform.pan(dx, dy);
@@ -269,6 +344,7 @@ export class PerfBoardCanvas {
               y: this.selectedComponent.end.y + shiftY,
             };
           }
+          this.hasObjectMoved = true;
           if (this.onProjectModified) this.onProjectModified();
           this.render();
         }
@@ -277,25 +353,55 @@ export class PerfBoardCanvas {
         this.render();
       }
     } else if (this.activePointers.size === 2) {
-      // Pinch zoom
+      // Stufenloser Tablet Pinch-to-Zoom & Two-Finger-Pan
       const pts = Array.from(this.activePointers.values());
-      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      if (this.initialPinchDistance > 10) {
-        const factor = dist / this.initialPinchDistance;
-        const midX = (pts[0].x + pts[1].x) / 2;
-        const midY = (pts[0].y + pts[1].y) / 2;
-        this.transform.applyZoom(factor > 1 ? 1.04 : 0.96, midX, midY);
+      const currentDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      const currentMid = {
+        x: (pts[0].x + pts[1].x) / 2,
+        y: (pts[0].y + pts[1].y) / 2,
+      };
+
+      if (this.lastPinchDistance > 5 && this.lastPinchMidpoint) {
+        // 1. Two-Finger Pan Delta
+        const panDeltaX = currentMid.x - this.lastPinchMidpoint.x;
+        const panDeltaY = currentMid.y - this.lastPinchMidpoint.y;
+        this.transform.pan(panDeltaX, panDeltaY);
+
+        // 2. Continuous Pinch Zoom
+        const zoomFactor = currentDist / this.lastPinchDistance;
+        if (Math.abs(zoomFactor - 1.0) > 0.003) {
+          this.transform.applyZoom(zoomFactor, currentMid.x, currentMid.y);
+        }
         this.render();
       }
+
+      this.lastPinchDistance = currentDist;
+      this.lastPinchMidpoint = currentMid;
     }
   }
 
   private handlePointerUp(e: PointerEvent): void {
-    this.activePointers.delete(e.pointerId);
-    this.isDraggingObject = false;
     if (this.longPressTimeout) {
       clearTimeout(this.longPressTimeout);
       this.longPressTimeout = null;
+    }
+    this.longPressStartPos = null;
+
+    // Wenn ein Objekt verschoben wurde, alten Zustand vor Beginn des Dragging sichern
+    if (this.isDraggingObject && this.hasObjectMoved && this.dragStartSnapshot) {
+      try {
+        const oldState: PerfProject = JSON.parse(this.dragStartSnapshot);
+        this.history.pushState(oldState);
+      } catch (_) {}
+    }
+    this.dragStartSnapshot = null;
+    this.hasObjectMoved = false;
+    this.isDraggingObject = false;
+
+    this.activePointers.delete(e.pointerId);
+    if (this.activePointers.size === 0) {
+      this.lastPinchDistance = 0;
+      this.lastPinchMidpoint = null;
     }
     this.render();
   }
@@ -418,6 +524,7 @@ export class PerfBoardCanvas {
         break;
     }
 
+    this.recordState();
     this.project.components.push(comp);
     this.selectedComponent = comp;
     if (this.onComponentSelected) this.onComponentSelected(comp);
@@ -1641,6 +1748,7 @@ export class PerfBoardCanvas {
 
   public rotateSelected(): void {
     if (this.selectedComponent) {
+      this.recordState();
       this.selectedComponent.rotation = (this.selectedComponent.rotation + 90) % 360;
       if (this.selectedComponent.end) {
         const dx = this.selectedComponent.end.x - this.selectedComponent.start.x;
@@ -1657,12 +1765,14 @@ export class PerfBoardCanvas {
 
   public deleteSelected(): void {
     if (this.selectedComponent) {
+      this.recordState();
       this.project.components = this.project.components.filter((c) => c !== this.selectedComponent);
       this.selectedComponent = null;
       if (this.onComponentSelected) this.onComponentSelected(null);
       if (this.onProjectModified) this.onProjectModified();
       this.render();
     } else if (this.selectedWire) {
+      this.recordState();
       this.project.wires = this.project.wires.filter((w) => w !== this.selectedWire);
       this.selectedWire = null;
       if (this.onComponentSelected) this.onComponentSelected(null);
@@ -1677,6 +1787,7 @@ export class PerfBoardCanvas {
 
   public setProject(project: PerfProject): void {
     this.project = project;
+    this.history.clear();
     this.selectedComponent = project.components[0] || null;
     const cols = this.project?.board?.columns || 24;
     this.transform.setFlippedX(this.currentLayer === 'BOTTOM', cols);

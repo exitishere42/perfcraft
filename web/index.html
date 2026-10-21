@@ -76,6 +76,14 @@
         color: #00C853;
         font-weight: bold;
       }
+      .hdr-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+      .hdr-btn:disabled:hover {
+        background: #242424;
+        color: #B0BEC5;
+      }
       .layer-group {
         display: flex;
         background: #121212;
@@ -506,6 +514,45 @@
       .modal-btn-primary:hover {
         background: #00E676;
       }
+
+      /* Tablet & Touch Optimization */
+      @media (max-width: 960px) {
+        header {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          gap: 6px;
+          padding: 0 8px;
+        }
+        .hdr-btn {
+          padding: 6px 8px;
+          font-size: 11px;
+        }
+        .left-toolbar {
+          width: 58px;
+          padding: 8px 4px;
+          gap: 8px;
+        }
+        .big-tool-btn {
+          width: 48px;
+          height: 48px;
+        }
+        .right-sidebar {
+          width: 230px;
+          padding: 10px;
+        }
+      }
+
+      @media (pointer: coarse) {
+        .hdr-btn, .zoom-btn, .layer-btn {
+          min-height: 36px;
+        }
+        .big-tool-btn {
+          min-height: 48px;
+        }
+        .comp-grid-btn {
+          min-height: 38px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -521,6 +568,22 @@
       <input type="file" id="fileInput" accept=".perf,application/json" style="display: none;" />
       <button class="hdr-btn save-btn" id="btnSave">Save</button>
       <button class="hdr-btn" id="btnExport">Export</button>
+
+      <div class="v-sep"></div>
+
+      <!-- Undo / Redo Buttons -->
+      <button class="hdr-btn" id="btnUndo" title="Undo (Ctrl+Z)" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/>
+        </svg>
+        <span>Undo</span>
+      </button>
+      <button class="hdr-btn" id="btnRedo" title="Redo (Ctrl+Y)" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/>
+        </svg>
+        <span>Redo</span>
+      </button>
 
       <div class="v-sep"></div>
 
