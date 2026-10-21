@@ -62,11 +62,13 @@ export class CoordinateTransform {
 
   public resetView(canvasWidth: number, canvasHeight: number, cols: number, rows: number): void {
     this.boardCols = Math.max(1, cols);
-    const boardWidthPx = (cols - 1) * CoordinateTransform.PITCH_MM * this.pixelsPerMm;
-    const boardHeightPx = (rows - 1) * CoordinateTransform.PITCH_MM * this.pixelsPerMm;
-    const margin = 32.0;
-    const scaleX = (canvasWidth - margin * 2) / Math.max(1, boardWidthPx);
-    const scaleY = (canvasHeight - margin * 2) / Math.max(1, boardHeightPx);
+    const pitchPx = CoordinateTransform.PITCH_MM * this.pixelsPerMm;
+    const boardWidthPx = (cols - 1) * pitchPx;
+    const boardHeightPx = (rows - 1) * pitchPx;
+    const totalW = boardWidthPx + pitchPx * 3.0;
+    const totalH = boardHeightPx + pitchPx * 3.8;
+    const scaleX = (canvasWidth - 40.0) / Math.max(1, totalW);
+    const scaleY = (canvasHeight - 40.0) / Math.max(1, totalH);
     this.scale = Math.min(Math.max(Math.min(scaleX, scaleY), 0.2), 8.0);
     this.translateX = (canvasWidth - boardWidthPx * this.scale) / 2.0;
     this.translateY = (canvasHeight - boardHeightPx * this.scale) / 2.0;

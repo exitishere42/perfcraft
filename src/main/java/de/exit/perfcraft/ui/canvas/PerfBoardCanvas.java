@@ -2,10 +2,14 @@ package de.exit.perfcraft.ui.canvas;
 
 import de.exit.perfcraft.model.*;
 import de.exit.perfcraft.service.ResistorColorCode;
+import javafx.geometry.VPos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
 
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -375,17 +379,118 @@ public class PerfBoardCanvas extends Canvas {
         int rows = project.getBoard().getRows();
         double hs = transform.getHoleSpacingPx();
 
-        double minBoardX = Math.min(transform.gridToScreenX(0), transform.gridToScreenX(cols - 1)) - hs * 0.8;
-        double boardY = transform.gridToScreenY(0) - hs * 0.8;
-        double boardW = (cols - 1) * hs + hs * 1.6;
-        double boardH = (rows - 1) * hs + hs * 1.6;
+        double minGridX = Math.min(transform.gridToScreenX(0), transform.gridToScreenX(cols - 1));
+        double maxGridX = Math.max(transform.gridToScreenX(0), transform.gridToScreenX(cols - 1));
+        double minGridY = transform.gridToScreenY(0);
+        double maxGridY = transform.gridToScreenY(rows - 1);
 
-        // 1. Platinen-Substrat (Clean sattes PCB-Grün)
+        // Erweitertes FR4-Platinensubstrat mit Platz für Edge-Pads, Montagelöcher und Beschriftung
+        double marginX = hs * 1.5;
+        double marginY = hs * 1.8;
+        double boardX = minGridX - marginX;
+        double boardY = minGridY - marginY;
+        double boardW = (cols - 1) * hs + marginX * 2;
+        double boardH = (rows - 1) * hs + marginY * 2;
+
+        // 1. Platinen-Substrat (Sattes FR4-PCB-Grün)
         gc.setFill(Color.web("#1B4D2E"));
-        gc.fillRoundRect(minBoardX, boardY, boardW, boardH, 12, 12);
+        gc.fillRoundRect(boardX, boardY, boardW, boardH, 14, 14);
         gc.setStroke(Color.web("#143922"));
         gc.setLineWidth(3);
-        gc.strokeRoundRect(minBoardX, boardY, boardW, boardH, 12, 12);
+        gc.strokeRoundRect(boardX, boardY, boardW, boardH, 14, 14);
+
+        // 1b. 4 Eck-Montagelöcher (M3 Screw Holes mit Silber-Ring und dunkler Bohrung)
+        double holeOffsetX = marginX * 0.55;
+        double holeOffsetY = marginY * 0.50;
+        double[][] mountHoles = {
+            { boardX + holeOffsetX, boardY + holeOffsetY },
+            { boardX + boardW - holeOffsetX, boardY + holeOffsetY },
+            { boardX + holeOffsetX, boardY + boardH - holeOffsetY },
+            { boardX + boardW - holeOffsetX, boardY + boardH - holeOffsetY }
+        };
+        double mountRingR = Math.max(4.5, hs * 0.52);
+        double mountDrillR = Math.max(2.5, hs * 0.32);
+
+        for (double[] mh : mountHoles) {
+            gc.setFill(Color.web("#CFD8DC"));
+            gc.fillOval(mh[0] - mountRingR, mh[1] - mountRingR, mountRingR * 2, mountRingR * 2);
+            gc.setStroke(Color.web("#90A4AE"));
+            gc.setLineWidth(1.0);
+            gc.strokeOval(mh[0] - mountRingR, mh[1] - mountRingR, mountRingR * 2, mountRingR * 2);
+
+            gc.setFill(Color.web("#121212"));
+            gc.fillOval(mh[0] - mountDrillR, mh[1] - mountDrillR, mountDrillR * 2, mountDrillR * 2);
+        }
+
+        // 1c. Ovale Rand-Pads (Silber Lötfinger oben und unten entlang jeder Spalte)
+        double edgePadW = Math.max(3.0, hs * 0.46);
+        double edgePadH = Math.max(6.5, hs * 0.86);
+        double edgePadR = edgePadW; // arcWidth / arcHeight in JavaFX
+
+        for (int c = 0; c < cols; c++) {
+            double px = transform.gridToScreenX(c);
+
+            // Oberes ovales Pad
+            double topPadY = minGridY - hs * 1.62;
+            gc.setFill(Color.web("#CFD8DC"));
+            gc.fillRoundRect(px - edgePadW / 2.0, topPadY, edgePadW, edgePadH, edgePadR, edgePadR);
+            gc.setStroke(Color.web("#90A4AE"));
+            gc.setLineWidth(1.0);
+            gc.strokeRoundRect(px - edgePadW / 2.0, topPadY, edgePadW, edgePadH, edgePadR, edgePadR);
+
+            // Unteres ovales Pad
+            double bottomPadY = maxGridY + hs * 0.76;
+            gc.setFill(Color.web("#CFD8DC"));
+            gc.fillRoundRect(px - edgePadW / 2.0, bottomPadY, edgePadW, edgePadH, edgePadR, edgePadR);
+            gc.setStroke(Color.web("#90A4AE"));
+            gc.setLineWidth(1.0);
+            gc.strokeRoundRect(px - edgePadW / 2.0, bottomPadY, edgePadW, edgePadH, edgePadR, edgePadR);
+        }
+
+        // 1d. Weißer Silkscreen (Trennlinien, Spalten A, B, C... und Zeilen 1, 5, 10...)
+        gc.setStroke(Color.rgb(255, 255, 255, 0.40));
+        gc.setLineWidth(1.0);
+        gc.strokeLine(minGridX - hs * 0.3, minGridY - hs * 0.65, maxGridX + hs * 0.3, minGridY - hs * 0.65);
+        gc.strokeLine(minGridX - hs * 0.3, maxGridY + hs * 0.65, maxGridX + hs * 0.3, maxGridY + hs * 0.65);
+
+        // Spalten-Buchstaben
+        gc.setFill(Color.rgb(255, 255, 255, 0.75));
+        gc.setFont(Font.font("Monospaced", FontWeight.BOLD, Math.max(8.0, hs * 0.36)));
+        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setTextBaseline(VPos.CENTER);
+
+        for (int c = 0; c < cols; c++) {
+            double px = transform.gridToScreenX(c);
+            StringBuilder letter = new StringBuilder();
+            int n = c;
+            while (n >= 0) {
+                letter.insert(0, (char) ('A' + (n % 26)));
+                n = (n / 26) - 1;
+            }
+            String colStr = letter.toString();
+            gc.fillText(colStr, px, minGridY - hs * 0.32);
+            gc.fillText(colStr, px, maxGridY + hs * 0.32);
+        }
+
+        // Zeilen-Zahlen (links und rechts)
+        gc.setFont(Font.font("Monospaced", FontWeight.NORMAL, Math.max(7.0, hs * 0.32)));
+        for (int r = 0; r < rows; r++) {
+            if (r == 0 || (r + 1) % 5 == 0 || r == rows - 1) {
+                double py = transform.gridToScreenY(r);
+                String label = String.valueOf(r + 1);
+                gc.setTextAlign(TextAlignment.RIGHT);
+                gc.fillText(label, minGridX - hs * 0.48, py);
+                gc.setTextAlign(TextAlignment.LEFT);
+                gc.fillText(label, maxGridX + hs * 0.48, py);
+            }
+        }
+
+        // Subtiler FR-4 Typenaufdruck
+        gc.setFont(Font.font("System", FontWeight.BOLD, Math.max(8.0, hs * 0.36)));
+        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setFill(Color.rgb(255, 255, 255, 0.50));
+        String boardLabel = ((cols == 24 && rows == 18) || (cols == 18 && rows == 24)) ? "5x7CM FR-4" : cols + "x" + rows + " FR-4";
+        gc.fillText(boardLabel, boardX + boardW / 2.0, boardY + marginY * 0.22);
 
         // 2. SILBER-PADS (Nutzer-Vorgabe: SILBER statt Gold!)
         double padR = Math.max(3.0, hs * 0.38);

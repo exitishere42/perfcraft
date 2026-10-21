@@ -549,22 +549,138 @@ export class PerfBoardCanvas {
     const rows = this.project.board.rows;
     const hs = this.transform.getHoleSpacingPx();
 
-    const minBoardX = Math.min(this.transform.gridToScreenX(0), this.transform.gridToScreenX(cols - 1)) - hs * 0.8;
-    const boardY = this.transform.gridToScreenY(0) - hs * 0.8;
-    const boardW = (cols - 1) * hs + hs * 1.6;
-    const boardH = (rows - 1) * hs + hs * 1.6;
+    const minGridX = Math.min(this.transform.gridToScreenX(0), this.transform.gridToScreenX(cols - 1));
+    const maxGridX = Math.max(this.transform.gridToScreenX(0), this.transform.gridToScreenX(cols - 1));
+    const minGridY = this.transform.gridToScreenY(0);
+    const maxGridY = this.transform.gridToScreenY(rows - 1);
 
-    // 1. Platinen-Substrat (Clean sattes PCB-Grün)
+    // Erweitertes FR4-Platinensubstrat mit Platz für Edge-Pads, Montagelöcher und Beschriftung
+    const marginX = hs * 1.5;
+    const marginY = hs * 1.8;
+    const boardX = minGridX - marginX;
+    const boardY = minGridY - marginY;
+    const boardW = (cols - 1) * hs + marginX * 2;
+    const boardH = (rows - 1) * hs + marginY * 2;
+
+    // 1. Platinen-Substrat (Sattes FR4-PCB-Grün)
     this.ctx.fillStyle = '#1B4D2E';
     this.ctx.beginPath();
-    this.ctx.roundRect(minBoardX, boardY, boardW, boardH, 12);
+    this.ctx.roundRect(boardX, boardY, boardW, boardH, 14);
     this.ctx.fill();
     this.ctx.strokeStyle = '#143922';
     this.ctx.lineWidth = 3;
     this.ctx.stroke();
 
+    // 1b. 4 Eck-Montagelöcher (M3 Screw Holes mit Silber-Ring und dunkler Bohrung)
+    const holeOffsetX = marginX * 0.55;
+    const holeOffsetY = marginY * 0.50;
+    const mountHoles = [
+      { x: boardX + holeOffsetX, y: boardY + holeOffsetY },
+      { x: boardX + boardW - holeOffsetX, y: boardY + holeOffsetY },
+      { x: boardX + holeOffsetX, y: boardY + boardH - holeOffsetY },
+      { x: boardX + boardW - holeOffsetX, y: boardY + boardH - holeOffsetY }
+    ];
+    const mountRingR = Math.max(4.5, hs * 0.52);
+    const mountDrillR = Math.max(2.5, hs * 0.32);
+
+    for (const mh of mountHoles) {
+      // Silber-Ring
+      this.ctx.fillStyle = '#CFD8DC';
+      this.ctx.beginPath();
+      this.ctx.arc(mh.x, mh.y, mountRingR, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#90A4AE';
+      this.ctx.lineWidth = 1;
+      this.ctx.stroke();
+
+      // Bohrung
+      this.ctx.fillStyle = '#121212';
+      this.ctx.beginPath();
+      this.ctx.arc(mh.x, mh.y, mountDrillR, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+
+    // 1c. Ovale Rand-Pads (Silber Lötfinger oben und unten entlang jeder Spalte)
+    const padW = Math.max(3.0, hs * 0.46);
+    const padH = Math.max(6.5, hs * 0.86);
+    const padR = padW / 2;
+
+    for (let c = 0; c < cols; c++) {
+      const px = this.transform.gridToScreenX(c);
+
+      // Oberes ovales Pad
+      const topPadY = minGridY - hs * 1.62;
+      this.ctx.fillStyle = '#CFD8DC';
+      this.ctx.beginPath();
+      this.ctx.roundRect(px - padW / 2, topPadY, padW, padH, padR);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#90A4AE';
+      this.ctx.lineWidth = 1;
+      this.ctx.stroke();
+
+      // Unteres ovales Pad
+      const bottomPadY = maxGridY + hs * 0.76;
+      this.ctx.fillStyle = '#CFD8DC';
+      this.ctx.beginPath();
+      this.ctx.roundRect(px - padW / 2, bottomPadY, padW, padH, padR);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#90A4AE';
+      this.ctx.lineWidth = 1;
+      this.ctx.stroke();
+    }
+
+    // 1d. Weißer Silkscreen (Trennlinien, Spalten A, B, C... und Zeilen 1, 5, 10...)
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.40)';
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    // Obere Silkscreen-Linie
+    this.ctx.moveTo(minGridX - hs * 0.3, minGridY - hs * 0.65);
+    this.ctx.lineTo(maxGridX + hs * 0.3, minGridY - hs * 0.65);
+    // Untere Silkscreen-Linie
+    this.ctx.moveTo(minGridX - hs * 0.3, maxGridY + hs * 0.65);
+    this.ctx.lineTo(maxGridX + hs * 0.3, maxGridY + hs * 0.65);
+    this.ctx.stroke();
+
+    // Spalten-Buchstaben
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    this.ctx.font = `600 ${Math.max(8, Math.round(hs * 0.36))}px monospace`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+
+    for (let c = 0; c < cols; c++) {
+      const px = this.transform.gridToScreenX(c);
+      let letter = '';
+      let n = c;
+      while (n >= 0) {
+        letter = String.fromCharCode(65 + (n % 26)) + letter;
+        n = Math.floor(n / 26) - 1;
+      }
+      this.ctx.fillText(letter, px, minGridY - hs * 0.32);
+      this.ctx.fillText(letter, px, maxGridY + hs * 0.32);
+    }
+
+    // Zeilen-Zahlen (links und rechts)
+    this.ctx.font = `500 ${Math.max(7, Math.round(hs * 0.32))}px monospace`;
+    for (let r = 0; r < rows; r++) {
+      if (r === 0 || (r + 1) % 5 === 0 || r === rows - 1) {
+        const py = this.transform.gridToScreenY(r);
+        const label = String(r + 1);
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText(label, minGridX - hs * 0.48, py);
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(label, maxGridX + hs * 0.48, py);
+      }
+    }
+
+    // Subtiler FR-4 Typenaufdruck
+    this.ctx.font = `700 ${Math.max(8, Math.round(hs * 0.36))}px sans-serif`;
+    this.ctx.textAlign = 'center';
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.50)';
+    const boardLabel = (cols === 24 && rows === 18) || (cols === 18 && rows === 24) ? '5x7CM FR-4' : `${cols}x${rows} FR-4`;
+    this.ctx.fillText(boardLabel, boardX + boardW / 2, boardY + marginY * 0.22);
+
     // 2. Silber-Pads (Silber #CFD8DC statt Gold!)
-    const padR = Math.max(3.0, hs * 0.38);
+    const holePadR = Math.max(3.0, hs * 0.38);
     const drillR = Math.max(1.5, hs * 0.18);
 
     for (let c = 0; c < cols; c++) {
@@ -576,14 +692,14 @@ export class PerfBoardCanvas {
         if (this.highlightedNet.has(key)) {
           this.ctx.fillStyle = '#FFEE58';
           this.ctx.beginPath();
-          this.ctx.arc(px, py, padR + 3, 0, Math.PI * 2);
+          this.ctx.arc(px, py, holePadR + 3, 0, Math.PI * 2);
           this.ctx.fill();
         }
 
         // Silber-Pad
         this.ctx.fillStyle = '#CFD8DC';
         this.ctx.beginPath();
-        this.ctx.arc(px, py, padR, 0, Math.PI * 2);
+        this.ctx.arc(px, py, holePadR, 0, Math.PI * 2);
         this.ctx.fill();
         this.ctx.strokeStyle = '#90A4AE';
         this.ctx.lineWidth = 1;
