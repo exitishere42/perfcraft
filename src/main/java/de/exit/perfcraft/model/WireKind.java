@@ -5,7 +5,7 @@ package de.exit.perfcraft.model;
  */
 public enum WireKind {
     CABLE("Kabel", "#E53935", BoardLayer.TOP),
-    SILVER_WIRE("Silberdraht", "#CFD8DC", BoardLayer.BOTTOM);
+    SILVER_WIRE("Silberdraht", "#CFD8DC", BoardLayer.TOP);
 
     private final String displayName;
     private final String defaultColor;

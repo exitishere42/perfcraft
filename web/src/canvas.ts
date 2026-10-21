@@ -312,22 +312,7 @@ export class PerfBoardCanvas {
     this.ctx.lineWidth = 3;
     this.ctx.stroke();
 
-    // 2. Bottom Wires (Silberdraht)
-    if (this.currentLayer === 'BOTTOM' || this.currentLayer === 'BOTH') {
-      this.ctx.strokeStyle = '#CFD8DC';
-      this.ctx.lineWidth = 4.0 * this.transform.getScale();
-      this.ctx.lineCap = 'round';
-      for (const wire of this.project.wires) {
-        if (wire.kind === 'SILVER_WIRE' && wire.points.length >= 2) {
-          this.ctx.beginPath();
-          this.ctx.moveTo(this.transform.gridToScreenX(wire.points[0].x), this.transform.gridToScreenY(wire.points[0].y));
-          this.ctx.lineTo(this.transform.gridToScreenX(wire.points[1].x), this.transform.gridToScreenY(wire.points[1].y));
-          this.ctx.stroke();
-        }
-      }
-    }
-
-    // 3. Silber-Pads (Silber #CFD8DC statt Gold!)
+    // 2. Silber-Pads (Silber #CFD8DC statt Gold!)
     const padR = Math.max(3.0, hs * 0.38);
     const drillR = Math.max(1.5, hs * 0.18);
 
@@ -361,25 +346,30 @@ export class PerfBoardCanvas {
       }
     }
 
-    // 4. Top Wires (Isolierte Kabel)
-    if (this.currentLayer === 'TOP' || this.currentLayer === 'BOTH') {
-      this.ctx.lineWidth = 4.5 * this.transform.getScale();
-      this.ctx.lineCap = 'round';
-      for (const wire of this.project.wires) {
-        if (wire.kind === 'CABLE' && wire.points.length >= 2) {
+    // 3. Leitungen (Kabel und Silberdraht - jetzt über den Pads gerendert!)
+    // Silberdraht ist dünner (1.8px) als normales Kabel (3.5px)
+    this.ctx.lineCap = 'round';
+    for (const wire of this.project.wires) {
+      if (wire.points.length >= 2) {
+        if (wire.kind === 'SILVER_WIRE') {
+          this.ctx.strokeStyle = '#E0E0E0';
+          this.ctx.lineWidth = 1.8 * this.transform.getScale();
+        } else {
           this.ctx.strokeStyle = wire.color || '#E53935';
-          this.ctx.beginPath();
-          this.ctx.moveTo(this.transform.gridToScreenX(wire.points[0].x), this.transform.gridToScreenY(wire.points[0].y));
-          this.ctx.lineTo(this.transform.gridToScreenX(wire.points[1].x), this.transform.gridToScreenY(wire.points[1].y));
-          this.ctx.stroke();
+          this.ctx.lineWidth = 3.5 * this.transform.getScale();
         }
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.transform.gridToScreenX(wire.points[0].x), this.transform.gridToScreenY(wire.points[0].y));
+        this.ctx.lineTo(this.transform.gridToScreenX(wire.points[1].x), this.transform.gridToScreenY(wire.points[1].y));
+        this.ctx.stroke();
       }
     }
 
     // Wire live preview rubberband
     if (this.activeTool === 'WIRE' && this.wireStartHole && this.currentHoverGrid) {
-      this.ctx.strokeStyle = '#00C853';
-      this.ctx.lineWidth = 3.0 * this.transform.getScale();
+      const isSilver = (this.activeWireKind === 'SILVER_WIRE');
+      this.ctx.strokeStyle = isSilver ? '#E0E0E0' : '#00C853';
+      this.ctx.lineWidth = (isSilver ? 1.8 : 3.0) * this.transform.getScale();
       this.ctx.setLineDash([4, 4]);
       this.ctx.beginPath();
       this.ctx.moveTo(this.transform.gridToScreenX(this.wireStartHole.x), this.transform.gridToScreenY(this.wireStartHole.y));
@@ -444,32 +434,99 @@ export class PerfBoardCanvas {
     const hs = this.transform.getHoleSpacingPx();
 
     if (comp.type === 'TACTILE_SWITCH') {
-      const cx = this.transform.gridToScreenX(comp.start.x + 1);
-      const cy = (this.transform.gridToScreenY(comp.start.y) + this.transform.gridToScreenY(comp.start.y + 1)) / 2;
-      const w = hs * 2.3;
-      const h = hs * 1.5;
+      const x0 = this.transform.gridToScreenX(comp.start.x);
+      const y0 = this.transform.gridToScreenY(comp.start.y);
+      const x1 = this.transform.gridToScreenX(comp.start.x + 2);
+      const y1 = this.transform.gridToScreenY(comp.start.y + 1);
 
+      const cx = (x0 + x1) / 2;
+      const cy = (y0 + y1) / 2;
+
+      // 1. 4 Metall-Pins geschwungen
+      const bodyHalfW = hs * 0.95;
+      const bodyHalfH = hs * 0.75;
+      this.ctx.strokeStyle = '#CFD8DC';
+      this.ctx.lineWidth = Math.max(2.0, hs * 0.16);
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+
+      this.ctx.beginPath();
+      // Oben links / rechts
+      this.ctx.moveTo(x0, y0); this.ctx.lineTo(cx - bodyHalfW + hs * 0.1, cy - bodyHalfH);
+      this.ctx.moveTo(x1, y0); this.ctx.lineTo(cx + bodyHalfW - hs * 0.1, cy - bodyHalfH);
+      // Unten links / rechts
+      this.ctx.moveTo(x0, y1); this.ctx.lineTo(cx - bodyHalfW + hs * 0.1, cy + bodyHalfH);
+      this.ctx.moveTo(x1, y1); this.ctx.lineTo(cx + bodyHalfW - hs * 0.1, cy + bodyHalfH);
+      this.ctx.stroke();
+
+      // Pin Lötkontaktpunkte
+      const pinDotR = Math.max(2.5, hs * 0.15);
+      this.ctx.fillStyle = '#ECEFF1';
+      for (const [px, py] of [[x0, y0], [x1, y0], [x0, y1], [x1, y1]]) {
+        this.ctx.beginPath();
+        this.ctx.arc(px, py, pinDotR, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+
+      // 2. Schwarzes Kunststoffgehäuse
+      const bw = bodyHalfW * 2;
+      const bh = bodyHalfH * 2;
+      this.ctx.fillStyle = '#1E1E1E';
+      this.ctx.beginPath();
+      this.ctx.roundRect(cx - bw / 2, cy - bh / 2, bw, bh, 4);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#121212';
+      this.ctx.lineWidth = 1;
+      this.ctx.stroke();
+
+      // 3. Silberne Metallplatte
+      const mw = bw * 0.85;
+      const mh = bh * 0.85;
+      this.ctx.fillStyle = '#B0BEC5';
+      this.ctx.beginPath();
+      this.ctx.roundRect(cx - mw / 2, cy - mh / 2, mw, mh, 3);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#78909C';
+      this.ctx.lineWidth = 1;
+      this.ctx.stroke();
+
+      // 4 Nieten
       this.ctx.fillStyle = '#37474F';
+      const rivetR = Math.max(1.2, hs * 0.08);
+      const rxOffset = mw * 0.38;
+      const ryOffset = mh * 0.38;
+      for (const [ox, oy] of [[-rxOffset, -ryOffset], [rxOffset, -ryOffset], [-rxOffset, ryOffset], [rxOffset, ryOffset]]) {
+        this.ctx.beginPath();
+        this.ctx.arc(cx + ox, cy + oy, rivetR, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+
+      // 4. Schwarzer runder Knopf mit Rand & Glanzlicht
+      const btnR = Math.min(mw, mh) * 0.38;
+      this.ctx.fillStyle = '#263238';
       this.ctx.beginPath();
-      this.ctx.roundRect(cx - w / 2, cy - h / 2, w, h, 6);
+      this.ctx.arc(cx, cy, btnR, 0, Math.PI * 2);
       this.ctx.fill();
 
-      this.ctx.fillStyle = '#607D8B';
+      this.ctx.fillStyle = '#151515';
       this.ctx.beginPath();
-      this.ctx.roundRect(cx - w * 0.35, cy - h * 0.35, w * 0.7, h * 0.7, 4);
+      this.ctx.arc(cx, cy, btnR * 0.88, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // Button
-      this.ctx.fillStyle = '#FBC02D';
+      this.ctx.fillStyle = '#424242';
       this.ctx.beginPath();
-      this.ctx.arc(cx, cy, Math.min(w, h) * 0.28, 0, Math.PI * 2);
+      this.ctx.arc(cx - btnR * 0.3, cy - btnR * 0.3, btnR * 0.25, 0, Math.PI * 2);
       this.ctx.fill();
 
       if (isSelected) {
         this.ctx.strokeStyle = '#00C853';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(cx - w / 2 - 3, cy - h / 2 - 3, w + 6, h + 6);
+        this.ctx.strokeRect(cx - bw / 2 - 3, cy - bh / 2 - 3, bw + 6, bh + 6);
       }
+
+      this.ctx.fillStyle = '#ECEFF1';
+      this.ctx.font = '11px sans-serif';
+      this.ctx.fillText(comp.designator, cx - 12, cy - bh / 2 - 4);
     } else if (comp.type === 'RESISTOR_AXIAL') {
       const x1 = this.transform.gridToScreenX(comp.start.x);
       const y1 = this.transform.gridToScreenY(comp.start.y);

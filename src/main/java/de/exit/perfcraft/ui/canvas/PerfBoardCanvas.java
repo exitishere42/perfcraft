@@ -265,24 +265,7 @@ public class PerfBoardCanvas extends Canvas {
         gc.setLineWidth(3);
         gc.strokeRoundRect(boardX, boardY, boardW, boardH, 12, 12);
 
-        // 2. Bottom-Layer Leitungen (Silberdraht)
-        if (currentLayer == BoardLayer.BOTTOM || currentLayer == BoardLayer.BOTH) {
-            gc.setStroke(Color.web("#CFD8DC"));
-            gc.setLineWidth(4.0 * transform.getScale());
-            gc.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
-            for (WireTrace w : project.getWires()) {
-                if (w.getKind() == WireKind.SILVER_WIRE && w.getPoints().size() >= 2) {
-                    var p1 = w.getPoints().get(0);
-                    var p2 = w.getPoints().get(1);
-                    gc.strokeLine(
-                            transform.gridToScreenX(p1.x()), transform.gridToScreenY(p1.y()),
-                            transform.gridToScreenX(p2.x()), transform.gridToScreenY(p2.y())
-                    );
-                }
-            }
-        }
-
-        // 3. SILBER-PADS (Nutzer-Vorgabe: SILBER statt Gold!)
+        // 2. SILBER-PADS (Nutzer-Vorgabe: SILBER statt Gold!)
         double padR = Math.max(3.0, hs * 0.38);
         double drillR = Math.max(1.5, hs * 0.18);
 
@@ -312,27 +295,33 @@ public class PerfBoardCanvas extends Canvas {
             }
         }
 
-        // 4. Top-Layer Leitungen (Kabel)
-        if (currentLayer == BoardLayer.TOP || currentLayer == BoardLayer.BOTH) {
-            for (WireTrace w : project.getWires()) {
-                if (w.getKind() == WireKind.CABLE && w.getPoints().size() >= 2) {
-                    var p1 = w.getPoints().get(0);
-                    var p2 = w.getPoints().get(1);
+        // 3. Leitungen (Kabel und Silberdraht - beide liegen oben auf den Pads)
+        // Silberdraht ist dünner (1.8px) als normales Kabel (3.5px) und in glänzendem Silber (#E0E0E0)
+        for (WireTrace w : project.getWires()) {
+            if (w.getPoints().size() >= 2) {
+                var p1 = w.getPoints().get(0);
+                var p2 = w.getPoints().get(1);
+
+                if (w.getKind() == WireKind.SILVER_WIRE) {
+                    gc.setStroke(Color.web("#E0E0E0"));
+                    gc.setLineWidth(1.8 * transform.getScale());
+                } else {
                     gc.setStroke(Color.web(w.getColor()));
                     gc.setLineWidth(3.5 * transform.getScale());
-                    gc.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
-                    gc.strokeLine(
-                            transform.gridToScreenX(p1.x()), transform.gridToScreenY(p1.y()),
-                            transform.gridToScreenX(p2.x()), transform.gridToScreenY(p2.y())
-                    );
                 }
+                gc.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+                gc.strokeLine(
+                        transform.gridToScreenX(p1.x()), transform.gridToScreenY(p1.y()),
+                        transform.gridToScreenX(p2.x()), transform.gridToScreenY(p2.y())
+                );
             }
         }
 
         // Elastische Vorschau-Linie beim Drahtziehen
         if (activeTool == ActiveTool.WIRE && wireStartHole != null && currentHoverGrid != null) {
-            gc.setStroke(activeWireKind == WireKind.SILVER_WIRE ? Color.web("#CFD8DC") : Color.web(activeWireColor));
-            gc.setLineWidth(3.0 * transform.getScale());
+            boolean isSilver = (activeWireKind == WireKind.SILVER_WIRE);
+            gc.setStroke(isSilver ? Color.web("#E0E0E0") : Color.web(activeWireColor));
+            gc.setLineWidth((isSilver ? 1.8 : 3.0) * transform.getScale());
             gc.setLineDashes(4, 4);
             gc.strokeLine(
                     transform.gridToScreenX(wireStartHole.x()), transform.gridToScreenY(wireStartHole.y()),
@@ -455,43 +444,89 @@ public class PerfBoardCanvas extends Canvas {
         int gy = comp.getStart().y();
         double hs = transform.getHoleSpacingPx();
 
-        double x1 = transform.gridToScreenX(gx);
-        double y1 = transform.gridToScreenY(gy);
-        double cx = transform.gridToScreenX(gx + 1);
-        double cy = (transform.gridToScreenY(gy) + transform.gridToScreenY(gy + 1)) / 2.0;
+        double x0 = transform.gridToScreenX(gx);
+        double y0 = transform.gridToScreenY(gy);
+        double x1 = transform.gridToScreenX(gx + 2);
+        double y1 = transform.gridToScreenY(gy + 1);
 
-        double w = hs * 2.3;
-        double h = hs * 1.5;
+        double cx = (x0 + x1) / 2.0;
+        double cy = (y0 + y1) / 2.0;
 
-        // 4 Pins an den Ecken
-        gc.setFill(Color.web("#B0BEC5"));
-        double pinS = hs * 0.3;
-        gc.fillRect(x1 - pinS/2, y1 - pinS/2, pinS, pinS);
-        gc.fillRect(transform.gridToScreenX(gx + 2) - pinS/2, y1 - pinS/2, pinS, pinS);
-        gc.fillRect(x1 - pinS/2, transform.gridToScreenY(gy + 1) - pinS/2, pinS, pinS);
-        gc.fillRect(transform.gridToScreenX(gx + 2) - pinS/2, transform.gridToScreenY(gy + 1) - pinS/2, pinS, pinS);
+        // 1. Die 4 geschwungenen Metall-Pins (Gull-Wing / Through-Hole Leads)
+        gc.setStroke(Color.web("#CFD8DC"));
+        gc.setLineWidth(Math.max(2.0, hs * 0.16));
+        gc.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+        gc.setLineJoin(javafx.scene.shape.StrokeLineJoin.ROUND);
 
-        // Gehäusekörper dunkelgrau
+        double bodyHalfW = hs * 0.95;
+        double bodyHalfH = hs * 0.75;
+
+        // Oben-links (Pin 1a)
+        gc.strokeLine(x0, y0, cx - bodyHalfW + hs * 0.1, cy - bodyHalfH);
+        // Oben-rechts (Pin 1b)
+        gc.strokeLine(x1, y0, cx + bodyHalfW - hs * 0.1, cy - bodyHalfH);
+        // Unten-links (Pin 2a)
+        gc.strokeLine(x0, y1, cx - bodyHalfW + hs * 0.1, cy + bodyHalfH);
+        // Unten-rechts (Pin 2b)
+        gc.strokeLine(x1, y1, cx + bodyHalfW - hs * 0.1, cy + bodyHalfH);
+
+        // Kleine glänzende Löt-Pads an den Pins
+        gc.setFill(Color.web("#ECEFF1"));
+        double pinDotR = Math.max(2.5, hs * 0.15);
+        gc.fillOval(x0 - pinDotR, y0 - pinDotR, pinDotR * 2, pinDotR * 2);
+        gc.fillOval(x1 - pinDotR, y0 - pinDotR, pinDotR * 2, pinDotR * 2);
+        gc.fillOval(x0 - pinDotR, y1 - pinDotR, pinDotR * 2, pinDotR * 2);
+        gc.fillOval(x1 - pinDotR, y1 - pinDotR, pinDotR * 2, pinDotR * 2);
+
+        // 2. Schwarzer Kunststoff-Körper (6x6 mm Sockel)
+        double bw = bodyHalfW * 2.0;
+        double bh = bodyHalfH * 2.0;
+        gc.setFill(Color.web("#1E1E1E")); // Tiefschwarzer Thermoplast
+        gc.fillRoundRect(cx - bw/2, cy - bh/2, bw, bh, 4, 4);
+        gc.setStroke(Color.web("#121212"));
+        gc.setLineWidth(1.0);
+        gc.strokeRoundRect(cx - bw/2, cy - bh/2, bw, bh, 4, 4);
+
+        // 3. Silberne Metall-Deckplatte mit den 4 Präge-Punkten an den Ecken
+        double mw = bw * 0.85;
+        double mh = bh * 0.85;
+        gc.setFill(Color.web("#B0BEC5")); // Mattes Silber-Blech
+        gc.fillRoundRect(cx - mw/2, cy - mh/2, mw, mh, 3, 3);
+        gc.setStroke(Color.web("#78909C"));
+        gc.setLineWidth(1.0);
+        gc.strokeRoundRect(cx - mw/2, cy - mh/2, mw, mh, 3, 3);
+
+        // 4 Eck-Nieten / Befestigungspunkte
         gc.setFill(Color.web("#37474F"));
-        gc.fillRoundRect(cx - w/2, cy - h/2, w, h, 6, 6);
+        double rivetR = Math.max(1.2, hs * 0.08);
+        double rxOffset = mw * 0.38;
+        double ryOffset = mh * 0.38;
+        gc.fillOval(cx - rxOffset - rivetR, cy - ryOffset - rivetR, rivetR * 2, rivetR * 2);
+        gc.fillOval(cx + rxOffset - rivetR, cy - ryOffset - rivetR, rivetR * 2, rivetR * 2);
+        gc.fillOval(cx - rxOffset - rivetR, cy + ryOffset - rivetR, rivetR * 2, rivetR * 2);
+        gc.fillOval(cx + rxOffset - rivetR, cy + ryOffset - rivetR, rivetR * 2, rivetR * 2);
 
-        // Metall-Deckplatte
-        gc.setFill(Color.web("#607D8B"));
-        gc.fillRoundRect(cx - w*0.35, cy - h*0.35, w*0.7, h*0.7, 4, 4);
-
-        // Runder Taster-Knopf
-        double btnR = Math.min(w, h) * 0.28;
-        gc.setFill(Color.web("#212121"));
+        // 4. Zentraler runder schwarzer Betätigungs-Knopf
+        double btnR = Math.min(mw, mh) * 0.38;
+        // Äußerer Schatten/Sockel
+        gc.setFill(Color.web("#263238"));
         gc.fillOval(cx - btnR, cy - btnR, btnR * 2, btnR * 2);
+        // Knopf-Oberseite mit dezenter Schattierung
+        gc.setFill(Color.web("#151515"));
+        gc.fillOval(cx - btnR * 0.88, cy - btnR * 0.88, btnR * 1.76, btnR * 1.76);
+        // Kleines Glanzlicht oben links
+        gc.setFill(Color.web("#424242"));
+        gc.fillOval(cx - btnR * 0.5, cy - btnR * 0.5, btnR * 0.35, btnR * 0.35);
 
+        // Selektions-Rahmen
         if (isSelected) {
             gc.setStroke(Color.web("#00C853"));
             gc.setLineWidth(2.0);
-            gc.strokeRoundRect(cx - w/2 - 2, cy - h/2 - 2, w + 4, h + 4, 8, 8);
+            gc.strokeRoundRect(cx - bw/2 - 3, cy - bh/2 - 3, bw + 6, bh + 6, 6, 6);
         }
 
         gc.setFill(Color.web("#ECEFF1"));
-        gc.fillText(comp.getDesignator(), cx - 12, cy - h/2 - 4);
+        gc.fillText(comp.getDesignator(), cx - 12, cy - bh/2 - 4);
     }
 
     private void renderResistor(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {

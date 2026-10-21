@@ -5,7 +5,7 @@
 
     <groupId>de.exit</groupId>
     <artifactId>perfcraft</artifactId>
-    <version>1.0.4</version>
+    <version>1.0.5</version>
     <packaging>jar</packaging>
 
     <name>PerfCraft</name>
