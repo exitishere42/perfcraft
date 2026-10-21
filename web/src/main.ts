@@ -217,20 +217,28 @@ document.querySelectorAll('.color-dot').forEach((dot) => {
 // 4. INSPECTOR PROPERTIES
 const propDes = document.getElementById('propDesignator') as HTMLInputElement;
 const propVal = document.getElementById('propValue') as HTMLInputElement;
+const propVisible = document.getElementById('propVisible') as HTMLInputElement;
 const resistorPreviewBox = document.getElementById('resistorPreviewBox')!;
 const resistorColorStrip = document.getElementById('resistorColorStrip')!;
 const resistorOhmLabel = document.getElementById('resistorOhmLabel')!;
 
 function updateInspector(comp: PlacedComponent | null) {
   if (!comp) {
-    propDes.value = '';
-    propVal.value = '';
+    const wire = canvas.getSelectedWire();
+    if (wire) {
+      propDes.value = wire.kind === 'SILVER_WIRE' ? 'SILVER' : 'WIRE';
+      propVal.value = wire.kind === 'SILVER_WIRE' ? 'Silberdraht' : `Kabel (${wire.color})`;
+    } else {
+      propDes.value = '';
+      propVal.value = '';
+    }
     resistorPreviewBox.style.display = 'none';
     return;
   }
 
   propDes.value = comp.designator;
   propVal.value = comp.value;
+  propVisible.checked = comp.visible !== false;
 
   if (comp.type === 'RESISTOR_AXIAL') {
     resistorPreviewBox.style.display = 'flex';
@@ -268,6 +276,14 @@ propVal.addEventListener('input', () => {
   if (sel) {
     sel.value = propVal.value;
     updateInspector(sel);
+    canvas.render();
+  }
+});
+
+propVisible.addEventListener('change', () => {
+  const sel = (canvas as any).selectedComponent;
+  if (sel) {
+    sel.visible = propVisible.checked;
     canvas.render();
   }
 });

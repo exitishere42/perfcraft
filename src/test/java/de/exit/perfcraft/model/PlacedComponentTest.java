@@ -30,5 +30,17 @@ class PlacedComponentTest {
         assertEquals("R", ComponentType.RESISTOR_AXIAL.getDefaultPrefix());
         assertEquals("LED", ComponentType.LED.getDefaultPrefix());
         assertEquals("IC", ComponentType.IC_DIP.getDefaultPrefix());
+        assertEquals("J", ComponentType.PIN_HEADER.getDefaultPrefix());
+    }
+
+    @Test
+    void testVisibilityToggle() {
+        PlacedComponent comp = new PlacedComponent(
+                "c1", ComponentType.ESP32_S3_ZERO, "U1", "ESP32",
+                new HoleCoord(0, 0), new HoleCoord(6, 8), 0, BoardLayer.TOP
+        );
+        assertTrue(comp.isVisible());
+        comp.setVisible(false);
+        assertFalse(comp.isVisible());
     }
 }

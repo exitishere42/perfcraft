@@ -10,7 +10,8 @@ export type ComponentType =
   | 'DIODE'
   | 'IC_DIP'
   | 'ESP32_S3_ZERO'
-  | 'TP4056_CHARGER';
+  | 'TP4056_CHARGER'
+  | 'PIN_HEADER';
 
 export interface HoleCoord {
   x: number;
@@ -34,6 +35,7 @@ export interface PlacedComponent {
   end: HoleCoord | null;
   rotation: number; // 0, 90, 180, 270
   layer: BoardLayer;
+  visible?: boolean;
 }
 
 export interface WireTrace {

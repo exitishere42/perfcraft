@@ -4,6 +4,7 @@ import {
   HoleCoord,
   ComponentType,
   WireKind,
+  WireTrace,
   BoardLayer,
 } from './models.ts';
 import { CoordinateTransform } from './transform.ts';
@@ -25,7 +26,9 @@ export class PerfBoardCanvas {
   private currentLayer: BoardLayer = 'TOP';
 
   private selectedComponent: PlacedComponent | null = null;
+  private selectedWire: WireTrace | null = null;
   private wireStartHole: HoleCoord | null = null;
+  private pinHeaderStartHole: HoleCoord | null = null;
   private currentHoverGrid: HoleCoord | null = null;
   private highlightedNet: Set<string> = new Set();
   private hoveredTerminalText: string | null = null;
@@ -81,6 +84,7 @@ export class PerfBoardCanvas {
     this.canvas.addEventListener('pointermove', (e) => this.handlePointerMove(e));
     this.canvas.addEventListener('pointerup', (e) => this.handlePointerUp(e));
     this.canvas.addEventListener('pointercancel', (e) => this.handlePointerUp(e));
+    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     this.canvas.addEventListener(
       'wheel',
@@ -112,6 +116,7 @@ export class PerfBoardCanvas {
       // Nur primärer Klick (Linksklick) darf Aktionen ausführen, Rechts-/Mittelklick brechen nur ab
       if (e.button === 2) {
         this.wireStartHole = null;
+        this.pinHeaderStartHole = null;
         this.render();
       }
       return;
@@ -134,9 +139,18 @@ export class PerfBoardCanvas {
 
       if (this.activeTool === 'SELECT') {
         const hit = this.findComponentAt(grid);
-        this.selectedComponent = hit;
-        this.isDraggingObject = hit !== null;
-        if (this.onComponentSelected) this.onComponentSelected(hit);
+        if (hit) {
+          this.selectedComponent = hit;
+          this.selectedWire = null;
+          this.isDraggingObject = true;
+          if (this.onComponentSelected) this.onComponentSelected(hit);
+        } else {
+          const wireHit = this.findWireNear(pt.x, pt.y);
+          this.selectedWire = wireHit;
+          this.selectedComponent = null;
+          this.isDraggingObject = false;
+          if (this.onComponentSelected) this.onComponentSelected(null);
+        }
         this.render();
       } else if (this.activeTool === 'WIRE') {
         if (!this.wireStartHole) {
@@ -166,7 +180,33 @@ export class PerfBoardCanvas {
         }
         this.render();
       } else if (this.activeTool === 'COMPONENT') {
-        this.placeNewComponent(grid);
+        if (this.activeComponentType === 'PIN_HEADER') {
+          if (!this.pinHeaderStartHole) {
+            this.pinHeaderStartHole = grid;
+          } else {
+            const count = this.project.components.filter((c) => c.type === 'PIN_HEADER').length + 1;
+            const pinCount = Math.max(Math.abs(grid.x - this.pinHeaderStartHole.x), Math.abs(grid.y - this.pinHeaderStartHole.y)) + 1;
+            const headerComp: PlacedComponent = {
+              id: 'c_' + Date.now(),
+              type: 'PIN_HEADER',
+              designator: 'J' + count,
+              value: '1x' + pinCount + ' Header',
+              start: this.pinHeaderStartHole,
+              end: grid,
+              rotation: 0,
+              layer: 'TOP',
+              visible: true,
+            };
+            this.project.components.push(headerComp);
+            this.selectedComponent = headerComp;
+            this.selectedWire = null;
+            this.pinHeaderStartHole = null;
+            if (this.onComponentSelected) this.onComponentSelected(headerComp);
+            if (this.onProjectModified) this.onProjectModified();
+          }
+        } else {
+          this.placeNewComponent(grid);
+        }
         this.render();
       }
     } else if (this.activePointers.size === 2) {
@@ -252,6 +292,20 @@ export class PerfBoardCanvas {
 
   private findComponentAt(grid: HoleCoord): PlacedComponent | null {
     for (const c of this.project.components) {
+      if (c.visible === false) continue;
+      if (c.type === 'PIN_HEADER') {
+        const s = c.start;
+        const e = c.end || s;
+        const dx = e.x - s.x;
+        const dy = e.y - s.y;
+        const steps = Math.max(Math.abs(dx), Math.abs(dy));
+        for (let i = 0; i <= steps; i++) {
+          const hx = steps === 0 ? s.x : s.x + Math.round((i * dx) / steps);
+          const hy = steps === 0 ? s.y : s.y + Math.round((i * dy) / steps);
+          if (grid.x === hx && grid.y === hy) return c;
+        }
+        continue;
+      }
       const minX = Math.min(c.start.x, c.end ? c.end.x : c.start.x);
       const maxX = Math.max(c.start.x, c.end ? c.end.x : c.start.x);
       const minY = Math.min(c.start.y, c.end ? c.end.y : c.start.y);
@@ -262,6 +316,33 @@ export class PerfBoardCanvas {
       }
     }
     return null;
+  }
+
+  private findWireNear(screenX: number, screenY: number): WireTrace | null {
+    const maxDist = Math.max(8.0, this.transform.getHoleSpacingPx() * 0.4);
+    for (const wire of this.project.wires) {
+      if (wire.points.length >= 2) {
+        const x1 = this.transform.gridToScreenX(wire.points[0].x);
+        const y1 = this.transform.gridToScreenY(wire.points[0].y);
+        const x2 = this.transform.gridToScreenX(wire.points[1].x);
+        const y2 = this.transform.gridToScreenY(wire.points[1].y);
+
+        const dist = this.distancePointToSegment(screenX, screenY, x1, y1, x2, y2);
+        if (dist <= maxDist) {
+          return wire;
+        }
+      }
+    }
+    return null;
+  }
+
+  private distancePointToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+    const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+    if (l2 === 0) return Math.hypot(px - x1, py - y1);
+    const t = Math.max(0, Math.min(1, ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2));
+    const projX = x1 + t * (x2 - x1);
+    const projY = y1 + t * (y2 - y1);
+    return Math.hypot(px - projX, py - projY);
   }
 
   private placeNewComponent(start: HoleCoord): void {
@@ -307,6 +388,13 @@ export class PerfBoardCanvas {
         des = 'U' + count;
         // TP4056 Lipo Lader: 7 Spalten x 10 Zeilen (dx=6, dy=9)
         comp = { id, type: this.activeComponentType, designator: des, value: 'TP4056', start, end: { x: start.x + 6, y: start.y + 9 }, rotation: 0, layer: 'TOP' };
+        break;
+      case 'PIN_HEADER':
+        des = 'J' + count;
+        comp = { id, type: this.activeComponentType, designator: des, value: '1x4 Header', start, end: { x: start.x + 3, y: start.y }, rotation: 0, layer: 'TOP' };
+        break;
+      default:
+        comp = { id, type: this.activeComponentType, designator: des, value: '10k', start, end: { x: start.x + 2, y: start.y }, rotation: 0, layer: 'TOP' };
         break;
     }
 
@@ -376,11 +464,25 @@ export class PerfBoardCanvas {
       }
     }
 
-    // 3. Leitungen (Kabel und Silberdraht - jetzt über den Pads gerendert!)
-    // Silberdraht ist dünner (1.8px) als normales Kabel (3.5px)
+    // 3. Leitungen (Kabel und Silberdraht)
     this.ctx.lineCap = 'round';
     for (const wire of this.project.wires) {
       if (wire.points.length >= 2) {
+        const sx1 = this.transform.gridToScreenX(wire.points[0].x);
+        const sy1 = this.transform.gridToScreenY(wire.points[0].y);
+        const sx2 = this.transform.gridToScreenX(wire.points[1].x);
+        const sy2 = this.transform.gridToScreenY(wire.points[1].y);
+
+        // Selektions-Aura
+        if (wire === this.selectedWire) {
+          this.ctx.strokeStyle = '#00E676';
+          this.ctx.lineWidth = 7 * this.transform.getScale();
+          this.ctx.beginPath();
+          this.ctx.moveTo(sx1, sy1);
+          this.ctx.lineTo(sx2, sy2);
+          this.ctx.stroke();
+        }
+
         if (wire.kind === 'SILVER_WIRE') {
           this.ctx.strokeStyle = '#E0E0E0';
           this.ctx.lineWidth = 1.8 * this.transform.getScale();
@@ -389,8 +491,8 @@ export class PerfBoardCanvas {
           this.ctx.lineWidth = 3.5 * this.transform.getScale();
         }
         this.ctx.beginPath();
-        this.ctx.moveTo(this.transform.gridToScreenX(wire.points[0].x), this.transform.gridToScreenY(wire.points[0].y));
-        this.ctx.lineTo(this.transform.gridToScreenX(wire.points[1].x), this.transform.gridToScreenY(wire.points[1].y));
+        this.ctx.moveTo(sx1, sy1);
+        this.ctx.lineTo(sx2, sy2);
         this.ctx.stroke();
       }
     }
@@ -411,6 +513,7 @@ export class PerfBoardCanvas {
     // 5. Komponenten
     if (this.currentLayer === 'TOP' || this.currentLayer === 'BOTH') {
       for (const comp of this.project.components) {
+        if (comp.visible === false) continue; // Unsichtbar geschaltet
         this.renderComponent(comp, comp === this.selectedComponent);
       }
     }
@@ -419,43 +522,58 @@ export class PerfBoardCanvas {
     if (this.activeTool === 'COMPONENT' && this.currentHoverGrid) {
       this.ctx.save();
       this.ctx.globalAlpha = 0.60;
-      let dummyEnd: HoleCoord = { x: this.currentHoverGrid.x + 4, y: this.currentHoverGrid.y };
-      if (this.activeComponentType === 'TACTILE_SWITCH') {
-        dummyEnd = { x: this.currentHoverGrid.x + 2, y: this.currentHoverGrid.y + 3 };
-      } else if (this.activeComponentType === 'RESISTOR_AXIAL') {
-        dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
-      } else if (this.activeComponentType === 'LED' || this.activeComponentType === 'CAPACITOR_CERAMIC') {
-        dummyEnd = { x: this.currentHoverGrid.x + 1, y: this.currentHoverGrid.y };
-      } else if (this.activeComponentType === 'DIODE') {
-        dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
-      } else if (this.activeComponentType === 'IC_DIP') {
-        dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y + 3 };
-      } else if (this.activeComponentType === 'ESP32_S3_ZERO') {
-        dummyEnd = { x: this.currentHoverGrid.x + 6, y: this.currentHoverGrid.y + 8 };
-      } else if (this.activeComponentType === 'TP4056_CHARGER') {
-        dummyEnd = { x: this.currentHoverGrid.x + 6, y: this.currentHoverGrid.y + 9 };
+      if (this.activeComponentType === 'PIN_HEADER') {
+        const pStart = this.pinHeaderStartHole || this.currentHoverGrid;
+        const dummy: PlacedComponent = {
+          id: 'ghost',
+          type: 'PIN_HEADER',
+          designator: 'J',
+          value: 'Header',
+          start: pStart,
+          end: this.currentHoverGrid,
+          rotation: 0,
+          layer: 'TOP',
+        };
+        this.renderPinHeader(dummy, false);
+      } else {
+        let dummyEnd: HoleCoord = { x: this.currentHoverGrid.x + 4, y: this.currentHoverGrid.y };
+        if (this.activeComponentType === 'TACTILE_SWITCH') {
+          dummyEnd = { x: this.currentHoverGrid.x + 2, y: this.currentHoverGrid.y + 3 };
+        } else if (this.activeComponentType === 'RESISTOR_AXIAL') {
+          dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
+        } else if (this.activeComponentType === 'LED' || this.activeComponentType === 'CAPACITOR_CERAMIC') {
+          dummyEnd = { x: this.currentHoverGrid.x + 1, y: this.currentHoverGrid.y };
+        } else if (this.activeComponentType === 'DIODE') {
+          dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y };
+        } else if (this.activeComponentType === 'IC_DIP') {
+          dummyEnd = { x: this.currentHoverGrid.x + 3, y: this.currentHoverGrid.y + 3 };
+        } else if (this.activeComponentType === 'ESP32_S3_ZERO') {
+          dummyEnd = { x: this.currentHoverGrid.x + 6, y: this.currentHoverGrid.y + 8 };
+        } else if (this.activeComponentType === 'TP4056_CHARGER') {
+          dummyEnd = { x: this.currentHoverGrid.x + 6, y: this.currentHoverGrid.y + 9 };
+        }
+
+        const dummy: PlacedComponent = {
+          id: 'ghost',
+          type: this.activeComponentType,
+          designator: 'GHOST',
+          value: '10k',
+          start: this.currentHoverGrid,
+          end: dummyEnd,
+          rotation: 0,
+          layer: 'TOP',
+        };
+        this.renderComponent(dummy, false);
+
+        // Snap Circles
+        this.ctx.strokeStyle = '#00E676';
+        this.ctx.lineWidth = 2;
+        const sx = this.transform.gridToScreenX(dummy.start.x);
+        const sy = this.transform.gridToScreenY(dummy.start.y);
+        this.ctx.beginPath();
+        this.ctx.arc(sx, sy, hs * 0.45, 0, Math.PI * 2);
+        this.ctx.stroke();
       }
-
-      const dummy: PlacedComponent = {
-        id: 'ghost',
-        type: this.activeComponentType,
-        designator: 'GHOST',
-        value: '10k',
-        start: this.currentHoverGrid,
-        end: dummyEnd,
-        rotation: 0,
-        layer: 'TOP',
-      };
-      this.renderComponent(dummy, false);
-
-      // Snap Circles
-      this.ctx.strokeStyle = '#00E676';
-      this.ctx.lineWidth = 2;
-      const sx = this.transform.gridToScreenX(dummy.start.x);
-      const sy = this.transform.gridToScreenY(dummy.start.y);
-      this.ctx.beginPath();
-      this.ctx.arc(sx, sy, hs * 0.45, 0, Math.PI * 2);
-      this.ctx.stroke();
       this.ctx.restore();
     }
 
@@ -954,11 +1072,78 @@ export class PerfBoardCanvas {
         this.ctx.roundRect(boardLeft - 4, boardTop - 4, width + 8, height + 8, 8);
         this.ctx.stroke();
       }
+    } else if (comp.type === 'PIN_HEADER') {
+      this.renderPinHeader(comp, isSelected);
     }
+  }
+
+  private renderPinHeader(comp: PlacedComponent, isSelected: boolean): void {
+    const s = comp.start;
+    const e = comp.end || s;
+    const hs = this.transform.getHoleSpacingPx();
+
+    const dx = e.x - s.x;
+    const dy = e.y - s.y;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
+
+    const boxSize = hs * 0.90;
+    const pinSize = hs * 0.30;
+    const drillSize = hs * 0.14;
+
+    for (let i = 0; i <= steps; i++) {
+      const hx = steps === 0 ? s.x : s.x + Math.round((i * dx) / steps);
+      const hy = steps === 0 ? s.y : s.y + Math.round((i * dy) / steps);
+
+      const cx = this.transform.gridToScreenX(hx);
+      const cy = this.transform.gridToScreenY(hy);
+
+      // 1. Schwarzer Plastiksockel
+      this.ctx.fillStyle = '#1E1E1E';
+      this.ctx.beginPath();
+      this.ctx.roundRect(cx - boxSize / 2, cy - boxSize / 2, boxSize, boxSize, 3);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#121212';
+      this.ctx.lineWidth = 1.0;
+      this.ctx.stroke();
+
+      // Innerer Fasenfalz
+      this.ctx.strokeStyle = '#2E2E2E';
+      this.ctx.lineWidth = 0.8;
+      this.ctx.beginPath();
+      this.ctx.roundRect(cx - boxSize * 0.4, cy - boxSize * 0.4, boxSize * 0.8, boxSize * 0.8, 2);
+      this.ctx.stroke();
+
+      // 2. Quadratischer vergoldeter Pin-Kontakt
+      this.ctx.fillStyle = '#FFD54F';
+      this.ctx.fillRect(cx - pinSize / 2, cy - pinSize / 2, pinSize, pinSize);
+      this.ctx.strokeStyle = '#FFA000';
+      this.ctx.lineWidth = 0.6;
+      this.ctx.strokeRect(cx - pinSize / 2, cy - pinSize / 2, pinSize, pinSize);
+
+      // Mittiges Loch
+      this.ctx.fillStyle = '#121212';
+      this.ctx.fillRect(cx - drillSize / 2, cy - drillSize / 2, drillSize, drillSize);
+
+      if (isSelected) {
+        this.ctx.strokeStyle = '#00E676';
+        this.ctx.lineWidth = 2.0;
+        this.ctx.beginPath();
+        this.ctx.roundRect(cx - boxSize / 2 - 2, cy - boxSize / 2 - 2, boxSize + 4, boxSize + 4, 4);
+        this.ctx.stroke();
+      }
+    }
+
+    // Beschriftung
+    const sx0 = this.transform.gridToScreenX(s.x);
+    const sy0 = this.transform.gridToScreenY(s.y);
+    this.ctx.fillStyle = '#B0BEC5';
+    this.ctx.font = '11px sans-serif';
+    this.ctx.fillText(comp.designator, sx0 - boxSize * 0.6, sy0 - boxSize * 0.6);
   }
 
   private detectTerminalLabel(grid: HoleCoord): string | null {
     for (const c of this.project.components) {
+      if (c.visible === false) continue;
       if (c.type === 'TACTILE_SWITCH') {
         const s = c.start;
         if (grid.x === s.x && grid.y === s.y) return c.designator + ': Pin 1a';
@@ -971,6 +1156,17 @@ export class PerfBoardCanvas {
       } else if (c.type === 'LED') {
         if (grid.x === c.start.x && grid.y === c.start.y) return c.designator + ': Anode (+)';
         if (c.end && grid.x === c.end.x && grid.y === c.end.y) return c.designator + ': Cathode (-)';
+      } else if (c.type === 'PIN_HEADER') {
+        const s = c.start;
+        const e = c.end || s;
+        const dx = e.x - s.x;
+        const dy = e.y - s.y;
+        const steps = Math.max(Math.abs(dx), Math.abs(dy));
+        for (let i = 0; i <= steps; i++) {
+          const hx = steps === 0 ? s.x : s.x + Math.round((i * dx) / steps);
+          const hy = steps === 0 ? s.y : s.y + Math.round((i * dy) / steps);
+          if (grid.x === hx && grid.y === hy) return `${c.designator}: Pin ${i + 1}`;
+        }
       } else if (c.type === 'ESP32_S3_ZERO') {
         const s = c.start;
         // Links
@@ -1007,6 +1203,7 @@ export class PerfBoardCanvas {
   public setActiveTool(tool: ActiveTool): void {
     this.activeTool = tool;
     this.wireStartHole = null;
+    this.pinHeaderStartHole = null;
     this.render();
   }
 
@@ -1052,7 +1249,17 @@ export class PerfBoardCanvas {
       if (this.onComponentSelected) this.onComponentSelected(null);
       if (this.onProjectModified) this.onProjectModified();
       this.render();
+    } else if (this.selectedWire) {
+      this.project.wires = this.project.wires.filter((w) => w !== this.selectedWire);
+      this.selectedWire = null;
+      if (this.onComponentSelected) this.onComponentSelected(null);
+      if (this.onProjectModified) this.onProjectModified();
+      this.render();
     }
+  }
+
+  public getSelectedWire(): WireTrace | null {
+    return this.selectedWire;
   }
 
   public setProject(project: PerfProject): void {

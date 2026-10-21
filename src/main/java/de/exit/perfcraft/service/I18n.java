@@ -89,6 +89,8 @@ public class I18n {
         DE_MAP.put("comp.esp32", "ESP32-S3-Zero");
         EN_MAP.put("comp.tp4056", "TP4056 Charger");
         DE_MAP.put("comp.tp4056", "TP4056 Lader");
+        EN_MAP.put("comp.pinheader", "Pin Header");
+        DE_MAP.put("comp.pinheader", "Pinleiste");
 
         // Sidebar & Properties
         EN_MAP.put("sidebar.components", "1. COMPONENT LIBRARY");

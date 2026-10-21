@@ -29,9 +29,11 @@ public class PerfBoardCanvas extends Canvas {
     private ComponentType activeComponentType = ComponentType.TACTILE_SWITCH;
 
     private PlacedComponent selectedComponent = null;
+    private WireTrace selectedWire = null;
 
     // Interaktions-Status
     private HoleCoord wireStartHole = null;
+    private HoleCoord pinHeaderStartHole = null;
     private HoleCoord currentHoverGrid = null;
     private boolean isDraggingObject = false;
     private double lastDragX;
@@ -102,12 +104,23 @@ public class PerfBoardCanvas extends Canvas {
                 }
 
                 if (activeTool == ActiveTool.SELECT) {
-                    // Selektion / Hit-Test
+                    // Selektion / Hit-Test: Zuerst Bauteile prüfen, dann Leitungen (Kabel/Silberdraht)
                     PlacedComponent hit = findComponentAt(grid);
-                    selectedComponent = hit;
-                    isDraggingObject = (hit != null);
-                    if (onComponentSelected != null && hit != null) {
-                        onComponentSelected.accept(hit);
+                    if (hit != null) {
+                        selectedComponent = hit;
+                        selectedWire = null;
+                        isDraggingObject = true;
+                        if (onComponentSelected != null) {
+                            onComponentSelected.accept(hit);
+                        }
+                    } else {
+                        WireTrace wireHit = findWireNear(e.getX(), e.getY());
+                        selectedWire = wireHit;
+                        selectedComponent = null;
+                        isDraggingObject = false;
+                        if (onComponentSelected != null) {
+                            onComponentSelected.accept(null);
+                        }
                     }
                     render();
                 } else if (activeTool == ActiveTool.WIRE) {
@@ -142,13 +155,40 @@ public class PerfBoardCanvas extends Canvas {
                     }
                     render();
                 } else if (activeTool == ActiveTool.COMPONENT) {
-                    // Bauteil platzieren
-                    placeNewComponent(grid);
+                    if (activeComponentType == ComponentType.PIN_HEADER) {
+                        // Benutzerdefinierte Stiftleiste: Start und Ziel wählen wie bei Draht
+                        if (pinHeaderStartHole == null) {
+                            pinHeaderStartHole = grid;
+                        } else {
+                            int count = (int) project.getComponents().stream().filter(c -> c.getType() == ComponentType.PIN_HEADER).count() + 1;
+                            int pinCount = Math.max(Math.abs(grid.x() - pinHeaderStartHole.x()), Math.abs(grid.y() - pinHeaderStartHole.y())) + 1;
+                            PlacedComponent headerComp = new PlacedComponent(
+                                    UUID.randomUUID().toString(),
+                                    ComponentType.PIN_HEADER,
+                                    "J" + count,
+                                    "1x" + pinCount + " Header",
+                                    pinHeaderStartHole,
+                                    grid,
+                                    0,
+                                    BoardLayer.TOP
+                            );
+                            project.getComponents().add(headerComp);
+                            selectedComponent = headerComp;
+                            selectedWire = null;
+                            pinHeaderStartHole = null;
+                            if (onComponentSelected != null) onComponentSelected.accept(headerComp);
+                            if (onProjectModified != null) onProjectModified.run();
+                        }
+                    } else {
+                        // Reguläres Bauteil platzieren
+                        placeNewComponent(grid);
+                    }
                     render();
                 }
             } else if (e.getButton() == MouseButton.SECONDARY) {
                 // Rechtsklick: Vorgang abbrechen
                 wireStartHole = null;
+                pinHeaderStartHole = null;
                 render();
             }
         });
@@ -205,6 +245,24 @@ public class PerfBoardCanvas extends Canvas {
 
     private PlacedComponent findComponentAt(HoleCoord grid) {
         for (PlacedComponent c : project.getComponents()) {
+            if (!c.isVisible()) continue;
+
+            if (c.getType() == ComponentType.PIN_HEADER) {
+                HoleCoord s = c.getStart();
+                HoleCoord e = c.getEnd() != null ? c.getEnd() : s;
+                int dx = e.x() - s.x();
+                int dy = e.y() - s.y();
+                int steps = Math.max(Math.abs(dx), Math.abs(dy));
+                for (int i = 0; i <= steps; i++) {
+                    int hx = steps == 0 ? s.x() : s.x() + (int) Math.round((double) i * dx / steps);
+                    int hy = steps == 0 ? s.y() : s.y() + (int) Math.round((double) i * dy / steps);
+                    if (grid.x() == hx && grid.y() == hy) {
+                        return c;
+                    }
+                }
+                continue;
+            }
+
             int minX = Math.min(c.getStart().x(), c.getEnd() != null ? c.getEnd().x() : c.getStart().x());
             int maxX = Math.max(c.getStart().x(), c.getEnd() != null ? c.getEnd().x() : c.getStart().x());
             int minY = Math.min(c.getStart().y(), c.getEnd() != null ? c.getEnd().y() : c.getStart().y());
@@ -216,6 +274,35 @@ public class PerfBoardCanvas extends Canvas {
             }
         }
         return null;
+    }
+
+    private WireTrace findWireNear(double screenX, double screenY) {
+        double maxDist = Math.max(8.0, transform.getHoleSpacingPx() * 0.4);
+        for (WireTrace w : project.getWires()) {
+            if (w.getPoints().size() >= 2) {
+                var p1 = w.getPoints().get(0);
+                var p2 = w.getPoints().get(1);
+                double x1 = transform.gridToScreenX(p1.x());
+                double y1 = transform.gridToScreenY(p1.y());
+                double x2 = transform.gridToScreenX(p2.x());
+                double y2 = transform.gridToScreenY(p2.y());
+
+                double dist = distancePointToSegment(screenX, screenY, x1, y1, x2, y2);
+                if (dist <= maxDist) {
+                    return w;
+                }
+            }
+        }
+        return null;
+    }
+
+    private double distancePointToSegment(double px, double py, double x1, double y1, double x2, double y2) {
+        double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+        if (l2 == 0) return Math.hypot(px - x1, py - y1);
+        double t = Math.max(0, Math.min(1, ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2));
+        double projX = x1 + t * (x2 - x1);
+        double projY = y1 + t * (y2 - y1);
+        return Math.hypot(px - projX, py - projY);
     }
 
     private void placeNewComponent(HoleCoord start) {
@@ -321,6 +408,19 @@ public class PerfBoardCanvas extends Canvas {
                 var p1 = w.getPoints().get(0);
                 var p2 = w.getPoints().get(1);
 
+                double sx1 = transform.gridToScreenX(p1.x());
+                double sy1 = transform.gridToScreenY(p1.y());
+                double sx2 = transform.gridToScreenX(p2.x());
+                double sy2 = transform.gridToScreenY(p2.y());
+
+                // Selektions-Aura / Highlight wenn Leitung ausgewählt ist
+                if (w.equals(selectedWire)) {
+                    gc.setStroke(Color.web("#00E676"));
+                    gc.setLineWidth(7.0 * transform.getScale());
+                    gc.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+                    gc.strokeLine(sx1, sy1, sx2, sy2);
+                }
+
                 if (w.getKind() == WireKind.SILVER_WIRE) {
                     gc.setStroke(Color.web("#E0E0E0"));
                     gc.setLineWidth(1.8 * transform.getScale());
@@ -329,10 +429,7 @@ public class PerfBoardCanvas extends Canvas {
                     gc.setLineWidth(3.5 * transform.getScale());
                 }
                 gc.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
-                gc.strokeLine(
-                        transform.gridToScreenX(p1.x()), transform.gridToScreenY(p1.y()),
-                        transform.gridToScreenX(p2.x()), transform.gridToScreenY(p2.y())
-                );
+                gc.strokeLine(sx1, sy1, sx2, sy2);
             }
         }
 
@@ -355,6 +452,7 @@ public class PerfBoardCanvas extends Canvas {
             gc.setGlobalAlpha(alpha);
 
             for (PlacedComponent comp : project.getComponents()) {
+                if (!comp.isVisible()) continue; // Unsichtbar geschaltet (z.B. abgehobenes Overlay)
                 boolean isSel = (comp == selectedComponent);
                 renderComponentInstance(gc, comp, isSel);
             }
@@ -365,20 +463,26 @@ public class PerfBoardCanvas extends Canvas {
         if (activeTool == ActiveTool.COMPONENT && currentHoverGrid != null) {
             gc.save();
             gc.setGlobalAlpha(0.60);
-            PlacedComponent ghost = createDummyComponent(activeComponentType, currentHoverGrid);
-            renderComponentInstance(gc, ghost, false);
+            if (activeComponentType == ComponentType.PIN_HEADER) {
+                HoleCoord pStart = (pinHeaderStartHole != null) ? pinHeaderStartHole : currentHoverGrid;
+                PlacedComponent ghost = new PlacedComponent("ghost", ComponentType.PIN_HEADER, "J", "Header", pStart, currentHoverGrid, 0, BoardLayer.TOP);
+                renderPinHeader(gc, ghost, false);
+            } else {
+                PlacedComponent ghost = createDummyComponent(activeComponentType, currentHoverGrid);
+                renderComponentInstance(gc, ghost, false);
 
-            // Highlight snap target holes
-            gc.setStroke(Color.web("#00E676"));
-            gc.setLineWidth(2.0);
-            double holeSpacing = transform.getHoleSpacingPx();
-            double sx = transform.gridToScreenX(ghost.getStart().x());
-            double sy = transform.gridToScreenY(ghost.getStart().y());
-            gc.strokeOval(sx - holeSpacing * 0.45, sy - holeSpacing * 0.45, holeSpacing * 0.9, holeSpacing * 0.9);
-            if (ghost.getEnd() != null) {
-                double ex = transform.gridToScreenX(ghost.getEnd().x());
-                double ey = transform.gridToScreenY(ghost.getEnd().y());
-                gc.strokeOval(ex - holeSpacing * 0.45, ey - holeSpacing * 0.45, holeSpacing * 0.9, holeSpacing * 0.9);
+                // Highlight snap target holes
+                gc.setStroke(Color.web("#00E676"));
+                gc.setLineWidth(2.0);
+                double holeSpacing = transform.getHoleSpacingPx();
+                double sx = transform.gridToScreenX(ghost.getStart().x());
+                double sy = transform.gridToScreenY(ghost.getStart().y());
+                gc.strokeOval(sx - holeSpacing * 0.45, sy - holeSpacing * 0.45, holeSpacing * 0.9, holeSpacing * 0.9);
+                if (ghost.getEnd() != null) {
+                    double ex = transform.gridToScreenX(ghost.getEnd().x());
+                    double ey = transform.gridToScreenY(ghost.getEnd().y());
+                    gc.strokeOval(ex - holeSpacing * 0.45, ey - holeSpacing * 0.45, holeSpacing * 0.9, holeSpacing * 0.9);
+                }
             }
             gc.restore();
         }
@@ -417,6 +521,8 @@ public class PerfBoardCanvas extends Canvas {
             renderESP32S3Zero(gc, comp, isSel);
         } else if (comp.getType() == ComponentType.TP4056_CHARGER) {
             renderTP4056(gc, comp, isSel);
+        } else if (comp.getType() == ComponentType.PIN_HEADER) {
+            renderPinHeader(gc, comp, isSel);
         }
     }
 
@@ -444,6 +550,7 @@ public class PerfBoardCanvas extends Canvas {
     private String detectTerminalLabel(HoleCoord grid) {
         if (grid == null) return null;
         for (PlacedComponent c : project.getComponents()) {
+            if (!c.isVisible()) continue;
             HoleCoord s = c.getStart();
             HoleCoord e = c.getEnd() != null ? c.getEnd() : s;
 
@@ -461,6 +568,17 @@ public class PerfBoardCanvas extends Canvas {
             } else if (c.getType() == ComponentType.DIODE) {
                 if (grid.equals(s)) return c.getDesignator() + ": Anode";
                 if (grid.equals(e)) return c.getDesignator() + ": Cathode";
+            } else if (c.getType() == ComponentType.PIN_HEADER) {
+                int dx = e.x() - s.x();
+                int dy = e.y() - s.y();
+                int steps = Math.max(Math.abs(dx), Math.abs(dy));
+                for (int i = 0; i <= steps; i++) {
+                    int hx = steps == 0 ? s.x() : s.x() + (int) Math.round((double) i * dx / steps);
+                    int hy = steps == 0 ? s.y() : s.y() + (int) Math.round((double) i * dy / steps);
+                    if (grid.x() == hx && grid.y() == hy) {
+                        return c.getDesignator() + ": Pin " + (i + 1);
+                    }
+                }
             } else if (c.getType() == ComponentType.ESP32_S3_ZERO) {
                 // Linke Pinleiste (x = s.x)
                 if (grid.x() == s.x()) {
@@ -1000,6 +1118,64 @@ public class PerfBoardCanvas extends Canvas {
         }
     }
 
+    private void renderPinHeader(GraphicsContext gc, PlacedComponent comp, boolean isSelected) {
+        HoleCoord s = comp.getStart();
+        HoleCoord e = comp.getEnd() != null ? comp.getEnd() : s;
+        double hs = transform.getHoleSpacingPx();
+
+        int dx = e.x() - s.x();
+        int dy = e.y() - s.y();
+        int steps = Math.max(Math.abs(dx), Math.abs(dy));
+
+        double boxSize = hs * 0.90;
+        double pinSize = hs * 0.30;
+        double drillSize = hs * 0.14;
+
+        for (int i = 0; i <= steps; i++) {
+            int hx = steps == 0 ? s.x() : s.x() + (int) Math.round((double) i * dx / steps);
+            int hy = steps == 0 ? s.y() : s.y() + (int) Math.round((double) i * dy / steps);
+
+            double cx = transform.gridToScreenX(hx);
+            double cy = transform.gridToScreenY(hy);
+
+            // 1. Schwarzer Isolierkörper / Plastiksockel
+            gc.setFill(Color.web("#1E1E1E"));
+            gc.fillRoundRect(cx - boxSize / 2.0, cy - boxSize / 2.0, boxSize, boxSize, 3, 3);
+            gc.setStroke(Color.web("#121212"));
+            gc.setLineWidth(1.0);
+            gc.strokeRoundRect(cx - boxSize / 2.0, cy - boxSize / 2.0, boxSize, boxSize, 3, 3);
+
+            // Fasen-Prägung
+            gc.setStroke(Color.web("#2E2E2E"));
+            gc.setLineWidth(0.8);
+            gc.strokeRoundRect(cx - boxSize * 0.4, cy - boxSize * 0.4, boxSize * 0.8, boxSize * 0.8, 2, 2);
+
+            // 2. Quadratischer vergoldeter Pin-Kontakt
+            gc.setFill(Color.web("#FFD54F"));
+            gc.fillRect(cx - pinSize / 2.0, cy - pinSize / 2.0, pinSize, pinSize);
+            gc.setStroke(Color.web("#FFA000"));
+            gc.setLineWidth(0.6);
+            gc.strokeRect(cx - pinSize / 2.0, cy - pinSize / 2.0, pinSize, pinSize);
+
+            // Mittige Bohrung
+            gc.setFill(Color.web("#121212"));
+            gc.fillRect(cx - drillSize / 2.0, cy - drillSize / 2.0, drillSize, drillSize);
+
+            // Selektions-Aura
+            if (isSelected) {
+                gc.setStroke(Color.web("#00E676"));
+                gc.setLineWidth(2.0);
+                gc.strokeRoundRect(cx - boxSize / 2.0 - 2, cy - boxSize / 2.0 - 2, boxSize + 4, boxSize + 4, 4, 4);
+            }
+        }
+
+        // Beschriftung (z.B. "J1")
+        double sx0 = transform.gridToScreenX(s.x());
+        double sy0 = transform.gridToScreenY(s.y());
+        gc.setFill(Color.web("#B0BEC5"));
+        gc.fillText(comp.getDesignator(), sx0 - boxSize * 0.6, sy0 - boxSize * 0.6);
+    }
+
     private void drawBand(GraphicsContext gc, double x, double y, double w, double h, String hexColor) {
         gc.setFill(Color.web(hexColor));
         gc.fillRect(x, y, w, h);
@@ -1035,6 +1211,11 @@ public class PerfBoardCanvas extends Canvas {
             selectedComponent = null;
             if (onProjectModified != null) onProjectModified.run();
             render();
+        } else if (selectedWire != null) {
+            project.getWires().remove(selectedWire);
+            selectedWire = null;
+            if (onProjectModified != null) onProjectModified.run();
+            render();
         }
     }
 
@@ -1063,6 +1244,7 @@ public class PerfBoardCanvas extends Canvas {
     public boolean isInitialFitDone() { return initialFitDone; }
     public PerfProject getProject() { return project; }
     public PlacedComponent getSelectedComponent() { return selectedComponent; }
+    public WireTrace getSelectedWire() { return selectedWire; }
 
     public void setOnHoverCoordinate(BiConsumer<Integer, Integer> callback) {
         this.onHoverCoordinate = callback;

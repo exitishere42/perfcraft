@@ -14,11 +14,17 @@ public class PlacedComponent {
     private HoleCoord end;
     private int rotation; // 0, 1, 2, 3 (x90 deg)
     private BoardLayer layer = BoardLayer.TOP;
+    private boolean visible = true; // Visibility toggle (z. B. für aufgestecktes Modul-Overlay)
 
     public PlacedComponent() {}
 
     public PlacedComponent(String id, ComponentType type, String designator, String value,
                            HoleCoord start, HoleCoord end, int rotation, BoardLayer layer) {
+        this(id, type, designator, value, start, end, rotation, layer, true);
+    }
+
+    public PlacedComponent(String id, ComponentType type, String designator, String value,
+                           HoleCoord start, HoleCoord end, int rotation, BoardLayer layer, boolean visible) {
         this.id = id;
         this.type = type;
         this.designator = designator;
@@ -27,6 +33,7 @@ public class PlacedComponent {
         this.end = end;
         this.rotation = rotation;
         this.layer = layer;
+        this.visible = visible;
     }
 
     public String getId() { return id; }
@@ -45,6 +52,8 @@ public class PlacedComponent {
     public void setRotation(int rotation) { this.rotation = rotation; }
     public BoardLayer getLayer() { return layer; }
     public void setLayer(BoardLayer layer) { this.layer = layer; }
+    public boolean isVisible() { return visible; }
+    public void setVisible(boolean visible) { this.visible = visible; }
 
     public void rotate90() {
         this.rotation = (this.rotation + 1) % 4;

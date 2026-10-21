@@ -591,6 +591,10 @@
             <span class="icon">🔋</span>
             <span>TP4056</span>
           </button>
+          <button class="comp-grid-btn" data-type="PIN_HEADER" style="grid-column: span 2;">
+            <span class="icon">⑉</span>
+            <span>Pin Header</span>
+          </button>
         </div>
 
         <!-- Wire Mode Selection -->
@@ -620,6 +624,10 @@
         <div class="prop-row">
           <div class="prop-label">Value / Model</div>
           <input type="text" class="prop-input" id="propValue" value="10k" />
+        </div>
+        <div class="prop-row" style="flex-direction: row; align-items: center; gap: 8px; margin-top: 4px;">
+          <input type="checkbox" id="propVisible" checked style="cursor: pointer;" />
+          <label for="propVisible" class="prop-label" style="cursor: pointer; color: #E0E0E0;">Sichtbar (Overlay)</label>
         </div>
 
         <!-- Resistor Color Bands Box -->

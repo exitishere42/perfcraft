@@ -4,6 +4,7 @@ import de.exit.perfcraft.model.BoardLayer;
 import de.exit.perfcraft.model.ComponentType;
 import de.exit.perfcraft.model.PlacedComponent;
 import de.exit.perfcraft.model.WireKind;
+import de.exit.perfcraft.model.WireTrace;
 import de.exit.perfcraft.service.ExportService;
 import de.exit.perfcraft.service.I18n;
 import de.exit.perfcraft.service.ProjectStorageService;
@@ -48,6 +49,7 @@ public class PerfCraftApp extends Application {
 
     private TextField propDesignatorField;
     private TextField propValueField;
+    private CheckBox propVisibleCheck;
     private VBox resistorPreviewBox;
     private HBox resistorColorStrip;
     private Label resistorOhmLabel;
@@ -326,6 +328,7 @@ public class PerfCraftApp extends Application {
         Button btnIc = createCompSelectButton(I18n.get("comp.ic"), "⚏");
         Button btnEsp32 = createCompSelectButton(I18n.get("comp.esp32"), "🖳");
         Button btnTp4056 = createCompSelectButton(I18n.get("comp.tp4056"), "🔋");
+        Button btnPinHeader = createCompSelectButton(I18n.get("comp.pinheader"), "⑉");
 
         btnSwitch.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.TACTILE_SWITCH); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
         btnResistor.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.RESISTOR_AXIAL); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
@@ -335,6 +338,7 @@ public class PerfCraftApp extends Application {
         btnIc.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.IC_DIP); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
         btnEsp32.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.ESP32_S3_ZERO); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
         btnTp4056.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.TP4056_CHARGER); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
+        btnPinHeader.setOnAction(e -> { canvas.setActiveComponentType(ComponentType.PIN_HEADER); activateTool(PerfBoardCanvas.ActiveTool.COMPONENT); });
 
         compGrid.add(btnSwitch, 0, 0);
         compGrid.add(btnResistor, 1, 0);
@@ -344,6 +348,7 @@ public class PerfCraftApp extends Application {
         compGrid.add(btnIc, 1, 2);
         compGrid.add(btnEsp32, 0, 3);
         compGrid.add(btnTp4056, 1, 3);
+        compGrid.add(btnPinHeader, 0, 4, 2, 1);
 
         // Leitungs-Auswahl
         VBox wireTypeBox = new VBox(6);
@@ -404,6 +409,16 @@ public class PerfCraftApp extends Application {
         propValueField = new TextField("6x6 mm");
         propValueField.setStyle("-fx-background-color: #242424; -fx-text-fill: white; -fx-border-color: #2C2C2C;");
 
+        propVisibleCheck = new CheckBox("Sichtbar (Overlay)");
+        propVisibleCheck.setStyle("-fx-text-fill: #E0E0E0; -fx-font-size: 11px; -fx-cursor: hand;");
+        propVisibleCheck.setSelected(true);
+        propVisibleCheck.selectedProperty().addListener((obs, oldV, newV) -> {
+            if (canvas.getSelectedComponent() != null) {
+                canvas.getSelectedComponent().setVisible(newV);
+                canvas.render();
+            }
+        });
+
         propValueField.textProperty().addListener((obs, oldV, newV) -> {
             if (canvas.getSelectedComponent() != null) {
                 canvas.getSelectedComponent().setValue(newV);
@@ -431,7 +446,7 @@ public class PerfCraftApp extends Application {
         resistorPreviewBox.setVisible(false);
         resistorPreviewBox.setManaged(false);
 
-        sidebar.getChildren().addAll(lblSection1, compGrid, wireTypeBox, s, lblSection2, lblDesignator, propDesignatorField, lblValue, propValueField, resistorPreviewBox);
+        sidebar.getChildren().addAll(lblSection1, compGrid, wireTypeBox, s, lblSection2, lblDesignator, propDesignatorField, lblValue, propValueField, propVisibleCheck, resistorPreviewBox);
         return sidebar;
     }
 
@@ -444,8 +459,23 @@ public class PerfCraftApp extends Application {
     }
 
     private void updateInspector(PlacedComponent comp) {
+        if (comp == null) {
+            WireTrace wire = canvas.getSelectedWire();
+            if (wire != null) {
+                propDesignatorField.setText(wire.getKind() == WireKind.SILVER_WIRE ? "SILVER" : "WIRE");
+                propValueField.setText(wire.getKind() == WireKind.SILVER_WIRE ? "Silberdraht" : ("Kabel (" + wire.getColor() + ")"));
+            } else {
+                propDesignatorField.setText("");
+                propValueField.setText("");
+            }
+            resistorPreviewBox.setVisible(false);
+            resistorPreviewBox.setManaged(false);
+            return;
+        }
+
         propDesignatorField.setText(comp.getDesignator());
         propValueField.setText(comp.getValue());
+        propVisibleCheck.setSelected(comp.isVisible());
 
         if (comp.getType() == ComponentType.RESISTOR_AXIAL) {
             resistorPreviewBox.setVisible(true);

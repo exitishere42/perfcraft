@@ -4,7 +4,7 @@ chcp 65001 >nul 2>&1
 
 set "REPO=exitishere42/perfcraft"
 set "INSTALL_DIR=%USERPROFILE%\perfcraft"
-set "JAR_NAME=perfcraft-1.1.0-all.jar"
+set "JAR_NAME=perfcraft-1.2.0-all.jar"
 set "RELEASE_URL=https://github.com/%REPO%/releases/latest/download"
 set "RAW_URL=https://raw.githubusercontent.com/%REPO%/main"
 
