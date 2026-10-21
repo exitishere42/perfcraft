@@ -107,17 +107,29 @@ cat > "$INSTALL_DIR/run.sh" << EOF
 SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 cd "\$SCRIPT_DIR"
 
+JAVA_CMD="java"
+if ! command -v java &>/dev/null; then
+    for cand in /usr/bin/java /usr/lib/jvm/default-java/bin/java /usr/lib/jvm/java-21-openjdk*/bin/java /usr/lib/jvm/temurin-21-jre*/bin/java "\$HOME/.sdkman/candidates/java/current/bin/java"; do
+        if [ -x "\$cand" ]; then
+            JAVA_CMD="\$cand"
+            break
+        fi
+    done
+fi
+
 JAR_PATH="\$SCRIPT_DIR/$JAR_NAME"
 if [ ! -f "\$JAR_PATH" ]; then
     JAR_PATH="\$(ls -t "\$SCRIPT_DIR"/perfcraft-*-all.jar 2>/dev/null | head -n 1)"
 fi
 
+LOG_FILE="\$SCRIPT_DIR/perfcraft.log"
+
 if [ -f "\$JAR_PATH" ]; then
-    exec java -cp "\$JAR_PATH" de.exit.perfcraft.Main "\$@" 2>/dev/null || exec java -jar "\$JAR_PATH" "\$@"
+    exec "\$JAVA_CMD" -cp "\$JAR_PATH" de.exit.perfcraft.Main "\$@" 2>&1 | tee "\$LOG_FILE"
 fi
 
 if [ -f "\$SCRIPT_DIR/$APPIMAGE_NAME" ] && [ -x "\$SCRIPT_DIR/$APPIMAGE_NAME" ]; then
-    exec "\$SCRIPT_DIR/$APPIMAGE_NAME" "\$@"
+    exec "\$SCRIPT_DIR/$APPIMAGE_NAME" "\$@" 2>&1 | tee "\$LOG_FILE"
 fi
 
 echo "[FEHLER] Keine ausfuehrbare PerfCraft JAR gefunden in \$SCRIPT_DIR"
