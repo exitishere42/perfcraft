@@ -300,7 +300,7 @@ public class PerfCraftApp extends Application {
         Button btnSwitch = createCompSelectButton(I18n.get("comp.switch"), "⊡");
         Button btnResistor = createCompSelectButton(I18n.get("comp.resistor"), "〰");
         Button btnCap = createCompSelectButton(I18n.get("comp.capacitor"), "||");
-        Button btnLed = createCompSelectButton(I18n.get("comp.led"), "💡");
+        Button btnLed = createCompSelectButton(I18n.get("comp.led"), "▷|↗");
         Button btnDiode = createCompSelectButton(I18n.get("comp.diode"), "▷|");
         Button btnIc = createCompSelectButton(I18n.get("comp.ic"), "⚏");
 
