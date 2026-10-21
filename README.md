@@ -117,10 +117,16 @@ Install with one PowerShell command:
 powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/exitishere42/perfcraft/main/install.bat' -OutFile 'install.bat'; .\install.bat"
 ```
 
-Or download the executable `perfcraft-1.0.1-all.jar` directly from [Releases](https://github.com/exitishere42/perfcraft/releases/latest) and run:
+Or download the executable `perfcraft.exe` (Windows) or `perfcraft-1.0.4-all.jar` directly from [Releases](https://github.com/exitishere42/perfcraft/releases/latest) and run:
 
 ```cmd
-javaw -jar perfcraft-1.0.1-all.jar
+perfcraft.exe
+```
+
+or via Java 21+:
+
+```cmd
+javaw -jar perfcraft-1.0.4-all.jar
 ```
 
 - Automatic `.perf` file type registration and custom document icon in Windows Explorer.
@@ -137,8 +143,58 @@ curl -fsSL https://raw.githubusercontent.com/exitishere42/perfcraft/main/install
 Or run directly with Java 21+:
 
 ```bash
-java -jar perfcraft-1.0.1-all.jar
+java -jar perfcraft-1.0.4-all.jar
 ```
+
+---
+
+## PerfCraft Web & Docker Deployment
+
+PerfCraft is also available as a zero-install, responsive web application for desktop browsers, tablets, and smartphones. It supports 1:1 `.perf` file opening/saving (including drag & drop) and touch gestures (pinch-to-zoom, 2-finger pan, Tinkercad-style component placement).
+
+### Quick Start with Docker Compose
+
+Run PerfCraft Web anywhere with a single command:
+
+```bash
+docker compose up -d
+```
+
+Once running, access the web interface in your browser:
+- **Local machine**: [http://localhost:8080](http://localhost:8080)
+- **Local Network (Tablets / Phones)**: `http://<your-server-ip>:8080`
+
+To stop the container:
+
+```bash
+docker compose down
+```
+
+### Docker Compose Configuration (`docker-compose.yml`)
+
+```yaml
+services:
+  perfcraft-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: perfcraft-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
+```
+
+### Running Locally without Docker
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173).
 
 ---
 
@@ -156,7 +212,7 @@ mvn package -DskipTests
 Run directly:
 
 ```bash
-java -jar target/perfcraft-1.0.1-all.jar
+java -jar target/perfcraft-1.0.4-all.jar
 ```
 
 ---
